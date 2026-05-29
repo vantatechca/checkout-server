@@ -14,7 +14,8 @@ databases:
   - name: checkout-db
     databaseName: checkout_db
     user: checkout_user
-    plan: starter          # "free" expires after 30 days; "starter" for production
+    plan: basic-256mb      # smallest paid Postgres plan (~$6/mo). Legacy "starter" is retired.
+    diskSizeGB: 5          # starting disk; raise later as order volume grows
 
 services:
   # ── Redis (Celery broker + result backend) ───────────────────────────────
