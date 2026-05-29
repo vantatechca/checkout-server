@@ -320,7 +320,7 @@ async def _is_whop_available_today() -> bool:
         from datetime import datetime, timezone
         from sqlalchemy import select, func
         from models.order import Order, PaymentMethod
-        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(func.coalesce(func.sum(Order.total), 0))

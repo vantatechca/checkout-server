@@ -107,7 +107,7 @@ async def btcpay_webhook(
         # Update crypto invoice
         inv_rec.status = btcpay_status
         if our_status == "paid":
-            inv_rec.settled_at = datetime.now(timezone.utc)
+            inv_rec.settled_at = datetime.utcnow()
 
         # Update parent order
         order_result = await db.execute(select(Order).where(Order.id == inv_rec.order_id))
@@ -117,7 +117,7 @@ async def btcpay_webhook(
         if order and order.payment_status == PaymentStatus.pending:
             order.payment_status = PaymentStatus(our_status)
             if our_status == "paid":
-                order.paid_at = datetime.now(timezone.utc)
+                order.paid_at = datetime.utcnow()
                 order.payment_notes = f"BTCPay invoice {btcpay_id} settled."
                 logger.info(f"✅ Crypto payment confirmed: order {order.id}")
                 should_create_shopify = True
@@ -236,7 +236,7 @@ async def shopify_paid_webhook(request: Request):
             return {"received": True, "action": "already_paid"}
 
         order.payment_status = PaymentStatus.paid
-        order.paid_at        = datetime.now(timezone.utc)
+        order.paid_at        = datetime.utcnow()
         order.payment_ref    = shopify_order_id
         order.payment_notes  = f"Matched to Shopify order {shopify_name} on {shop_domain}"
         await db.commit()
@@ -366,7 +366,7 @@ async def nowpayments_ipn(
         inv_rec.status        = np_status
         inv_rec.coin          = pay_currency
         if our_status == "paid":
-            inv_rec.settled_at = datetime.now(timezone.utc)
+            inv_rec.settled_at = datetime.utcnow()
 
         order_result = await db.execute(select(Order).where(Order.id == order_id))
         order = order_result.scalar_one_or_none()
@@ -375,7 +375,7 @@ async def nowpayments_ipn(
         if order and order.payment_status == PaymentStatus.pending:
             order.payment_status = PaymentStatus(our_status)
             if our_status == "paid":
-                order.paid_at       = datetime.now(timezone.utc)
+                order.paid_at       = datetime.utcnow()
                 order.payment_notes = f"NowPayments {np_payment_id} finished ({pay_currency})."
                 logger.info(f"✅ Altcoin payment confirmed: order {order.id}")
                 should_create_shopify = True
@@ -465,7 +465,7 @@ async def pymtz_webhook(
             order.payment_status = PaymentStatus(our_status)
             order.payment_ref    = payment_id or order.payment_ref
             if our_status == "paid":
-                order.paid_at       = datetime.now(timezone.utc)
+                order.paid_at       = datetime.utcnow()
                 order.payment_notes = f"pymtz {payment_id} completed."
                 should_create_shopify = True
                 logger.info(f"✅ Card payment confirmed (pymtz): order {order.id}")
@@ -904,7 +904,7 @@ async def whop_webhook(
             _whop_fill_customer_from_payload(order, payload, data)
 
             if our_status == "paid":
-                order.paid_at       = datetime.now(timezone.utc)
+                order.paid_at       = datetime.utcnow()
                 order.payment_notes = f"Whop payment {whop_id} completed."
                 should_create_shopify = True
                 logger.info(f"✅ Whop payment confirmed: order {order.id}")

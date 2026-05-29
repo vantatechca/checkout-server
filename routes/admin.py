@@ -204,7 +204,7 @@ async def order_stats(
         )
     )
 
-    start_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    start_today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     paid_q = select(sa_func.count()).select_from(Order).where(
         and_(*base_filter, Order.payment_status == PaymentStatus.paid)
     )
@@ -375,13 +375,13 @@ async def mark_order_paid(
         raise HTTPException(400, "Order already marked as paid")
 
     order.payment_status = PaymentStatus.paid
-    order.paid_at        = datetime.now(timezone.utc)
+    order.paid_at        = datetime.utcnow()
     order.payment_notes  = body.notes or "Manually marked paid by admin"
 
     # If Interac, also update interac_payment record (clears underpaid flag if it was set)
     if order.payment_method == PaymentMethod.interac and order.interac_payment:
         order.interac_payment.status          = "manual"
-        order.interac_payment.matched_at      = datetime.now(timezone.utc)
+        order.interac_payment.matched_at      = datetime.utcnow()
         # If was underpaid, set received_amount to the full total now that balance is in
         if order.interac_payment.received_amount is not None:
             order.interac_payment.received_amount = order.total
@@ -389,7 +389,7 @@ async def mark_order_paid(
     # If Zelle, also update zelle_payment record (clears underpaid flag if it was set)
     if order.payment_method == PaymentMethod.zelle and order.zelle_payment:
         order.zelle_payment.status            = "manual"
-        order.zelle_payment.matched_at        = datetime.now(timezone.utc)
+        order.zelle_payment.matched_at        = datetime.utcnow()
         if order.zelle_payment.received_amount is not None:
             order.zelle_payment.received_amount = order.total
 
@@ -589,7 +589,7 @@ async def send_payment_reminder(
         else f"Reminded — full ${total:.2f} outstanding"
     )
 
-    order.last_customer_email_at = datetime.now(timezone.utc)
+    order.last_customer_email_at = datetime.utcnow()
     order.customer_emails_sent   = (order.customer_emails_sent or 0) + 1
 
     await db.commit()
@@ -768,10 +768,10 @@ async def manual_interac_match(
     # Update both
     ip.order_id   = body.order_id
     ip.status     = "manual"
-    ip.matched_at = datetime.now(timezone.utc)
+    ip.matched_at = datetime.utcnow()
 
     order.payment_status = PaymentStatus.paid
-    order.paid_at        = datetime.now(timezone.utc)
+    order.paid_at        = datetime.utcnow()
     order.payment_notes  = f"Manually matched to Interac payment #{ip.id}"
 
     await db.commit()
@@ -855,10 +855,10 @@ async def manual_zelle_match(
 
     zp.order_id   = body.order_id
     zp.status     = "manual"
-    zp.matched_at = datetime.now(timezone.utc)
+    zp.matched_at = datetime.utcnow()
 
     order.payment_status = PaymentStatus.paid
-    order.paid_at        = datetime.now(timezone.utc)
+    order.paid_at        = datetime.utcnow()
     order.payment_notes  = f"Manually matched to Zelle payment #{zp.id}"
 
     await db.commit()
