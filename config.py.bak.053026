@@ -1,4 +1,3 @@
-import os
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -111,11 +110,6 @@ class Settings(BaseSettings):
     ORDER_EXPIRY_CRYPTO_MINUTES:  int = 60
     ORDER_EXPIRY_INTERAC_MINUTES: int = 2880
 
-    # Used by the hourly Celery beat task `expire_old_orders`. Keep >= your
-    # longest payment window (Interac = 2880 min = 48h) so the scheduler does
-    # not expire orders customers are still legitimately paying.
-    ORDER_EXPIRY_HOURS: int = 48
-
     # Affiliate dashboard
     AFFILIATE_DASHBOARD_URL: str = "https://peps-affiliate.onrender.com"
 
@@ -208,34 +202,11 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        # If a full connection string is provided (e.g. Render's DB_URL),
-        # normalize it to the async psycopg/asyncpg driver and use it as-is.
-        url = os.getenv("DB_URL", "").strip()
-        if url:
-            if url.startswith("postgres://"):
-                url = url.replace("postgres://", "postgresql://", 1)
-            if url.startswith("postgresql://"):
-                url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-            return url
-        return (
-            f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}"
-            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        )
+        return f"mysql+aiomysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
-        # Sync driver (used by Alembic / any blocking tooling).
-        url = os.getenv("DB_URL", "").strip()
-        if url:
-            if url.startswith("postgres://"):
-                url = url.replace("postgres://", "postgresql://", 1)
-            if url.startswith("postgresql://"):
-                url = url.replace("postgresql://", "postgresql+psycopg2://", 1)
-            return url
-        return (
-            f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}"
-            f"@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-        )
+        return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     class Config:
         env_file = ".env"

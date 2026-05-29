@@ -1,0 +1,132 @@
+# ============================================================================
+# Render Blueprint — checkout-server
+# FastAPI (web) + Postgres + Redis + Celery worker (with embedded beat)
+# ----------------------------------------------------------------------------
+# Push to your GitHub repo root, then in Render: New → Blueprint → pick repo.
+# Render creates everything below and wires DB + Redis credentials in.
+#
+# Shared secrets live in the `checkout-secrets` env group so the web service
+# and the worker stay in sync. Fill the `sync: false` values in the dashboard
+# once (on the group) and both services inherit them.
+# ============================================================================
+
+databases:
+  - name: checkout-db
+    databaseName: checkout_db
+    user: checkout_user
+    plan: starter          # "free" expires after 30 days; "starter" for production
+
+services:
+  # ── Redis (Celery broker + result backend) ───────────────────────────────
+  - type: keyvalue
+    name: checkout-redis
+    plan: starter          # smallest paid tier; "free" works for light use
+    maxmemoryPolicy: noeviction   # never drop queued tasks
+
+  # ── FastAPI web service ───────────────────────────────────────────────────
+  - type: web
+    name: checkout-server
+    runtime: python         # if your account rejects this, use:  env: python
+    plan: starter
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - fromGroup: checkout-secrets
+      - key: DB_HOST
+        fromDatabase: { name: checkout-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: checkout-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: checkout-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: checkout-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: checkout-db, property: password }
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: checkout-redis, property: connectionString }
+
+  # ── Celery worker (runs tasks AND the beat scheduler, via -B) ─────────────
+  # Embedded beat (-B) keeps this to one service. Fine for a single worker.
+  # If you ever scale to multiple workers, split beat into its own service
+  # (drop -B here, add a second worker with: celery -A tasks.celery_app beat)
+  # so the schedule only fires once.
+  - type: worker
+    name: checkout-worker
+    runtime: python
+    plan: starter
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A tasks.celery_app worker -B --loglevel=info
+    envVars:
+      - fromGroup: checkout-secrets
+      - key: DB_HOST
+        fromDatabase: { name: checkout-db, property: host }
+      - key: DB_PORT
+        fromDatabase: { name: checkout-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: checkout-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: checkout-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: checkout-db, property: password }
+      - key: REDIS_URL
+        fromService: { type: keyvalue, name: checkout-redis, property: connectionString }
+
+# ============================================================================
+# Shared environment (web + worker). Static values are set here; secrets are
+# `sync: false` — set them once in the dashboard under Env Groups → checkout-secrets.
+# ============================================================================
+envVarGroups:
+  - name: checkout-secrets
+    envVars:
+      # ---- Core app ----
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: ENVIRONMENT
+        value: production
+      - key: BASE_URL
+        value: https://pepscheckoutportal.com
+      - key: SECRET_KEY
+        generateValue: true
+      # Keep >= 48 so the hourly expire task doesn't kill slow Interac orders
+      - key: ORDER_EXPIRY_HOURS
+        value: "48"
+
+      # ---- Payment / integration secrets (fill in the dashboard) ----
+      - key: HELCIM_API_TOKEN
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: NOWPAYMENTS_API_KEY
+        sync: false
+      - key: NOWPAYMENTS_IPN_SECRET
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: BRIDGE_SECRET
+        sync: false
+      - key: SHOPIFY_API_TOKEN
+        sync: false
+      - key: SHOPIFY_WEBHOOK_SECRET
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: WHOP_API_KEY
+        sync: false
+      - key: WHOP_WEBHOOK_SECRET
+        sync: false
+      # ---- BTCPay (required for the check_btcpay_invoice worker task) ----
+      - key: BTCPAY_URL
+        sync: false
+      - key: BTCPAY_API_KEY
+        sync: false
+      - key: BTCPAY_STORE_ID
+        sync: false
+      - key: BTCPAY_WEBHOOK_SECRET
+        sync: false
+      # ...add the rest from config.py (per-store *_CHECKOUT_SHOP / *_TOKEN /
+      # *_WEBHOOK_SECRET sets, pymtz, Lasso, Gmail, etc.) here as sync: false.
