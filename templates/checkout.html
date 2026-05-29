@@ -1370,7 +1370,7 @@ var _autoSaveQueue = [];
       document.getElementById('btnLabel').textContent = labels[method] || labels.card;
       
       // UPDATE PAYMENT METHOD AMOUNTS in payment boxes (truncate, don't round)
-      var zelleFinal = Math.floor(afterCodeSubtotal * 0.95 * 100) / 100;
+      var zelleFinal = Math.floor(afterCodeSubtotal * (1 - DISCOUNTS.interac) * 100) / 100;
       var zelleDiscount = afterCodeSubtotal - zelleFinal;
       var zelleAmt = document.getElementById('zelleAmt');
       if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal.toFixed(2);
@@ -1379,7 +1379,7 @@ var _autoSaveQueue = [];
       var zelleSav = document.getElementById('zelleSavings');
       if (zelleSav) zelleSav.textContent = '$' + zelleDiscount.toFixed(2);
       
-      var interacFinal = Math.floor(afterCodeSubtotal * 0.95 * 100) / 100;
+      var interacFinal = Math.floor(afterCodeSubtotal * (1 - DISCOUNTS.interac) * 100) / 100;
       var interacDiscount = afterCodeSubtotal - interacFinal;
       var interacAmt = document.getElementById('interacAmt');
       if (interacAmt) interacAmt.textContent = '$' + interacFinal.toFixed(2);
@@ -1388,14 +1388,14 @@ var _autoSaveQueue = [];
       var interacSav = document.getElementById('interacSavings');
       if (interacSav) interacSav.textContent = '$' + interacDiscount.toFixed(2);
       
-      var cryptoFinal = Math.floor(afterCodeSubtotal * 0.90 * 100) / 100;
+      var cryptoFinal = Math.floor(afterCodeSubtotal * (1 - DISCOUNTS.crypto) * 100) / 100;
       var cryptoDiscount = afterCodeSubtotal - cryptoFinal;
       var cryptoAmt = document.getElementById('cryptoAmt');
       if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal.toFixed(2);
       var cryptoSav = document.getElementById('cryptoSavings');
       if (cryptoSav) cryptoSav.textContent = '$' + cryptoDiscount.toFixed(2);
 
-      var altcoinFinal = Math.floor(afterCodeSubtotal * 0.93 * 100) / 100;
+      var altcoinFinal = Math.floor(afterCodeSubtotal * (1 - DISCOUNTS.altcoin) * 100) / 100;
       var altcoinDiscount = afterCodeSubtotal - altcoinFinal;
       var altcoinAmt = document.getElementById('altcoinAmt');
       if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal.toFixed(2);
@@ -1441,7 +1441,7 @@ var _autoSaveQueue = [];
     document.getElementById('btnLabel').textContent = labels[method] || labels.card;
     
     // Update payment method amounts (truncate, don't round)
-    var zelleFinal = Math.floor(SUBTOTAL * 0.95 * 100) / 100;
+    var zelleFinal = Math.floor(SUBTOTAL * (1 - DISCOUNTS.interac) * 100) / 100;
     var zelleDiscount = SUBTOTAL - zelleFinal;
     var zelleAmt = document.getElementById('zelleAmt');
     if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal.toFixed(2);
@@ -1450,7 +1450,7 @@ var _autoSaveQueue = [];
     var zelleSav = document.getElementById('zelleSavings');
     if (zelleSav) zelleSav.textContent = '$' + zelleDiscount.toFixed(2);
     
-    var interacFinal = Math.floor(SUBTOTAL * 0.95 * 100) / 100;
+    var interacFinal = Math.floor(SUBTOTAL * (1 - DISCOUNTS.interac) * 100) / 100;
     var interacDiscount = SUBTOTAL - interacFinal;
     var interacAmt = document.getElementById('interacAmt');
     if (interacAmt) interacAmt.textContent = '$' + interacFinal.toFixed(2);
@@ -1459,14 +1459,14 @@ var _autoSaveQueue = [];
     var interacSav = document.getElementById('interacSavings');
     if (interacSav) interacSav.textContent = '$' + interacDiscount.toFixed(2);
     
-    var cryptoFinal = Math.floor(SUBTOTAL * 0.90 * 100) / 100;
+    var cryptoFinal = Math.floor(SUBTOTAL * (1 - DISCOUNTS.crypto) * 100) / 100;
     var cryptoDiscount = SUBTOTAL - cryptoFinal;
     var cryptoAmt = document.getElementById('cryptoAmt');
     if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal.toFixed(2);
     var cryptoSav = document.getElementById('cryptoSavings');
     if (cryptoSav) cryptoSav.textContent = '$' + cryptoDiscount.toFixed(2);
 
-    var altcoinFinal = Math.floor(SUBTOTAL * 0.93 * 100) / 100;
+    var altcoinFinal = Math.floor(SUBTOTAL * (1 - DISCOUNTS.altcoin) * 100) / 100;
     var altcoinDiscount = SUBTOTAL - altcoinFinal;
     var altcoinAmt = document.getElementById('altcoinAmt');
     if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal.toFixed(2);
