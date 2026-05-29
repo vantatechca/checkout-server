@@ -1,0 +1,2333 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Payments Admin</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/style.css" >
+
+
+    <script>
+      // Apply theme instantly on load to prevent white-flash
+      var savedTheme = localStorage.getItem('theme') || 'light';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+  </head>
+  <body>
+    <div class="toast" id="toast"></div>
+
+    <!-- Detail / Confirm Modal -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="modalTitle">Order Details</h2>
+          <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+      </div>
+    </div>
+
+    <!-- Email Composer Modal -->
+    <div class="modal-overlay" id="emailModalOverlay">
+      <div class="modal email-modal">
+        <div class="modal-header">
+          <h2 id="emailModalTitle">Email Customer</h2>
+          <button class="modal-close" onclick="closeEmailModal()">
+            &#x2715;
+          </button>
+        </div>
+        <div class="modal-body" id="emailModalBody"></div>
+      </div>
+    </div>
+
+    <header class="header">
+      <h1>Payments Admin</h1>
+      <span class="header-sub" id="lastRefresh">Loading...</span>
+    </header>
+
+    <div class="app-layout">
+      
+      <aside class="sidebar">
+        <nav class="sidebar-nav">
+          <div class="sidebar-item active" onclick="switchTab('pending')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Pending
+            </div>
+            <span id="pendingCount" class="tab-count" style="background: #b98900">0</span>
+          </div>
+          
+          <div class="sidebar-item" onclick="switchTab('awaiting')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Awaiting
+            </div>
+            <span id="awaitingCount" class="tab-count" style="background: #2563eb">0</span>
+          </div>
+
+          <div class="sidebar-item" onclick="switchTab('all')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+              All Orders
+            </div>
+            <span id="allCount" class="tab-count" style="background: #666">0</span>
+          </div>
+
+          <div class="sidebar-item" onclick="switchTab('paid')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Paid
+            </div>
+            <span id="paidCount" class="tab-count" style="background: #1a7e2e">0</span>
+          </div>
+
+          <div class="sidebar-item" onclick="switchTab('failed')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Failed
+            </div>
+            <span id="failedCount" class="tab-count" style="background: #c8102e">0</span>
+          </div>
+
+          <div class="sidebar-item" onclick="switchTab('revenue')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              Revenue
+            </div>
+          </div>
+          
+          <div style="margin-top: auto; display: flex; flex-direction: column; gap: 0.6rem;">
+            <div class="sidebar-item" id="themeToggleBtn" onclick="toggleTheme()">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <svg id="themeIcon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <span id="themeText">Dark Mode</span>
+              </div>
+            </div>
+
+            <div class="sidebar-item signout-item" onclick="logout()" style="margin-top: 0;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Sign Out
+              </div>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="main-content">
+        <div class="container">
+          
+          <div class="stats">
+            <div class="stat" onclick="switchTab('pending')" style="cursor: pointer">
+              <div class="stat-label">Pending</div>
+              <div class="stat-value pending" id="statPending">—</div>
+            </div>
+            <div class="stat" onclick="switchTab('awaiting')" style="cursor: pointer">
+              <div class="stat-label" style="color: #c8102e">⚠ Underpaid</div>
+              <div class="stat-value" id="statUnderpaid" style="color: #c8102e">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Paid today</div>
+              <div class="stat-value paid" id="statPaidToday">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Total orders</div>
+              <div class="stat-value" id="statTotal">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Revenue today</div>
+              <div class="stat-value" id="statRevenue">—</div>
+            </div>
+          </div>
+
+      <!-- Orders view -->
+      <div id="ordersView" style="position: relative">
+        <!-- Loading overlay (matches Revenue tab pattern) -->
+        <div class="loading-overlay" id="ordersLoading">
+          <div class="spinner-circle"></div>
+          <div class="loading-text">Loading orders...</div>
+        </div>
+
+        <div class="filters-container">
+          <div class="filters-primary">
+            <input type="text" class="filter-input" id="searchInput" placeholder="Search order ID, email, name..." oninput="applyFilters()" />
+            <select class="filter-select" id="methodFilter" onchange="applyFilters()">
+              <option value="">All methods</option>
+              <option value="interac">Interac</option>
+              <option value="zelle">Zelle</option>
+              <option value="card">Credit Card</option>
+              <option value="crypto">Crypto</option>
+              <option value="altcoin">Altcoin</option>
+            </select>
+
+            <button type="button" class="filter-toggle" onclick="toggleFilters()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
+              </svg>
+              <span class="hide-mobile">Filters</span>
+              <span class="active-filter-count" id="activeFilterCount" style="display:none;">0</span>
+              <span class="chevron">▾</span>
+            </button>
+
+            <button class="clear-btn" onclick="clearFilters()" style="display:flex;">Clear</button>
+            <button class="refresh-btn" onclick="loadOrders()">
+              <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
+              <span class="hide-mobile">Refresh</span>
+            </button>
+          </div>
+
+          <div class="filters-advanced" id="advancedFilters">
+            <select class="filter-select" id="countryFilter" onchange="loadOrders()">
+              <option value="">All countries</option>
+              <option value="CAD">🇨🇦 Canada</option>
+              <option value="USD">🇺🇸 USA</option>
+            </select>
+            <input type="text" class="filter-input" id="storeFilter" list="storeList" placeholder="Search 600+ stores..." oninput="applyFilters()" />
+            <datalist id="storeList"></datalist>
+            <input type="date" class="filter-input" id="dateFromFilter" placeholder="From" onchange="applyFilters()" title="Start Date" />
+            <input type="date" class="filter-input" id="dateToFilter" placeholder="To" onchange="applyFilters()" title="End Date" />
+          </div>
+        </div>
+        <div class="results-count" id="resultsCount"></div>
+        <div class="orders-table">
+          <div class="table-header">
+            <span onclick="sortBy('id')">Order ID</span>
+            <span onclick="sortBy('email')">Customer</span>
+            <span onclick="sortBy('storeName')">Source Store</span>
+            <span onclick="sortBy('total')">Amount</span>
+            <span>Method</span>
+            <span onclick="sortBy('paymentStatus')">Status</span>
+            <span>Action</span>
+          </div>
+          <div id="ordersBody">
+            <div class="loading-row">Loading orders...</div>
+          </div>
+        </div>
+        <div class="pagination" id="ordersPagination"></div>
+      </div>
+
+      <!-- Revenue view -->
+      <div id="revenueView" style="display: none">
+        <!-- Loading overlay -->
+        <div class="loading-overlay" id="revLoading">
+          <div class="spinner-circle"></div>
+          <div class="loading-text">Loading revenue data...</div>
+        </div>
+
+        <!-- Period buttons -->
+        <div class="filters-container" style="margin-bottom: 2.4rem;">
+          <div class="filters-primary">
+            <input type="text" class="filter-input" id="revStoreFilter" list="revStoreList" placeholder="Search 600+ stores..." oninput="buildRevenue()" />
+            <datalist id="revStoreList"></datalist>
+
+            <select class="filter-select" id="revMethodFilter" onchange="buildRevenue()">
+              <option value="">All methods</option>
+              <option value="interac">Interac</option>
+              <option value="zelle">Zelle</option>
+              <option value="shopify">Credit Card</option>
+              <option value="crypto">Crypto</option>
+            </select>
+
+            <button type="button" class="filter-toggle" onclick="toggleRevFilters()">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="10" y1="18" x2="14" y2="18" />
+              </svg>
+              <span class="hide-mobile">Filters</span>
+              <span class="chevron">▾</span>
+            </button>
+            <button class="clear-btn" onclick="clearRevFilters()" style="display:flex;">Clear</button>
+          </div>
+
+          <div class="filters-advanced" id="revAdvancedFilters">
+            <div style="display: flex; gap: 0.8rem; grid-column: 1 / -1; flex-wrap: wrap; margin-bottom: 0.4rem;">
+              <button class="rev-period-btn active" id="pb-7" onclick="setRevPeriod(7)">Last 7 days</button>
+              <button class="rev-period-btn" id="pb-30" onclick="setRevPeriod(30)">Last 30 days</button>
+              <button class="rev-period-btn" id="pb-90" onclick="setRevPeriod(90)">Last 90 days</button>
+              <button class="rev-period-btn" id="pb-0" onclick="setRevPeriod(0)">All time</button>
+            </div>
+            
+            <select class="filter-select" id="revCountryFilter" onchange="loadAllPaidOrders(buildRevenue)">
+              <option value="">All countries</option>
+              <option value="CAD">🇨🇦 Canada</option>
+              <option value="USD">🇺🇸 USA</option>
+            </select>
+            <input type="date" class="filter-input" id="revFrom" onchange="setRevCustom()" placeholder="From" />
+            <input type="date" class="filter-input" id="revTo" onchange="setRevCustom()" placeholder="To" />
+          </div>
+        </div>
+
+        <!-- Revenue stats -->
+        <div class="rev-stats">
+          <div class="stat">
+            <div class="stat-label">Total Revenue</div>
+            <div class="stat-value paid" id="revTotal">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Orders</div>
+            <div class="stat-value" id="revOrders">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Avg Order Value</div>
+            <div class="stat-value" id="revAvg">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Top Store</div>
+            <div
+              class="stat-value"
+              id="revTopStore"
+              style="
+                font-size: 1.6rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+              "
+            >
+              —
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar chart -->
+        <div class="chart-card">
+          <div class="chart-title" id="chartTitle">Daily Revenue</div>
+          <div class="chart-wrap">
+            <canvas id="revChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Store breakdown -->
+        <div class="rev-section-title">Revenue by Store</div>
+        <div class="store-table">
+          <div class="store-table-header">
+            <span>Store</span>
+            <span>Revenue</span>
+            <span>Orders</span>
+            <span>Avg Order</span>
+          </div>
+          <div id="storeBreakdown">
+            <div class="loading-row">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Revenue orders table -->
+        <div class="rev-section-title" style="margin-top: 2.4rem">Orders</div>
+        <div class="orders-table">
+          <div
+            class="table-header"
+            style="grid-template-columns: 1.1fr 1.4fr 0.9fr 0.7fr 0.7fr 1.1fr"
+          >
+            <span>Order ID</span>
+            <span>Customer</span>
+            <span>Store</span>
+            <span>Total</span>
+            <span>Method</span>
+            <span>Status</span>
+          </div>
+          <div id="revOrdersBody">
+            <div class="loading-row">Loading...</div>
+          </div>
+        </div>
+        <div class="pagination" id="revPagination"></div>
+      </div>
+      </main>
+    </div>
+
+    <script>
+      fetch("/peps-admin-2026/auth/check", { credentials: "include" })
+        .then(function (r) {
+          if (!r.ok) window.location.href = "/peps-admin-2026/login";
+        })
+        .catch(function () {
+          window.location.href = "/peps-admin-2026/login";
+        });
+      function logout() {
+        if (!confirm("Are you sure you want to sign out?")) return;
+        fetch("/peps-admin-2026/auth/logout", {
+          method: "POST",
+          credentials: "include",
+        }).then(function () {
+          window.location.href = "/peps-admin-2026/login";
+        });
+      }
+      var currentTab = "pending";
+      var allOrders = [];
+      var filteredOrders = [];
+      var pendingOrder = null;
+      var sortField = "createdAt";
+      var sortDir = -1;
+      var revPeriodDays = 7;
+      var revFromDate = "";
+      var revToDate = "";
+      var allPaidOrders = [];
+      var chartInstance = null;
+      var PAGE_SIZE = 20;
+      var ordersPage = 1;
+      var revOrdersPage = 1;
+      var lastUserActivity = Date.now();
+
+      ["click", "keydown", "scroll"].forEach(function (evt) {
+        document.addEventListener(
+          evt,
+          function () {
+            lastUserActivity = Date.now();
+          },
+          { passive: true },
+        );
+      });
+      function fmt(n) {
+        return "$" + parseFloat(n).toFixed(2);
+      }
+      function getStoreAvatar(storeName) {
+        if (!storeName || storeName === '—') return '';
+        var clean = storeName.replace('www.', '').trim();
+        var initial = clean.charAt(0).toUpperCase();
+        var colors = ['#2563eb', '#c8102e', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#be123c', '#4f46e5'];
+        var hash = 0;
+        for (var i = 0; i < clean.length; i++) {
+          hash = clean.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        var color = colors[Math.abs(hash) % colors.length];
+        
+        return '<div class="store-avatar" style="background:' + color + '">' + initial + '</div>';
+      }
+      function updateTabCount(id, count) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        if (count > 0) {
+          el.textContent = count;
+          el.classList.add("visible");
+        } else {
+          el.classList.remove("visible");
+        }
+      }
+      function labelMethod(m) {
+        var map = {
+          interac: { label: "Interac", cls: "method-interac" },
+          zelle: { label: "Zelle", cls: "method-zelle" },
+          card: { label: "Credit Card", cls: "method-card" },
+          shopify: { label: "Credit Card", cls: "method-card" },
+          stripe: { label: "Stripe", cls: "method-card" },
+          crypto: { label: "₿ Bitcoin", cls: "method-btc" },
+          altcoin: { label: "◈ Altcoin", cls: "method-altcoin" },
+        };
+        var entry = map[m];
+        if (!entry) return m || "—";
+        return (
+          '<span class="method-badge ' +
+          entry.cls +
+          '">' +
+          entry.label +
+          "</span>"
+        );
+      }
+      function fmtTime(dateStr) {
+        if (!dateStr) return "—";
+        var d = new Date(dateStr + "Z");
+        return d.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      }
+      function isToday(dateStr) {
+        if (!dateStr) return false;
+        var d = new Date(dateStr + "Z");
+        var now = new Date();
+        return (
+          d.getDate() === now.getDate() &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
+      }
+      function loadOrders(opts) {
+        var preservePage = opts && opts.preservePage;
+        var loaderEl = document.getElementById("ordersLoading");
+
+        var url = "/admin/orders?limit=500";
+
+        if (currentTab === "pending") {
+          url += "&status=pending&not_emailed=yes";
+        } else if (currentTab === "awaiting") {
+          url += "&awaiting=yes";
+        } else if (currentTab === "paid") {
+          url += "&status=paid";
+        } else if (currentTab === "failed") {
+          url += "&failed=yes";
+        }
+        var country =
+          document.getElementById("countryFilter") &&
+          document.getElementById("countryFilter").value;
+        if (country) url += "&currency=" + country;
+
+        fetch(url)
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (currentTab === "all") {
+              data = data.filter(function (o) {
+                return !(
+                  o.paymentMethod === "card" && o.paymentStatus === "pending"
+                );
+              });
+            }
+            allOrders = data;
+            applyFilters(preservePage);
+            updateStats();
+            document.getElementById("lastRefresh").textContent =
+              "Updated " + new Date().toLocaleTimeString();
+          })
+          .catch(function () {
+            document.getElementById("ordersBody").innerHTML =
+              '<div class="loading-row">Failed to load. Is the server running?</div>';
+          })
+          .finally(function () {
+            if (loaderEl) loaderEl.classList.remove("active");
+          });
+      }
+
+      function loadAllPaidOrders(cb) {
+        var loadingEl = document.getElementById("revLoading");
+        if (loadingEl) loadingEl.classList.add("active");
+
+        var dbPromise = fetch("/admin/orders?limit=500&status=paid", {
+          credentials: "include",
+        })
+          .then(function (r) {
+            return r.ok ? r.json() : [];
+          })
+          .catch(function () {
+            return [];
+          });
+
+        var shopifyUrl = "/admin/revenue/shopify";
+        var params = [];
+        if (revPeriodDays > 0) {
+          var from = new Date(Date.now() - revPeriodDays * 86400000);
+          params.push("from_date=" + from.toISOString().slice(0, 10));
+        } else if (revPeriodDays === -1) {
+          if (revFromDate) params.push("from_date=" + revFromDate);
+          if (revToDate) params.push("to_date=" + revToDate);
+        }
+        if (params.length) shopifyUrl += "?" + params.join("&");
+
+        var revCountry =
+          document.getElementById("revCountryFilter") &&
+          document.getElementById("revCountryFilter").value;
+        if (revCountry) params.push("currency=" + revCountry);
+
+        var shopifyPromise = fetch(shopifyUrl, { credentials: "include" })
+          .then(function (r) {
+            return r.ok ? r.json() : [];
+          })
+          .catch(function () {
+            return [];
+          });
+
+        Promise.all([dbPromise, shopifyPromise])
+          .then(function (results) {
+            var dbOrders = results[0] || [];
+            var shopifyOrders = results[1] || [];
+            var dbFiltered = dbOrders.filter(function (o) {
+              return o.paymentMethod !== "card";
+            });
+            allPaidOrders = dbFiltered.concat(shopifyOrders);
+            if (cb) cb();
+          })
+          .catch(function () {
+            if (cb) cb();
+          })
+          .finally(function () {
+            if (loadingEl) loadingEl.classList.remove("active");
+          });
+      }
+
+      function updateStats() {
+        var country = document.getElementById("countryFilter").value;
+        var url = "/admin/orders/stats";
+        if (country) url += "?currency=" + country;
+
+        fetch(url)
+          .then(function (r) {
+            return r.ok ? r.json() : null;
+          })
+          .then(function (s) {
+            if (!s) throw new Error("stats failed");
+
+            document.getElementById("statPending").textContent = s.pending;
+            document.getElementById("statUnderpaid").textContent = s.underpaid;
+            document.getElementById("statPaidToday").textContent = s.paidToday;
+            document.getElementById("statTotal").textContent = s.all;
+            document.getElementById("statRevenue").textContent = fmt(
+              s.revenueToday,
+            );
+
+            updateTabCount("pendingCount", s.pending);
+            updateTabCount("awaitingCount", s.pending + s.underpaid); 
+            updateTabCount("allCount", s.all);
+            updateTabCount("paidCount", s.paid);
+            updateTabCount("failedCount", s.failed || 0);
+          })
+          .catch(function () {
+            var pending = allOrders.filter(function (o) {
+              return o.paymentStatus === "pending";
+            }).length;
+            var underpaid = allOrders.filter(function (o) {
+              return !!o.underpaidMethod;
+            }).length;
+            var paidToday = allOrders.filter(function (o) {
+              return (
+                o.paymentStatus === "paid" && isToday(o.paidAt || o.createdAt)
+              );
+            });
+            var revenue = paidToday.reduce(function (s, o) {
+              return s + parseFloat(o.total || 0);
+            }, 0);
+            document.getElementById("statPending").textContent = pending;
+            document.getElementById("statUnderpaid").textContent = underpaid;
+            document.getElementById("statPaidToday").textContent =
+              paidToday.length;
+            document.getElementById("statTotal").textContent = allOrders.length;
+            document.getElementById("statRevenue").textContent = fmt(revenue);
+          });
+      }
+
+      function applyFilters(preservePage) {
+        updateActiveFilterCount();
+        var q = document.getElementById("searchInput").value.toLowerCase();
+        var method = document.getElementById("methodFilter").value;
+        var dateFrom = document.getElementById("dateFromFilter").value;
+        var dateTo = document.getElementById("dateToFilter").value;
+        var store = document.getElementById("storeFilter").value;
+
+        filteredOrders = allOrders.filter(function (o) {
+          var matchQ =
+            !q ||
+            (o.id || "").toLowerCase().includes(q) ||
+            (o.email || "").toLowerCase().includes(q) ||
+            (o.firstName || "").toLowerCase().includes(q) ||
+            (o.lastName || "").toLowerCase().includes(q) ||
+            (o.sourceDomain || "").toLowerCase().includes(q);
+          var matchM = !method || o.paymentMethod === method;
+          var matchD = true;
+          if (dateFrom || dateTo) {
+            var ds = o.createdAt || "";
+            var d = new Date(/[+\-]\d\d:?\d\d$|Z$/.test(ds) ? ds : ds + "Z");
+            
+            if (dateFrom) {
+              matchD = matchD && d >= new Date(dateFrom);
+            }
+            if (dateTo) {
+              matchD = matchD && d <= new Date(dateTo + "T23:59:59");
+            }
+          }
+          var matchS = 
+            !store || (o.sourceDomain || o.storeName || "").toLowerCase().includes(store.toLowerCase());
+          return matchQ && matchM && matchD && matchS;
+        });
+
+        filteredOrders.sort(function (a, b) {
+          var av = a[sortField] || "",
+            bv = b[sortField] || "";
+          if (sortField === "total") {
+            av = parseFloat(av);
+            bv = parseFloat(bv);
+          }
+          return av < bv ? -sortDir : av > bv ? sortDir : 0;
+        });
+
+        document.getElementById("resultsCount").textContent =
+          filteredOrders.length +
+          " order" +
+          (filteredOrders.length !== 1 ? "s" : "") +
+          " found";
+        if (!preservePage) ordersPage = 1;
+        renderOrders(filteredOrders);
+      }
+
+      function sortBy(field) {
+        if (sortField === field) sortDir *= -1;
+        else {
+          sortField = field;
+          sortDir = -1;
+        }
+        applyFilters();
+      }
+
+      function clearFilters() {
+        document.getElementById("searchInput").value = "";
+        document.getElementById("methodFilter").value = "";
+        document.getElementById("dateFromFilter").value = "";
+        document.getElementById("dateToFilter").value = "";
+        document.getElementById("storeFilter").value = "";
+        var c = document.getElementById("countryFilter");
+        if (c) c.value = "";
+        updateActiveFilterCount();
+        applyFilters();
+        loadOrders(); 
+      }
+      function renderOrders(orders) {
+        var body = document.getElementById("ordersBody");
+        if (!orders.length) {
+          body.innerHTML =
+            '<div class="empty"><svg viewBox="0 0 24 24" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><p>No orders found</p></div>';
+          document.getElementById("ordersPagination").innerHTML = "";
+          return;
+        }
+        var totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+        if (ordersPage > totalPages) ordersPage = totalPages;
+        if (ordersPage < 1) ordersPage = 1;
+        var start = (ordersPage - 1) * PAGE_SIZE;
+        var pageOrders = orders.slice(start, start + PAGE_SIZE);
+
+        var html = "";
+        pageOrders.forEach(function (o) {
+          var badge;
+          if (o.underpaidMethod) {
+            var shortfall =
+              parseFloat(o.total || 0) - parseFloat(o.receivedAmount || 0);
+            badge =
+              '<span class="status-badge status-failed" title="Received $' +
+              parseFloat(o.receivedAmount || 0).toFixed(2) +
+              " of $" +
+              parseFloat(o.total || 0).toFixed(2) +
+              '">\u26a0 Short $' +
+              shortfall.toFixed(2) +
+              "</span>";
+          } else if (
+            o.paymentStatus === "pending" &&
+            (o.customerEmailsSent || 0) > 0
+          ) {
+            badge =
+              '<span class="status-badge" style="background:#dbeafe;color:#1e40af">\u2709 Reminded</span>';
+          } else {
+            badge =
+              '<span class="status-badge status-' +
+              o.paymentStatus +
+              '">' +
+              (o.paymentStatus === "paid"
+                ? "\u2713 Paid"
+                : o.paymentStatus === "pending"
+                  ? "\u23f3 Pending"
+                  : o.paymentStatus) +
+              "</span>";
+          }
+
+          var action = "";
+          if (o.paymentStatus === "pending") {
+            action += '<div style="display:flex;gap:0.4rem;flex-wrap:nowrap">';
+            action +=
+              '<button class="action-btn btn-pay" onclick="event.stopPropagation();openConfirm(\'' +
+              o.id +
+              "')\">Paid</button>";
+            if (o.paymentMethod === "interac" || o.paymentMethod === "zelle") {
+              var emailLabel;
+              var emailHandler;
+              if (o.underpaidMethod) {
+                emailLabel = "Resend";
+                emailHandler = "openUnderpaidResend";
+              } else if ((o.customerEmailsSent || 0) > 0) {
+                emailLabel = "Resend";
+                emailHandler = "openPaymentReminder";
+              } else {
+                emailLabel = "Email";
+                emailHandler = "openPaymentReminder";
+              }
+              action +=
+                '<button class="action-btn btn-email" onclick="event.stopPropagation();' +
+                emailHandler +
+                "('" +
+                o.id +
+                '\')" title="Send payment reminder">\u2709 ' +
+                emailLabel +
+                "</button>";
+            }
+            action +=
+              '<button class="action-btn btn-cancel" onclick="event.stopPropagation();cancelOrder(\'' +
+              o.id +
+              "')\">Cancel</button>";
+            action += "</div>";
+          } else if (o.paymentStatus === "paid") {
+            action = '<span class="action-btn btn-paid">\u2713 Paid</span>';
+          } else if (
+            o.paymentStatus === "failed" ||
+            o.paymentStatus === "expired"
+          ) {
+            action =
+              '<button class="action-btn btn-recover" onclick="event.stopPropagation();recoverOrder(\'' +
+              o.id +
+              "')\">\u21bb Recover</button>";
+          } else {
+            action =
+              '<span style="color:#aaa;font-size:1.2rem;">' +
+              o.paymentStatus +
+              "</span>";
+          }
+          var sourceName = (o.sourceDomain || o.storeName || "\u2014").replace(
+            "www.",
+            "",
+          );
+          
+          // --- NEW: Smart Time Display (Shows Paid time if available) ---
+          var timeHtml = "";
+          if (o.paymentStatus === "paid" && o.paidAt) {
+            timeHtml = '<span style="color:var(--green); font-weight: 600;">Paid: ' + fmtTime(o.paidAt) + '</span>';
+          } else {
+            timeHtml = "Created: " + fmtTime(o.createdAt);
+          }
+
+          html +=
+            '<div class="order-row" onclick="openDetail(\'' + o.id + "')\">";
+          html +=
+            '<div><div class="order-id">' +
+            o.id +
+            '</div><div class="order-time">' +
+            timeHtml +
+            "</div></div>";
+          html +=
+            '<div><div class="order-email">' +
+            (o.email || "\u2014") +
+            '</div><div class="order-name">' +
+            ((o.firstName || "") + " " + (o.lastName || "")).trim() +
+            "</div></div>";
+          html += '<div class="store-cell">' + getStoreAvatar(sourceName) + '<span class="order-store-text">' + sourceName + '</span></div>';
+          html += '<div class="order-amount">' + fmt(o.total) + "</div>";
+          html +=
+            '<div class="order-method">' +
+            labelMethod(o.paymentMethod) +
+            "</div>";
+          html += "<div>" + badge + "</div>";
+          html += "<div>" + action + "</div>";
+          html += "</div>";
+        });
+        body.innerHTML = html;
+        renderPagination(
+          "ordersPagination",
+          orders.length,
+          ordersPage,
+          function (p) {
+            ordersPage = p;
+            renderOrders(orders);
+          },
+        );
+      }
+
+      function renderPagination(
+        containerId,
+        totalCount,
+        currentPage,
+        onPageChange,
+      ) {
+        var el = document.getElementById(containerId);
+        var totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+        if (totalPages <= 1) {
+          el.innerHTML = "";
+          return;
+        }
+        var start = (currentPage - 1) * PAGE_SIZE + 1;
+        var end = Math.min(currentPage * PAGE_SIZE, totalCount);
+        var html =
+          '<button class="page-btn" ' +
+          (currentPage === 1 ? "disabled" : "") +
+          ' data-page="1">\u00ab</button>';
+        html +=
+          '<button class="page-btn" ' +
+          (currentPage === 1 ? "disabled" : "") +
+          ' data-page="' +
+          (currentPage - 1) +
+          '">\u2039</button>';
+        var firstShown = Math.max(1, currentPage - 2);
+        var lastShown = Math.min(totalPages, firstShown + 4);
+        firstShown = Math.max(1, lastShown - 4);
+        for (var i = firstShown; i <= lastShown; i++) {
+          html +=
+            '<button class="page-btn ' +
+            (i === currentPage ? "active" : "") +
+            '" data-page="' +
+            i +
+            '">' +
+            i +
+            "</button>";
+        }
+        html +=
+          '<button class="page-btn" ' +
+          (currentPage === totalPages ? "disabled" : "") +
+          ' data-page="' +
+          (currentPage + 1) +
+          '">\u203a</button>';
+        html +=
+          '<button class="page-btn" ' +
+          (currentPage === totalPages ? "disabled" : "") +
+          ' data-page="' +
+          totalPages +
+          '">\u00bb</button>';
+        html +=
+          '<span class="page-info">' +
+          start +
+          "\u2013" +
+          end +
+          " of " +
+          totalCount +
+          "</span>";
+        el.innerHTML = html;
+        el.querySelectorAll(".page-btn").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var p = parseInt(btn.getAttribute("data-page"));
+            if (!isNaN(p)) onPageChange(p);
+          });
+        });
+      }
+
+      function switchTab(tab) {
+        var isSameTab = currentTab === tab;
+        currentTab = tab;
+
+        document.querySelectorAll(".sidebar-item").forEach(function (t, i) {
+          t.classList.toggle(
+            "active",
+            ["pending", "awaiting", "all", "paid", "failed", "revenue"][i] ===
+              tab,
+          );
+        });
+
+        if (tab === "revenue") {
+          document.getElementById("ordersView").style.display = "none";
+          document.getElementById("revenueView").style.display = "block";
+          loadAllPaidOrders(buildRevenue);
+        } else {
+          document.getElementById("ordersView").style.display = "block";
+          document.getElementById("revenueView").style.display = "none";
+
+          if (!isSameTab) {
+            document.getElementById("ordersLoading").classList.add("active");
+            ordersPage = 1;
+          }
+          loadOrders({ showLoader: !isSameTab });
+        }
+      }
+
+      /* ─── REVENUE ─────────────────────────────── */
+      function toggleRevFilters() {
+        var adv = document.getElementById("revAdvancedFilters");
+        var btn = document.querySelector("#revenueView .filter-toggle");
+        if (adv) adv.classList.toggle("expanded");
+        if (btn) btn.classList.toggle("expanded");
+      }
+
+      function clearRevFilters() {
+        document.getElementById("revStoreFilter").value = "";
+        document.getElementById("revMethodFilter").value = "";
+        document.getElementById("revCountryFilter").value = "";
+        setRevPeriod(7); // This automatically resets dates and reloads data
+      }
+      function setRevPeriod(days) {
+        revPeriodDays = days;
+        revFromDate = "";
+        revToDate = "";
+        document.getElementById("revFrom").value = "";
+        document.getElementById("revTo").value = "";
+        document.querySelectorAll(".rev-period-btn").forEach(function (b) {
+          b.classList.remove("active");
+        });
+        var map = { 7: "pb-7", 30: "pb-30", 90: "pb-90", 0: "pb-0" };
+        if (map[days])
+          document.getElementById(map[days]).classList.add("active");
+        loadAllPaidOrders(buildRevenue);
+      }
+
+      function setRevCustom() {
+        revFromDate = document.getElementById("revFrom").value;
+        revToDate = document.getElementById("revTo").value;
+        revPeriodDays = -1;
+        document.querySelectorAll(".rev-period-btn").forEach(function (b) {
+          b.classList.remove("active");
+        });
+        if (revFromDate || revToDate) loadAllPaidOrders(buildRevenue);
+      }
+
+      function getRevOrders() {
+        var method = document.getElementById("revMethodFilter").value;
+        var store = document.getElementById("revStoreFilter").value;
+        var country = document.getElementById("revCountryFilter").value;
+        var now = new Date();
+        return allPaidOrders.filter(function (o) {
+          var ds = o.paidAt || o.createdAt || "";
+          var d = new Date(/[+\-]\d\d:?\d\d$|Z$/.test(ds) ? ds : ds + "Z");
+          var inRange = true;
+          if (revPeriodDays > 0) {
+            var cutoff = new Date(now.getTime() - revPeriodDays * 86400000);
+            inRange = d >= cutoff;
+          } else if (revPeriodDays === 0) {
+            inRange = true;
+          } else {
+            if (revFromDate) inRange = inRange && d >= new Date(revFromDate);
+            if (revToDate)
+              inRange = inRange && d <= new Date(revToDate + "T23:59:59");
+          }
+          var matchM = !method || o.paymentMethod === method;
+          var matchS = 
+            !store || (o.storeName || o.sourceDomain || "").toLowerCase().includes(store.toLowerCase());
+          var matchC = !country || (o.currency || "").toUpperCase() === country;
+          return inRange && matchM && matchS && matchC;
+        });
+      }
+
+      function buildRevenue() {
+        var orders = getRevOrders();
+        function isCountable(o) {
+          if (o.cancelled === true) return false;
+          var s = (o.financialStatus || o.paymentStatus || "").toLowerCase();
+          if (s === "refunded" || s === "voided" || s === "partially_refunded")
+            return false;
+          return s === "paid" || s === "";
+        }
+        var countableOrders = orders.filter(isCountable);
+        var total = countableOrders.reduce(function (s, o) {
+          return s + parseFloat(o.total || 0);
+        }, 0);
+        var avg = countableOrders.length ? total / countableOrders.length : 0;
+        var storeMap = {};
+        countableOrders.forEach(function (o) {
+          var s = (o.storeName || o.sourceDomain || "Unknown").replace(
+            "www.",
+            "",
+          );
+          if (!storeMap[s]) storeMap[s] = { rev: 0, count: 0 };
+          storeMap[s].rev += parseFloat(o.total || 0);
+          storeMap[s].count++;
+        });
+        var storeArr = Object.keys(storeMap).map(function (k) {
+          return { name: k, rev: storeMap[k].rev, count: storeMap[k].count };
+        });
+        storeArr.sort(function (a, b) {
+          return b.rev - a.rev;
+        });
+        var topStore = storeArr.length ? storeArr[0].name : "—";
+
+        document.getElementById("revTotal").textContent = fmt(total);
+        document.getElementById("revOrders").textContent =
+          countableOrders.length;
+        document.getElementById("revAvg").textContent = fmt(avg);
+        document.getElementById("revTopStore").textContent = topStore;
+
+        var sbHtml = "";
+        if (!storeArr.length) {
+          sbHtml = '<div class="loading-row">No data for this period</div>';
+        } else {
+          storeArr.forEach(function (s) {
+            sbHtml += '<div class="store-row">';
+            // NEW: Added the store avatar cell
+            sbHtml += '<div class="store-cell">' + getStoreAvatar(s.name) + '<span class="store-name">' + s.name + '</span></div>';
+            sbHtml += '<div class="store-rev">' + fmt(s.rev) + "</div>";
+            sbHtml += '<div class="store-orders">' + s.count + " orders</div>";
+            sbHtml +=
+              '<div class="store-avg">' + fmt(s.rev / s.count) + "</div>";
+            sbHtml += "</div>";
+          });
+        }
+        document.getElementById("storeBreakdown").innerHTML = sbHtml;
+
+        revOrdersPage = 1;
+        var sorted = orders.slice().sort(function (a, b) {
+          var ad = a.paidAt || a.createdAt || "";
+          var bd = b.paidAt || b.createdAt || "";
+          return ad < bd ? 1 : ad > bd ? -1 : 0;
+        });
+        renderRevOrders(sorted);
+
+        // chart
+        buildChart(orders);
+      }
+
+      function renderRevOrders(orders) {
+        var body = document.getElementById("revOrdersBody");
+        if (!orders.length) {
+          body.innerHTML =
+            '<div class="loading-row">No orders for this period</div>';
+          document.getElementById("revPagination").innerHTML = "";
+          return;
+        }
+        var totalPages = Math.max(1, Math.ceil(orders.length / PAGE_SIZE));
+        if (revOrdersPage > totalPages) revOrdersPage = totalPages;
+        if (revOrdersPage < 1) revOrdersPage = 1;
+        var start = (revOrdersPage - 1) * PAGE_SIZE;
+        var pageOrders = orders.slice(start, start + PAGE_SIZE);
+
+        var html = "";
+        pageOrders.forEach(function (o) {
+          var isShopify = o.paymentMethod === "shopify";
+          var orderId = o.orderNumber || o.id || "\u2014";
+          var sourceName = (o.sourceDomain || o.storeName || "\u2014").replace(
+            "www.",
+            "",
+          );
+          var methodLabel = isShopify
+            ? "Credit Card"
+            : labelMethod(o.paymentMethod);
+
+          var statusBadges = buildStatusBadges(o);
+
+          var clickAttr;
+          if (isShopify && o.sourceDomain) {
+            var shopifyUrl =
+              "https://" + o.sourceDomain + "/admin/orders/" + o.id;
+            clickAttr =
+              "onclick=\"window.open('" + shopifyUrl + "','_blank')\"";
+          } else {
+            clickAttr = "onclick=\"openDetail('" + o.id + "')\"";
+          }
+          html +=
+            '<div class="order-row" style="grid-template-columns:1.1fr 1.4fr 0.9fr 0.7fr 0.7fr 1.1fr" ' +
+            clickAttr +
+            ">";
+          html +=
+            '<div><div class="order-id">' +
+            orderId +
+            '</div><div class="order-time">' +
+            fmtRevTime(o.paidAt || o.createdAt) +
+            "</div></div>";
+          html +=
+            '<div class="order-email">' + (o.email || "\u2014") + "</div>";
+          // NEW: Added the store avatar cell
+          html += '<div class="store-cell">' + getStoreAvatar(sourceName) + '<span class="order-store-text">' + sourceName + '</span></div>';
+          html += '<div class="order-amount">' + fmt(o.total) + "</div>";
+          html +=
+            '<div class="order-method">' +
+            methodLabel +
+            (isShopify ? ' <span style="color:#aaa">\u2197</span>' : "") +
+            "</div>";
+          html += "<div>" + statusBadges + "</div>";
+          html += "</div>";
+        });
+        body.innerHTML = html;
+        renderPagination(
+          "revPagination",
+          orders.length,
+          revOrdersPage,
+          function (p) {
+            revOrdersPage = p;
+            renderRevOrders(orders);
+          },
+        );
+      }
+
+      function buildStatusBadges(o) {
+        if (o.cancelled === true) {
+          return '<span class="status-badge status-cancelled">Cancelled</span>';
+        }
+        var fin = (o.financialStatus || o.paymentStatus || "").toLowerCase();
+        var ful = (o.fulfillmentStatus || "").toLowerCase();
+
+        var finMap = {
+          paid: { cls: "status-paid", label: "Paid" },
+          partially_paid: { cls: "status-pending", label: "Part. Paid" },
+          pending: { cls: "status-pending", label: "Pending" },
+          refunded: { cls: "status-refunded", label: "Refunded" },
+          partially_refunded: { cls: "status-refunded", label: "Part. Refund" },
+          voided: { cls: "status-refunded", label: "Voided" },
+          authorized: { cls: "status-pending", label: "Auth" },
+          expired: { cls: "status-failed", label: "Expired" },
+          failed: { cls: "status-failed", label: "Failed" },
+        };
+        var fulMap = {
+          fulfilled: { cls: "status-fulfilled", label: "Fulfilled" },
+          partial: { cls: "status-partial", label: "Part. Ship" },
+          unfulfilled: { cls: "status-unfulfilled", label: "Unshipped" },
+          restocked: { cls: "status-unfulfilled", label: "Restocked" },
+        };
+
+        var out = '<div class="status-stack">';
+        if (fin && finMap[fin]) {
+          out +=
+            '<span class="status-badge ' +
+            finMap[fin].cls +
+            '">' +
+            finMap[fin].label +
+            "</span>";
+        } else if (fin) {
+          out += '<span class="status-badge status-pending">' + fin + "</span>";
+        }
+        if (o.paymentMethod === "shopify" && ful && fulMap[ful]) {
+          out +=
+            '<span class="status-badge ' +
+            fulMap[ful].cls +
+            '">' +
+            fulMap[ful].label +
+            "</span>";
+        }
+        out += "</div>";
+        return out;
+      }
+
+      function fmtRevTime(dateStr) {
+        if (!dateStr) return "\u2014";
+        var d = new Date(
+          /[+\-]\d\d:?\d\d$|Z$/.test(dateStr) ? dateStr : dateStr + "Z",
+        );
+        if (isNaN(d)) return "\u2014";
+        return d.toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+      }
+
+      function buildChart(orders) {
+        var days =
+          revPeriodDays > 0 ? revPeriodDays : revPeriodDays === 0 ? 90 : 30;
+        var labels = [];
+        var values = [];
+        var now = new Date();
+        for (var i = days - 1; i >= 0; i--) {
+          var d = new Date(now.getTime() - i * 86400000);
+          var key =
+            d.getFullYear() +
+            "-" +
+            pad(d.getMonth() + 1) +
+            "-" +
+            pad(d.getDate());
+          labels.push(
+            d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          );
+          var dayTotal = 0;
+          orders.forEach(function (o) {
+            var ods = o.paidAt || o.createdAt || "";
+            var od = new Date(
+              /[+\-]\d\d:?\d\d$|Z$/.test(ods) ? ods : ods + "Z",
+            );
+            var ok =
+              od.getFullYear() +
+              "-" +
+              pad(od.getMonth() + 1) +
+              "-" +
+              pad(od.getDate());
+            if (ok === key) dayTotal += parseFloat(o.total || 0);
+          });
+          values.push(+dayTotal.toFixed(2));
+        }
+
+        document.getElementById("chartTitle").textContent =
+          "Daily Revenue — last " + days + " days";
+
+        var canvas = document.getElementById("revChart");
+        var ctx = canvas.getContext("2d");
+        var wrap = canvas.parentElement;
+        canvas.width = wrap.offsetWidth;
+        canvas.height = 220;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        var maxVal = Math.max.apply(null, values) || 1;
+        var padL = 60,
+          padR = 20,
+          padT = 20,
+          padB = 40;
+        var chartW = canvas.width - padL - padR;
+        var chartH = canvas.height - padT - padB;
+        var barW = Math.max(4, (chartW / labels.length) * 0.6);
+        var gap = chartW / labels.length;
+
+        // Check if dark mode is active for chart colors
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        
+        // grid lines
+        ctx.strokeStyle = isDark ? "rgba(255,255,255,0.1)" : "#e2e0da";
+        ctx.lineWidth = 1;
+        for (var g = 0; g <= 4; g++) {
+          var y = padT + chartH - chartH * (g / 4);
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(padL + chartW, y);
+          ctx.stroke();
+          ctx.fillStyle = "#aaa";
+          ctx.font = "1.1rem DM Mono,monospace";
+          ctx.textAlign = "right";
+          ctx.fillText("$" + (maxVal * (g / 4)).toFixed(0), padL - 6, y + 4);
+        }
+
+        // bars
+        values.forEach(function (v, i) {
+          var x = padL + i * gap + gap / 2 - barW / 2;
+          var h = v ? chartH * (v / maxVal) : 2;
+          var y = padT + chartH - h;
+          ctx.fillStyle = v > 0 ? (isDark ? "#22c55e" : "#1a7e2e") : (isDark ? "#333" : "#e2e0da");
+          ctx.beginPath();
+          ctx.roundRect
+            ? ctx.roundRect(x, y, barW, h, 4)
+            : ctx.rect(x, y, barW, h);
+          ctx.fill();
+        });
+
+        // x labels — show every nth
+        var every = Math.ceil(labels.length / 10);
+        ctx.fillStyle = "#888";
+        ctx.font = "11px DM Sans,sans-serif";
+        ctx.textAlign = "center";
+        labels.forEach(function (l, i) {
+          if (i % every === 0) {
+            var x = padL + i * gap + gap / 2;
+            ctx.fillText(l, x, padT + chartH + 18);
+          }
+        });
+      }
+
+      function pad(n) {
+        return n < 10 ? "0" + n : n;
+      }
+
+      /* ─── ORDER DETAIL MODAL ──────────────────── */
+      function openDetail(orderId) {
+        var o = allOrders.find(function (x) {
+          return x.id === orderId;
+        });
+        if (!o) return;
+        pendingOrder = o;
+        var sourceName = (o.sourceDomain || o.storeName || "—").replace(
+          "www.",
+          "",
+        );
+        var isPending = o.paymentStatus === "pending";
+
+        var html = '<div class="modal-split">';
+        
+        // --- LEFT PANE (Email History) ---
+        html += '<div class="modal-left-pane">';
+        html += '<div class="modal-section-title">Email History</div>';
+        html += '<div id="emailHistoryList"></div>';
+        html += '</div>';
+
+        // --- RIGHT PANE (Main Content) ---
+        html += '<div class="modal-right-pane">';
+
+        html += '<div class="modal-section">';
+        html += '<div class="modal-section-title">Order Info</div>';
+        html += '<div class="detail-grid">';
+        html +=
+          '<div class="detail-row"><div class="detail-label">Order ID</div><div class="detail-value mono">' +
+          o.id +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Status</div><div class="detail-value"><span class="status-badge status-' +
+          o.paymentStatus +
+          '">' +
+          o.paymentStatus +
+          "</span></div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Payment Method</div><div class="detail-value">' +
+          (o.paymentMethod || "—") +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Source Store</div><div class="detail-value">' +
+          sourceName +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Created</div><div class="detail-value">' +
+          fmtTime(o.createdAt) +
+          "</div></div>";
+        // --- NEW: Highlighted Paid At field ---
+        var paidAtText = o.paidAt ? fmtTime(o.paidAt) : "—";
+        var paidAtStyle = o.paidAt ? "color:var(--green); font-weight:700;" : "";
+        
+        html +=
+          '<div class="detail-row"><div class="detail-label">Paid At</div><div class="detail-value" style="' + paidAtStyle + '">' +
+          paidAtText +
+          "</div></div>";
+        html += "</div></div>";
+
+        html += '<div class="modal-section">';
+        html += '<div class="modal-section-title">Customer</div>';
+        html += '<div class="detail-grid">';
+        html +=
+          '<div class="detail-row"><div class="detail-label">Name</div><div class="detail-value">' +
+          ((o.firstName || "") + " " + (o.lastName || "")).trim() +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Email</div><div class="detail-value">' +
+          (o.email || "—") +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">City</div><div class="detail-value">' +
+          (o.city || "—") +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Province</div><div class="detail-value">' +
+          (o.province || "—") +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Postal Code</div><div class="detail-value mono">' +
+          (o.postalCode || "—") +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Country</div><div class="detail-value">' +
+          (o.country || "—") +
+          "</div></div>";
+        html += "</div></div>";
+
+        html += '<div class="modal-section">';
+        html += '<div class="modal-section-title">Financials</div>';
+        html += '<div class="detail-grid">';
+        html +=
+          '<div class="detail-row"><div class="detail-label">Subtotal</div><div class="detail-value mono">' +
+          fmt(o.subtotal || 0) +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Discount</div><div class="detail-value mono green">-' +
+          fmt(o.discountPct ? (o.subtotal * o.discountPct) / 100 : 0) +
+          " (" +
+          (o.discountPct || 0) +
+          "%)</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Total</div><div class="detail-value mono" style="font-size:1.8rem;font-weight:700">' +
+          fmt(o.total) +
+          " " +
+          (o.currency || "CAD") +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Currency</div><div class="detail-value">' +
+          (o.currency || "CAD") +
+          "</div></div>";
+        html += "</div></div>";
+
+        html += '<div class="modal-section">';
+        html += '<div class="modal-section-title">Items Purchased</div>';
+        html += '<div id="modalItems">Loading items...</div>';
+        html += "</div>";
+
+        // Customer Communication — only for pending Interac/Zelle
+        if (
+          isPending &&
+          (o.paymentMethod === "interac" || o.paymentMethod === "zelle")
+        ) {
+          var emailHistoryHtml = "";
+          if (o.customerEmailsSent && o.customerEmailsSent > 0) {
+            emailHistoryHtml =
+              '<div class="email-history">Last contacted: <strong>' +
+              fmtTime(o.lastCustomerEmailAt) +
+              "</strong> &middot; Sent <strong>" +
+              o.customerEmailsSent +
+              "</strong> email" +
+              (o.customerEmailsSent !== 1 ? "s" : "") +
+              ' total &middot; <a href="#" onclick="event.preventDefault();loadEmailHistory(\'' +
+              o.id +
+              '\')" style="color:#2563eb;text-decoration:none;font-weight:600;background:#e0e7ff;padding:0.2rem 0.6rem;border-radius:4px;">\u2190 View emails</a></div>';
+          } else {
+            emailHistoryHtml =
+              '<div class="email-history">No emails sent to this customer yet.</div>';
+          }
+
+          // Show shortfall banner for already-underpaid orders
+          if (o.underpaidMethod) {
+            var sf =
+              parseFloat(o.total || 0) - parseFloat(o.receivedAmount || 0);
+            emailHistoryHtml +=
+              '<div style="background:#fff0f0;border-left:3px solid var(--red);padding:1rem 1.4rem;border-radius:4px;font-size:1.3rem;color:#8a1c1c;margin-bottom:1.2rem;line-height:1.5">';
+            emailHistoryHtml +=
+              "⚠ This order was marked <strong>underpaid</strong>. Customer sent $" +
+              parseFloat(o.receivedAmount || 0).toFixed(2) +
+              " of $" +
+              parseFloat(o.total || 0).toFixed(2) +
+              ". <strong>$" +
+              sf.toFixed(2) +
+              " " +
+              (o.currency || "CAD") +
+              "</strong> still outstanding.";
+            emailHistoryHtml += "</div>";
+          }
+
+          html += '<div class="modal-section">';
+          html +=
+            '<div class="modal-section-title">Customer Communication</div>';
+          html += emailHistoryHtml;
+          html += '<div style="display:flex;gap:1rem">';
+
+          if (o.underpaidMethod) {
+            html +=
+              '<button class="action-btn btn-underpaid" style="flex:1;height:4rem;font-size:1.35rem" onclick="closeModal();openUnderpaidResend(\'' +
+              o.id +
+              "')\">✉ Resend Balance Reminder</button>";
+          } else {
+            html +=
+              '<button class="action-btn btn-email" style="flex:1;height:4rem;font-size:1.35rem" onclick="closeModal();openPaymentReminder(\'' +
+              o.id +
+              "')\">✉ Send Payment Reminder</button>";
+          }
+          html += "</div>";
+          html += "</div>";
+        }
+
+        html += '</div>'; // close modal-right-pane
+        html += '</div>'; // close modal-split
+
+        if (isPending) {
+          html += '<div class="modal-btns">';
+          html +=
+            '<button class="modal-cancel" onclick="closeModal()">Close</button>';
+          html +=
+            "<button style=\"height:4.8rem;padding:0 2rem;background:#fff0f0;color:#c8102e;border:1.5px solid #c8102e;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer;\" onclick=\"cancelOrder('" +
+            o.id +
+            "');closeModal()\">Cancel Order</button>";
+          html +=
+            '<button class="modal-confirm" id="modalConfirmBtn" onclick="confirmMarkPaid()">\u2713 Mark as Paid</button>';
+          html += "</div>";
+        } else {
+          html +=
+            '<div class="modal-btns"><button class="modal-cancel" style="flex:1" onclick="closeModal()">Close</button></div>';
+        }
+
+        document.getElementById("modalTitle").textContent = "Order " + o.id;
+        document.getElementById("modalBody").innerHTML = html;
+
+        fetch("/admin/orders/" + o.id, { credentials: "include" })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            var items = data.items || [];
+            var el = document.getElementById("modalItems");
+            if (!el) return;
+            if (!items.length) {
+              el.innerHTML =
+                '<div style="color:#aaa;font-size:1.3rem;">No items</div>';
+              return;
+            }
+            var t =
+              '<table style="width:100%;border-collapse:collapse;font-size:1.3rem;">';
+            t +=
+              '<tr style="border-bottom:1px solid #e2e0da;color:#888;"><th style="text-align:left;padding:0.6rem 0;">Product</th><th style="text-align:center;padding:0.6rem;">Qty</th><th style="text-align:right;padding:0.6rem 0;">Price</th><th style="text-align:right;padding:0.6rem 0;">Total</th></tr>';
+            items.forEach(function (item) {
+              t += '<tr style="border-bottom:1px solid #f0ede8;">';
+              t +=
+                '<td style="padding:0.8rem 0;">' +
+                item.title +
+                (item.variant
+                  ? ' <span style="color:#aaa;">(' + item.variant + ")</span>"
+                  : "") +
+                "</td>";
+              t +=
+                '<td style="text-align:center;padding:0.8rem;">' +
+                item.qty +
+                "</td>";
+              t +=
+                "<td style=\"text-align:right;padding:0.8rem 0;font-family:'DM Mono',monospace;\">$" +
+                parseFloat(item.price).toFixed(2) +
+                "</td>";
+              t +=
+                "<td style=\"text-align:right;padding:0.8rem 0;font-family:'DM Mono',monospace;font-weight:600;\">$" +
+                parseFloat(item.total).toFixed(2) +
+                "</td>";
+              t += "</tr>";
+            });
+            t += "</table>";
+            el.innerHTML = t;
+          })
+          .catch(function () {
+            var el = document.getElementById("modalItems");
+            if (el)
+              el.innerHTML =
+                '<div style="color:#aaa;">Could not load items</div>';
+          });
+
+        document.getElementById("modalOverlay").classList.add("open");
+      }
+
+      function openConfirm(orderId) {
+        var o = allOrders.find(function (x) {
+          return x.id === orderId;
+        });
+        if (!o) return;
+        pendingOrder = o;
+        openDetail(orderId);
+      }
+
+      function closeModal() {
+        var modal = document.querySelector("#modalOverlay .modal");
+        if (modal) modal.classList.remove("wide-mode");
+        document.getElementById("modalOverlay").classList.remove("open");
+        pendingOrder = null;
+      }
+
+      function confirmMarkPaid() {
+        if (!pendingOrder) return;
+        var btn = document.getElementById("modalConfirmBtn");
+        if (btn) {
+          btn.textContent = "Processing...";
+          btn.disabled = true;
+        }
+        if (pendingOrder.underpaidMethod) {
+          var shortfall =
+            parseFloat(pendingOrder.total || 0) -
+            parseFloat(pendingOrder.receivedAmount || 0);
+          if (
+            !confirm(
+              "This order is currently underpaid by $" +
+                shortfall.toFixed(2) +
+                ". Did the customer send the remaining balance?\n\nClick OK to mark as fully paid.",
+            )
+          ) {
+            if (btn) {
+              btn.textContent = "✓ Mark as Paid";
+              btn.disabled = false;
+            }
+            return;
+          }
+        }
+
+        var notes = pendingOrder.underpaidMethod
+          ? "Balance received - marked paid by admin (originally underpaid by $" +
+            (
+              parseFloat(pendingOrder.total || 0) -
+              parseFloat(pendingOrder.receivedAmount || 0)
+            ).toFixed(2) +
+            ")"
+          : "Marked paid by admin";
+
+        fetch("/admin/orders/" + pendingOrder.id + "/mark-paid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: notes }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (data.success) {
+              showToast(
+                "success",
+                "\u2713 Order " + pendingOrder.id + " marked as paid",
+              );
+              closeModal();
+              loadOrders();
+            } else showToast("error", "Failed to mark paid");
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+          })
+          .finally(function () {
+            if (btn) {
+              btn.textContent = "\u2713 Mark as Paid";
+              btn.disabled = false;
+            }
+          });
+      }
+
+      function cancelOrder(orderId) {
+        if (!confirm("Cancel order " + orderId + "? This cannot be undone."))
+          return;
+        fetch("/admin/orders/" + orderId + "/cancel", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: "Cancelled by admin" }),
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            if (data.success) {
+              showToast("success", "Order " + orderId + " cancelled");
+              loadOrders();
+            } else showToast("error", data.detail || "Failed to cancel order");
+          })
+          .catch(function () {
+            showToast("error", "Network error");
+          });
+      }
+
+      function recoverOrder(orderId) {
+        if (
+          !confirm(
+            "Recover order " +
+              orderId +
+              "? This resets it to pending so the customer can pay again.",
+          )
+        )
+          return;
+        fetch("/admin/orders/" + orderId + "/recover", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: "Recovered by admin" }),
+        })
+          .then(function (r) {
+            return r.json().then(function (data) {
+              return { ok: r.ok, data: data };
+            });
+          })
+          .then(function (res) {
+            if (res.ok && res.data.success) {
+              showToast(
+                "success",
+                "\u21bb Order " + orderId + " recovered — back to pending",
+              );
+              loadOrders();
+              updateStats();
+            } else {
+              showToast("error", res.data.detail || "Failed to recover order");
+            }
+          })
+          .catch(function () {
+            showToast("error", "Network error");
+          });
+      }
+
+      function showToast(type, msg) {
+        var el = document.getElementById("toast");
+        el.textContent = msg;
+        el.className = "toast " + type + " show";
+        setTimeout(function () {
+          el.className = "toast " + type;
+        }, 4000);
+      }
+
+      /* ─── EMAIL HISTORY VIEWER ─────────────────── */
+
+      function loadEmailHistory(orderId) {
+        var container = document.getElementById("emailHistoryList");
+        var modal = document.querySelector("#modalOverlay .modal");
+        if (!container || !modal) return;
+
+        var isOpen = modal.classList.contains("wide-mode");
+        if (isOpen) {
+          modal.classList.remove("wide-mode"); // Shrink back to normal
+          return;
+        }
+        
+        modal.classList.add("wide-mode"); // Expand to two-pane view
+        
+        // --- NEW: Smoothly scroll the modal back to the top ---
+        modal.scrollTo({ top: 0, behavior: "smooth" });
+
+        container.innerHTML =
+          '<div style="padding:1.2rem;color:#888;font-size:1.3rem">Loading email history...</div>';
+
+        fetch("/admin/orders/" + orderId + "/emails", {
+          credentials: "include",
+        })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (logs) {
+            if (!logs.length) {
+              container.innerHTML =
+                '<div style="padding:1.2rem;color:#888;font-size:1.3rem">No emails on record yet.</div>';
+              return;
+            }
+            var h = "";
+            logs.forEach(function (log) {
+              var typeLabel =
+                log.type === "reminder"
+                  ? "Payment Reminder"
+                  : "Underpayment Notice";
+              var typeColor = log.type === "reminder" ? "#2563eb" : "#b98900";
+              var statusBadge = log.success
+                ? '<span style="color:#1a7e2e;font-size:1.2rem">✓ Delivered</span>'
+                : '<span style="color:#c8102e;font-size:1.2rem">✗ Failed</span>';
+
+              h +=
+                '<div style="border:1px solid var(--border);border-radius:6px;margin-bottom:0.8rem;overflow:hidden">';
+              h +=
+                '<div style="padding:1rem 1.4rem;background:#fafaf8;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="toggleEmailDetail(' +
+                log.id +
+                ')">';
+              h += "<div>";
+              h +=
+                '<div style="font-size:1.3rem;font-weight:600;color:#111">' +
+                escapeHtml(log.subject) +
+                "</div>";
+              h +=
+                '<div style="font-size:1.15rem;color:#888;margin-top:0.3rem">';
+              h +=
+                '<span style="color:' +
+                typeColor +
+                ';font-weight:600">' +
+                typeLabel +
+                "</span> &middot; ";
+              h += "to " + escapeHtml(log.sentTo) + " &middot; ";
+              h += fmtTime(log.sentAt) + " &middot; ";
+              h += statusBadge;
+              h += "</div></div>";
+              h +=
+                '<div style="font-size:1.6rem;color:#aaa" id="caret-' +
+                log.id +
+                '">▾</div>';
+              h += "</div>";
+              h +=
+                '<div id="emailDetail-' +
+                log.id +
+                '" style="display:none;padding:1.2rem 1.4rem;background:#fff;border-top:1px solid var(--border)">';
+              h +=
+                '<div style="margin-bottom:0.8rem;font-size:1.2rem;color:#666">Preview as customer received it:</div>';
+              h +=
+                '<div style="border:1px solid #eee;border-radius:4px;padding:0.6rem;background:#fafafa;max-height:40rem;overflow-y:auto">';
+              h += log.bodyHtml || "<em>No HTML body recorded</em>";
+              h += "</div>";
+              if (log.bodyText) {
+                h +=
+                  '<details style="margin-top:1rem"><summary style="cursor:pointer;font-size:1.2rem;color:#666">Show plain-text version</summary>';
+                h +=
+                  "<pre style=\"white-space:pre-wrap;font-family:'DM Mono',monospace;font-size:1.2rem;background:#f7f7f7;padding:1rem;border-radius:4px;margin-top:0.6rem\">" +
+                  escapeHtml(log.bodyText) +
+                  "</pre>";
+                h += "</details>";
+              }
+              h += "</div>";
+              h += "</div>";
+            });
+            container.innerHTML = h;
+          })
+          .catch(function () {
+            container.innerHTML =
+              '<div style="padding:1.2rem;color:#c8102e;font-size:1.3rem">Failed to load email history.</div>';
+          });
+      }
+
+      function toggleEmailDetail(logId) {
+        var detail = document.getElementById("emailDetail-" + logId);
+        var caret = document.getElementById("caret-" + logId);
+        if (!detail) return;
+        var isOpen = detail.style.display === "block";
+        detail.style.display = isOpen ? "none" : "block";
+        if (caret) caret.textContent = isOpen ? "▾" : "▴";
+      }
+
+      // ─── Email composer state — shared across the modal flow ─────────────
+      var emailContext = {
+        orderId: null,
+        order: null,
+        template: null,
+        receivedAmount: null,
+      };
+
+      // ─── Single entry point: ask for amount paid, then send reminder ─────
+      function openPaymentReminder(orderId) {
+        var o = allOrders.find(function (x) {
+          return x.id === orderId;
+        });
+        if (!o) {
+          showToast("error", "Order not found in current view");
+          return;
+        }
+        emailContext = {
+          orderId: orderId,
+          order: o,
+          template: null,
+          receivedAmount: null, // will be set in step 1
+        };
+        renderAmountStep();
+        document.getElementById("emailModalOverlay").classList.add("open");
+      }
+
+      // For already-underpaid orders: skip the amount step (we already have it)
+      function openUnderpaidResend(orderId) {
+        var o = allOrders.find(function (x) {
+          return x.id === orderId;
+        });
+        if (!o) {
+          showToast("error", "Order not found in current view");
+          return;
+        }
+        if (!o.underpaidMethod || o.receivedAmount == null) {
+          showToast("error", "This order isn't flagged as underpaid");
+          return;
+        }
+        emailContext = {
+          orderId: orderId,
+          order: o,
+          template: null,
+          receivedAmount: parseFloat(o.receivedAmount),
+        };
+        document.getElementById("emailModalOverlay").classList.add("open");
+        fetchAndRenderTemplate();
+      }
+
+      // ─── Step 1: ask "how much have they paid?" ──────────────────────────
+      function renderAmountStep() {
+        var o = emailContext.order;
+        var total = parseFloat(o.total || 0);
+        var currency = o.currency || "CAD";
+
+        var html = "";
+        html += '<div class="email-info">';
+        html +=
+          "Before sending the reminder, confirm how much of this order the customer has already paid.";
+        html += "</div>";
+
+        html += '<div class="modal-section">';
+        html += '<div class="modal-section-title">Order Summary</div>';
+        html += '<div class="detail-grid">';
+        html +=
+          '<div class="detail-row"><div class="detail-label">Order ID</div><div class="detail-value mono">' +
+          o.id +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Customer</div><div class="detail-value">' +
+          (o.email || "—") +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Order Total</div><div class="detail-value mono" style="font-size:1.7rem;font-weight:700">' +
+          fmt(total) +
+          " " +
+          currency +
+          "</div></div>";
+        html +=
+          '<div class="detail-row"><div class="detail-label">Method</div><div class="detail-value">' +
+          labelMethod(o.paymentMethod) +
+          "</div></div>";
+        html += "</div></div>";
+
+        html += '<div class="email-field">';
+        html += "<label>Amount Paid So Far (" + currency + ")</label>";
+        html += '<div style="display:flex;gap:0.8rem;margin-bottom:0.6rem">';
+        html +=
+          '<button type="button" class="modal-cancel" style="flex:1" onclick="setReceivedAmount(0)">Nothing Yet ($0)</button>';
+        html +=
+          '<button type="button" class="modal-cancel" style="flex:1" onclick="document.getElementById(\'receivedAmountInput\').focus()">Partial Payment</button>';
+        html += "</div>";
+        html +=
+          '<input type="number" class="email-input email-amount-input" id="receivedAmountInput" placeholder="0.00" step="0.01" min="0" max="' +
+          (total - 0.01) +
+          '" oninput="onAmountInput()"/>';
+        html +=
+          '<div class="email-hint" id="amountHint">Enter $0 if no payment received yet, or the partial amount they sent.</div>';
+        html += "</div>";
+
+        html += '<div class="modal-btns">';
+        html +=
+          '<button class="modal-cancel" onclick="closeEmailModal()">Cancel</button>';
+        html +=
+          '<button class="btn-send" id="amountNextBtn" onclick="proceedFromAmountStep()" disabled>Continue \u2192</button>';
+        html += "</div>";
+
+        document.getElementById("emailModalTitle").textContent =
+          "Send Payment Reminder";
+        document.getElementById("emailModalBody").innerHTML = html;
+
+        setTimeout(function () {
+          var inp = document.getElementById("receivedAmountInput");
+          if (inp) {
+            inp.addEventListener("keypress", function (e) {
+              if (e.key === "Enter") proceedFromAmountStep();
+            });
+          }
+        }, 50);
+      }
+
+      // Quick set for "Nothing Yet ($0)" button
+      function setReceivedAmount(val) {
+        var inp = document.getElementById("receivedAmountInput");
+        inp.value = val;
+        onAmountInput();
+        proceedFromAmountStep();
+      }
+
+      function toggleFilters() {
+        var adv = document.getElementById("advancedFilters");
+        var btn = document.querySelector(".filter-toggle");
+        if (adv) adv.classList.toggle("expanded");
+        if (btn) btn.classList.toggle("expanded");
+      }
+
+      function updateActiveFilterCount() {
+        var count = 0;
+        ["methodFilter", "countryFilter", "storeFilter", "dateFromFilter", "dateToFilter"].forEach(
+          function (id) {
+            var el = document.getElementById(id);
+            if (el && el.value) count++;
+          },
+        );
+        var badge = document.getElementById("activeFilterCount");
+        if (!badge) return;
+        if (count > 0) {
+          badge.textContent = count;
+          badge.style.display = "inline-block";
+        } else {
+          badge.style.display = "none";
+        }
+      }
+
+      // Validate input as user types — enables Continue button
+      function onAmountInput() {
+        var inp = document.getElementById("receivedAmountInput");
+        var btn = document.getElementById("amountNextBtn");
+        var hint = document.getElementById("amountHint");
+        var total = parseFloat(emailContext.order.total || 0);
+        var val = parseFloat(inp.value);
+
+        if (inp.value === "" || isNaN(val) || val < 0) {
+          btn.disabled = true;
+          hint.textContent =
+            "Enter $0 if no payment received yet, or the partial amount they sent.";
+          hint.style.color = "#888";
+        } else if (val >= total) {
+          btn.disabled = true;
+          hint.textContent =
+            "Amount must be less than the order total ($" +
+            total.toFixed(2) +
+            "). If they paid in full, use Mark as Paid instead.";
+          hint.style.color = "#c8102e";
+        } else {
+          btn.disabled = false;
+          var remaining = total - val;
+          if (val === 0) {
+            hint.textContent =
+              "$0 paid → reminder will ask for full $" + total.toFixed(2) + ".";
+          } else {
+            hint.textContent =
+              "$" +
+              val.toFixed(2) +
+              " paid → reminder will ask for remaining $" +
+              remaining.toFixed(2) +
+              ". Order will be flagged as underpaid.";
+          }
+          hint.style.color = "#1a7e2e";
+        }
+      }
+
+      function proceedFromAmountStep() {
+        var inp = document.getElementById("receivedAmountInput");
+        var val = parseFloat(inp.value);
+        var total = parseFloat(emailContext.order.total || 0);
+
+        if (isNaN(val) || val < 0) {
+          showToast("error", "Please enter a valid amount (0 or greater)");
+          inp.focus();
+          return;
+        }
+        if (val >= total) {
+          showToast(
+            "error",
+            "Amount must be less than the order total ($" +
+              total.toFixed(2) +
+              ")",
+          );
+          inp.focus();
+          return;
+        }
+
+        emailContext.receivedAmount = val;
+        fetchAndRenderTemplate();
+      }
+
+      // ─── Step 2: fetch template + render composer ─────────────────────────
+      function fetchAndRenderTemplate() {
+        var url =
+          "/admin/orders/" +
+          emailContext.orderId +
+          "/email-preview?received_amount=" +
+          (emailContext.receivedAmount || 0);
+
+        document.getElementById("emailModalBody").innerHTML =
+          '<div class="loading-row" style="padding:5rem">Loading email template...</div>';
+
+        fetch(url, { credentials: "include" })
+          .then(function (r) {
+            if (!r.ok) throw new Error("Preview failed: " + r.status);
+            return r.json();
+          })
+          .then(function (tpl) {
+            emailContext.template = tpl;
+            renderEmailComposer();
+          })
+          .catch(function () {
+            showToast("error", "Could not load email template");
+            document.getElementById("emailModalBody").innerHTML =
+              '<div class="empty"><p>Failed to load template. Please close and try again.</p><div class="modal-btns" style="justify-content:center;margin-top:2rem"><button class="modal-cancel" onclick="closeEmailModal()">Close</button></div></div>';
+          });
+      }
+
+      function renderEmailComposer() {
+        var o = emailContext.order;
+        var tpl = emailContext.template;
+        var total = parseFloat(o.total || 0);
+        var received = parseFloat(emailContext.receivedAmount || 0);
+        var currency = o.currency || "CAD";
+        var remaining = total - received;
+        var isPartial = received > 0;
+        var isResend = !!o.underpaidMethod;
+
+        var html = "";
+
+        var bannerColor = isPartial ? "var(--red)" : "#2563eb";
+        var bannerBg = isPartial ? "#fff0f0" : "#f0f7ff";
+        var bannerText = isPartial ? "#8a1c1c" : "#1e40af";
+        html +=
+          '<div style="background:' +
+          bannerBg +
+          ";border-left:3px solid " +
+          bannerColor +
+          ";padding:1rem 1.4rem;border-radius:4px;font-size:1.3rem;color:" +
+          bannerText +
+          ';margin-bottom:1.6rem;line-height:1.5">';
+        html +=
+          "Customer will be asked to send <strong>" +
+          fmt(remaining) +
+          " " +
+          currency +
+          "</strong>. ";
+        html +=
+          '<span style="color:#666">Total: ' +
+          fmt(total) +
+          " &middot; Paid: " +
+          fmt(received);
+        if (!isResend) {
+          html +=
+            ' &middot; <strong style="color:' +
+            bannerColor +
+            '">Order will be flagged as underpaid</strong>';
+        }
+        html += "</span>";
+        html += "</div>";
+
+        html += '<div class="tab-switcher">';
+        html +=
+          '<button class="tab-switch-btn active" id="modeDefaultBtn" onclick="switchEmailMode(\'default\')">Use Template</button>';
+        html +=
+          '<button class="tab-switch-btn" id="modeCustomBtn" onclick="switchEmailMode(\'custom\')">Edit Custom</button>';
+        html += "</div>";
+
+        html += '<div class="email-field">';
+        html += "<label>Subject</label>";
+        html +=
+          '<input type="text" class="email-input" id="emailSubject" value="' +
+          escapeHtml(tpl.subject) +
+          '" maxlength="120"/>';
+        html +=
+          '<div class="email-hint">Avoid ALL CAPS or excessive punctuation \u2014 they trip spam filters.</div>';
+        html += "</div>";
+
+        html += '<div class="email-field">';
+        html += "<label>Message Body</label>";
+        html +=
+          '<textarea class="email-textarea" id="emailBody">' +
+          escapeHtml(tpl.text || "") +
+          "</textarea>";
+        html +=
+          '<div class="email-hint">Plain text. The system will format this as a clean email automatically.</div>';
+        html += "</div>";
+
+        html += '<div class="modal-btns">';
+        if (!isResend) {
+          html +=
+            '<button class="modal-cancel" onclick="renderAmountStep()" style="margin-right:auto">\u2190 Back</button>';
+        }
+        html +=
+          '<button class="modal-cancel" onclick="closeEmailModal()">Cancel</button>';
+        var btnLabel = isResend
+          ? "✉ Resend Balance Reminder"
+          : "✉ Mark Underpaid & Send";
+        html +=
+          '<button class="btn-send" id="emailSendBtn" onclick="submitReminder()">' +
+          btnLabel +
+          "</button>";
+        html += "</div>";
+
+        var titleText = isResend
+          ? "Resend Balance Reminder"
+          : isPartial
+            ? "Send Underpayment Notice"
+            : "Send Payment Reminder";
+        document.getElementById("emailModalTitle").textContent = titleText;
+        document.getElementById("emailModalBody").innerHTML = html;
+      }
+
+      function switchEmailMode(mode) {
+        document
+          .getElementById("modeDefaultBtn")
+          .classList.toggle("active", mode === "default");
+        document
+          .getElementById("modeCustomBtn")
+          .classList.toggle("active", mode === "custom");
+        if (mode === "default") {
+          if (
+            !confirm(
+              "Reset subject and body to the default template? Your edits will be lost.",
+            )
+          ) {
+            document
+              .getElementById("modeDefaultBtn")
+              .classList.remove("active");
+            document.getElementById("modeCustomBtn").classList.add("active");
+            return;
+          }
+          document.getElementById("emailSubject").value =
+            emailContext.template.subject;
+          document.getElementById("emailBody").value =
+            emailContext.template.text || "";
+        }
+      }
+
+      function escapeHtml(str) {
+        return (str || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function getEmailOverrides() {
+        var subject = document.getElementById("emailSubject").value.trim();
+        var body = document.getElementById("emailBody").value;
+        var payload = {};
+        if (subject && subject !== emailContext.template.subject) {
+          payload.custom_subject = subject;
+        }
+        if (body && body !== emailContext.template.text) {
+          payload.custom_text = body;
+        }
+        return payload;
+      }
+
+      // ─── Submit: hits the unified send-reminder endpoint ─────────────────
+      function submitReminder() {
+        var btn = document.getElementById("emailSendBtn");
+        var originalLabel = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Sending...";
+
+        var payload = getEmailOverrides();
+        payload.received_amount = emailContext.receivedAmount || 0;
+
+        fetch("/admin/orders/" + emailContext.orderId + "/send-reminder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        })
+          .then(function (r) {
+            return r.json().then(function (d) {
+              return { ok: r.ok, data: d };
+            });
+          })
+          .then(function (res) {
+            if (res.ok && res.data.success) {
+              var msg;
+              if (emailContext.order.underpaidMethod) {
+                msg = "✓ Balance reminder resent.";
+              } else {
+                msg =
+                  "✓ Marked underpaid and email sent (asked for $" +
+                  res.data.remaining.toFixed(2) +
+                  ").";
+              }
+              showToast("success", msg);
+              closeEmailModal();
+              loadOrders();
+            } else {
+              showToast("error", res.data.detail || "Failed to send reminder");
+              btn.disabled = false;
+              btn.textContent = originalLabel;
+            }
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+          });
+      }
+
+      function closeEmailModal() {
+        document.getElementById("emailModalOverlay").classList.remove("open");
+        emailContext = {
+          orderId: null,
+          order: null,
+          template: null,
+          receivedAmount: null,
+        };
+      }
+
+      document
+        .getElementById("emailModalOverlay")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closeEmailModal();
+        });
+
+      document
+        .getElementById("modalOverlay")
+        .addEventListener("click", function (e) {
+          if (e.target === this) closeModal();
+        });
+      setInterval(function () {
+        var modalOpen =
+          document.getElementById("modalOverlay").classList.contains("open") ||
+          document
+            .getElementById("emailModalOverlay")
+            .classList.contains("open");
+        if (modalOpen) return;
+
+        if (currentTab === "revenue") return;
+
+        if (Date.now() - lastUserActivity < 5000) return;
+
+        loadOrders({ preservePage: true });
+      }, 30000);
+
+      // --- Theme Toggle Logic ---
+      function toggleTheme() {
+        var root = document.documentElement;
+        var isDark = root.getAttribute('data-theme') === 'dark';
+        var newTheme = isDark ? 'light' : 'dark';
+        
+        root.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeUI(newTheme);
+        
+        // Redraw chart if on revenue tab
+        if (currentTab === 'revenue') buildRevenue(); 
+      }
+
+      function updateThemeUI(theme) {
+        var text = document.getElementById('themeText');
+        var icon = document.getElementById('themeIcon');
+        if (!text || !icon) return;
+
+        if (theme === 'dark') {
+          text.textContent = 'Light Mode';
+          icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        } else {
+          text.textContent = 'Dark Mode';
+          icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+        }
+      }
+
+      // Ensure the button UI matches the saved state when the page finishes loading
+      document.addEventListener('DOMContentLoaded', function() {
+        updateThemeUI(localStorage.getItem('theme') || 'light');
+      });
+
+
+      // --- NEW: Fetch all 600+ stores from your backend once on page load ---
+      fetch("/admin/brands", { credentials: "include" })
+        .then(function (r) {
+          return r.ok ? r.json() : [];
+        })
+        .then(function (brands) {
+          var dlHtml = "";
+          brands.forEach(function (b) {
+            // Uses your DB's domain name, cleans out 'www.'
+            var name = (b.domain || b.storeName || "").replace("www.", "");
+            if (name) {
+              dlHtml += '<option value="' + name + '">';
+            }
+          });
+          
+          var sl = document.getElementById("storeList");
+          var rsl = document.getElementById("revStoreList");
+          if (sl) sl.innerHTML = dlHtml;
+          if (rsl) rsl.innerHTML = dlHtml;
+        })
+        .catch(function (e) {
+          console.error("Failed to load master store list from API", e);
+        });
+
+      loadOrders();
+    </script>
+  </body>
+</html>

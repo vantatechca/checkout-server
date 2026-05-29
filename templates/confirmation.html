@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Order Confirmed — {{ store_name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:62.5%}
+body{font-family:"DM Sans",sans-serif;font-size:1.5rem;line-height:1.5;color:#111;background:#f8f7f4;min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+:root{--accent:{{ accent_color }};--dark:#0f1117;--green:#1a7e2e;--green-bg:#edfbee;--border:#e2e0da;--radius:8px;--radius-lg:12px}
+.header{background:var(--dark);padding:1.2rem 4rem;display:flex;align-items:center;justify-content:space-between}
+.header-brand{display:flex;align-items:center;gap:1.2rem;text-decoration:none}
+.header-logo{width:3.2rem;height:3.2rem;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.header-logo svg{width:1.8rem;height:1.8rem;fill:#fff}
+.header-name{font-size:1.7rem;font-weight:600;color:#fff;letter-spacing:-0.02em}
+.main{flex:1;display:flex;justify-content:center;padding:2rem 2rem}
+.card{width:100%;max-width:96rem}
+.cb-cols{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+.cb-col{display:flex;flex-direction:column;min-width:0}
+@media(max-width:900px){.cb-cols{grid-template-columns:1fr;gap:1.4rem}}
+.banner{border-radius:12px 12px 0 0;padding:1.8rem 3rem;text-align:center;color:#fff}
+.banner.placed{background:var(--dark)}
+.banner.paid{background:var(--green)}
+.banner.crypto{background:#1a3a5c}
+.banner-icon{width:6rem;height:6rem;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 1.6rem}
+.banner-icon svg{width:2.8rem;height:2.8rem;fill:none;stroke:#fff;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.banner h1{font-size:2.4rem;font-weight:600;letter-spacing:-0.02em;margin-bottom:0.6rem}
+.banner p{font-size:1.5rem;opacity:0.85}
+.card-body{background:#fff;border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:2rem 2.4rem}
+.ref-box{background:#0f1117;border-radius:12px;padding:1.6rem;margin-bottom:1.4rem;text-align:center}
+.ref-label{font-size:1.2rem;font-weight:500;color:#8b8a85;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:1rem}
+.ref-code{font-family:"DM Mono",monospace;font-size:2.4rem;font-weight:600;color:#fff;letter-spacing:0.08em;display:flex;align-items:center;justify-content:center;gap:1.2rem;flex-wrap:wrap;margin-bottom:1.2rem}
+.copy-code-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-family:"DM Sans",sans-serif;font-size:1.2rem;padding:0.4rem 1rem;cursor:pointer;transition:background 0.15s;white-space:nowrap}
+.copy-code-btn:hover{background:rgba(255,255,255,0.2)}
+.ref-note{font-size:1.25rem;color:#8b8a85;line-height:1.6}
+.ref-note strong{color:#e8e6e0}
+.interac-steps{background:#fffbf0;border:1.5px solid #f0e4b8;border-radius:8px;padding:1.4rem 1.6rem;margin-bottom:0}
+.interac-steps-title{font-size:1.3rem;font-weight:600;color:#3d3210;margin-bottom:0.8rem}
+.step-list{list-style:none;padding:0}
+.step-list li{display:flex;gap:1rem;padding:0.5rem 0;border-bottom:1px solid #f0e4b8;font-size:1.25rem;color:#5c4b1f;line-height:1.45}
+.step-list li:last-child{border-bottom:none}
+.step-num-badge{width:2.2rem;height:2.2rem;background:#f0e4b8;color:#3d3210;border-radius:50%;font-size:1.1rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0.1rem}
+.interac-email-pill{display:inline-flex;align-items:center;gap:0.6rem;background:#fff;border:1.5px solid #e5d8b8;border-radius:6px;padding:0.3rem 1rem;font-family:"DM Mono",monospace;font-size:1.3rem;font-weight:500;color:#3d3210}
+.copy-small{background:none;border:1px solid #ccc;border-radius:4px;padding:0.2rem 0.7rem;font-size:1.1rem;cursor:pointer;color:#666;font-family:"DM Sans",sans-serif;transition:background 0.1s}
+.copy-small:hover{background:#f0e4b8}
+.amount-highlight{font-family:"DM Mono",monospace;font-weight:600;color:var(--accent)}
+.crypto-box{background:#f0f5ff;border:1.5px solid #c5d7f5;border-radius:8px;padding:2rem;margin-bottom:2.4rem;font-size:1.35rem;color:#1a3a5c;line-height:1.6}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:0.9rem 0;border-bottom:1px solid var(--border);font-size:1.4rem}
+.summary-row:last-child{border-bottom:none}
+.summary-label{color:#888}
+.summary-value{font-weight:500;color:#111}
+.summary-row.total{margin-top:0.4rem;padding-top:1.4rem;border-top:2px solid var(--border);border-bottom:none}
+.summary-row.total .summary-label{font-size:1.5rem;font-weight:600;color:#111}
+.summary-row.total .summary-value{font-family:"DM Mono",monospace;font-size:2rem;font-weight:600;color:#111}
+.items-box{background:#fafaf9;border:1px solid var(--border);border-radius:var(--radius);padding:1.2rem 1.4rem;margin-bottom:1.2rem}
+.items-title{font-size:1.3rem;font-weight:600;color:#111;margin-bottom:0.8rem;display:flex;align-items:center;gap:0.6rem}
+.item-row{display:flex;justify-content:space-between;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--border);font-size:1.25rem;color:#444}
+.item-row:last-child{border-bottom:none}
+.item-title{font-weight:500;color:#111}
+.item-meta{color:#888;font-size:1.2rem}
+.item-price{font-family:"DM Mono",monospace;font-weight:600;color:#111;white-space:nowrap;margin-left:1rem}
+.status-pill{display:inline-flex;align-items:center;gap:0.5rem;padding:0.4rem 1.2rem;border-radius:3rem;font-size:1.2rem;font-weight:600;margin-bottom:1.2rem;align-self:flex-start}
+.status-pending{background:#fff6ed;color:#b98900}
+.status-paid{background:var(--green-bg);color:var(--green)}
+.status-expired{background:#fff0f0;color:#d72c0d}
+.polling{text-align:center;font-size:1.25rem;color:#999;margin-top:1.6rem}
+.polling.confirmed{font-size:2rem;font-weight:600;color:var(--green);background:var(--green-bg);border:1.5px solid var(--green);border-radius:8px;padding:1.6rem;margin-top:1.6rem}
+/* When paid: collapse to single centered column */
+.card:has(.banner.paid) .cb-cols{grid-template-columns:1fr;max-width:48rem;margin:0 auto}
+.card:has(.banner.paid) .cb-col:first-child{display:none}
+.card:has(.banner.paid) .status-pill{margin-bottom:1.6rem}
+.polling.confirmed .check-big{font-size:2.4rem;margin-right:0.6rem;vertical-align:-2px}
+.dot{animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.notif{position:fixed;top:2rem;right:2rem;z-index:9999;padding:1.2rem 1.8rem;border-radius:8px;font-size:1.4rem;font-weight:500;background:var(--dark);color:#fff;transform:translateX(120%);transition:transform 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.notif.show{transform:translateX(0)}
+.footer{text-align:center;padding:1rem;font-size:1.2rem;color:#aaa}
+@media(max-width:600px){.header{padding:1rem 1.6rem}.card-body{padding:1.6rem 1.4rem}.ref-code{font-size:1.8rem}.banner{padding:1.8rem 1.6rem}.main{padding:1rem 1rem}}
+</style>
+</head>
+<body>
+<div class="notif" id="notif"></div>
+<header class="header">
+  <a class="header-brand" href="/">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ store_name }}" style="max-height:3.6rem"/>
+    {% else %}
+    <div class="header-logo"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.1-1.3 3.9-3.1 4.7L16 19H8l2.1-7.3A5 5 0 0112 2z"/></svg></div>
+    <span class="header-name">{{ store_name }}</span>
+    {% endif %}
+  </a>
+</header>
+<main class="main">
+  <div class="card">
+    {% if payment_method == "interac" %}
+    <div class="banner placed">
+      <div class="banner-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h1>Order Placed!</h1>
+      <p>Send your Interac e-Transfer to confirm your order.</p>
+    </div>
+    <div class="card-body">
+    <div class="cb-cols">
+      <div class="cb-col">
+      <div class="ref-box">
+        <div class="ref-label">Your reference code</div>
+        <div class="ref-code">
+          <span id="refCodeDisplay">{{ order_id }}</span>
+          <button class="copy-code-btn" onclick="copyRef()">Copy</button>
+        </div>
+        <div class="ref-note"><strong>You must include this code</strong> in the comment/message/note field of your Interac e-Transfer so we can match your payment.</div>
+      </div>
+      <span class="status-pill status-{{ payment_status }}" id="statusPill">
+        {% if payment_status == "paid" %}&#10003; Payment received{% else %}&#8987; Awaiting payment{% endif %}
+      </span>
+      <div class="interac-steps">
+        <div class="interac-steps-title">How to send your Interac e-Transfer</div>
+        <ol class="step-list">
+          <li><span class="step-num-badge">1</span><span>Log into your bank app or online banking (any Canadian bank)</span></li>
+          <li><span class="step-num-badge">2</span><span>Send an Interac e-Transfer to:<div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap"><span class="interac-email-pill">{{ interac_email }}</span><button class="copy-small" onclick="copyEmail()">Copy</button></div></span></li>
+          <li><span class="step-num-badge">3</span><span>Set the amount to exactly: <span class="amount-highlight">${{ "%.2f"|format(total) }} {{ currency }}</span></span></li>
+          <li><span class="step-num-badge">4</span><span>In the <strong>message / note / comment field</strong>, enter your reference code exactly:<div style="margin-top:0.6rem"><span class="interac-email-pill" style="font-size:1.4rem;letter-spacing:0.05em">{{ order_id }}</span></div></span></li>
+          <li><span class="step-num-badge">5</span><span>When asked for a security question, enter:<br><strong>Question: checkout</strong><br><strong>Answer: canada</strong></span></li>
+        </ol>
+      </div>
+      </div>
+      <div class="cb-col">
+
+      {% if items %}
+      <div class="items-box">
+        <div class="items-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          Your Order
+        </div>
+        {% for item in items %}
+        <div class="item-row">
+          <div>
+            <span class="item-title">{{ item.title }}</span>
+            {% if item.variant %}<span class="item-meta"> · {{ item.variant }}</span>{% endif %}
+            <span class="item-meta"> × {{ item.qty }}</span>
+          </div>
+          <span class="item-price">${{ "%.2f"|format(item.total|float) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div>
+        <div class="summary-row"><span class="summary-label">Order reference</span><span class="summary-value" style="font-family:'DM Mono',monospace">{{ order_id }}</span></div>
+        <div class="summary-row"><span class="summary-label">Send to</span><span class="summary-value">{{ interac_email }}</span></div>
+        {% if voucher_discount > 0 %}
+        <div class="summary-row"><span class="summary-label">Original subtotal</span><span class="summary-value">${{ "%.2f"|format(original_subtotal) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Promo Code: {{ discount_code }}</span><span class="summary-value" style="color:var(--green)">-${{ "%.2f"|format(voucher_discount) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Subtotal after promo code</span><span class="summary-value">${{ "%.2f"|format(subtotal) }}</span></div>
+        {% else %}
+        <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${{ "%.2f"|format(subtotal) }}</span></div>
+        {% endif %}
+        {% if payment_method_discount > 0 %}
+        <div class="summary-row"><span class="summary-label">Interac e-Transfer discount ({{ "%g"|format(interac_discount_pct) }}%)</span><span class="summary-value" style="color:var(--green)">-${{ "%.2f"|format(payment_method_discount) }}</span></div>
+        {% endif %}
+        <div class="summary-row total"><span class="summary-label">Amount to send</span><span class="summary-value">${{ "%.2f"|format(total) }} {{ currency }}</span></div>
+      </div>
+      <div class="polling" id="pollingNotice"><span class="dot">&#9679;</span> Waiting for your transfer...</div>
+      </div>
+    </div>
+    </div>
+    {% elif payment_method == "zelle" %}
+    <div class="banner placed">
+      <div class="banner-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h1>Order Placed!</h1>
+      <p>Send your Zelle transfer to confirm your order.</p>
+    </div>
+    <div class="card-body">
+    <div class="cb-cols">
+      <div class="cb-col">
+      <div class="ref-box">
+        <div class="ref-label">Your reference code</div>
+        <div class="ref-code">
+          <span id="refCodeDisplay">{{ order_id }}</span>
+          <button class="copy-code-btn" onclick="copyRef()">Copy</button>
+        </div>
+        <div class="ref-note"><strong>You must include this code</strong> in the memo/note field of your Zelle transfer so we can match your payment.</div>
+      </div>
+      <span class="status-pill status-{{ payment_status }}" id="statusPill">
+        {% if payment_status == "paid" %}&#10003; Payment received{% else %}&#8987; Awaiting payment{% endif %}
+      </span>
+      <div class="interac-steps">
+        <div class="interac-steps-title">How to send your Zelle transfer</div>
+        <ol class="step-list">
+          <li><span class="step-num-badge">1</span><span>Open your bank app (Chase, Bank of America, Wells Fargo, etc.) and find Zelle</span></li>
+          <li><span class="step-num-badge">2</span><span>Send Zelle to:<div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap"><span class="interac-email-pill">{{ zelle_email }}</span><button class="copy-small" onclick="copyEmail()">Copy</button></div></span></li>
+          <li><span class="step-num-badge">3</span><span>Set the amount to exactly: <span class="amount-highlight">${{ "%.2f"|format(total) }} {{ currency }}</span></span></li>
+          <li><span class="step-num-badge">4</span><span>In the <strong>memo / note field</strong>, enter your reference code exactly:<div style="margin-top:0.6rem"><span class="interac-email-pill" style="font-size:1.4rem;letter-spacing:0.05em">{{ order_id }}</span></div></span></li>
+        </ol>
+      </div>
+      </div>
+      <div class="cb-col">
+
+      {% if items %}
+      <div class="items-box">
+        <div class="items-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          Your Order
+        </div>
+        {% for item in items %}
+        <div class="item-row">
+          <div>
+            <span class="item-title">{{ item.title }}</span>
+            {% if item.variant %}<span class="item-meta"> · {{ item.variant }}</span>{% endif %}
+            <span class="item-meta"> × {{ item.qty }}</span>
+          </div>
+          <span class="item-price">${{ "%.2f"|format(item.total|float) }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div>
+        <div class="summary-row"><span class="summary-label">Order reference</span><span class="summary-value" style="font-family:'DM Mono',monospace">{{ order_id }}</span></div>
+        <div class="summary-row"><span class="summary-label">Send to</span><span class="summary-value">{{ zelle_email }}</span></div>
+        {% if voucher_discount > 0 %}
+        <div class="summary-row"><span class="summary-label">Original subtotal</span><span class="summary-value">${{ "%.2f"|format(original_subtotal) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Promo Code: {{ discount_code }}</span><span class="summary-value" style="color:var(--green)">-${{ "%.2f"|format(voucher_discount) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Subtotal after promo code</span><span class="summary-value">${{ "%.2f"|format(subtotal) }}</span></div>
+        {% else %}
+        <div class="summary-row"><span class="summary-label">Subtotal</span><span class="summary-value">${{ "%.2f"|format(subtotal) }}</span></div>
+        {% endif %}
+        {% if payment_method_discount > 0 %}
+        <div class="summary-row"><span class="summary-label">Zelle discount ({{ "%g"|format(zelle_discount_pct) }}%)</span><span class="summary-value" style="color:var(--green)">-${{ "%.2f"|format(payment_method_discount) }}</span></div>
+        {% endif %}
+        <div class="summary-row total"><span class="summary-label">Amount to send</span><span class="summary-value">${{ "%.2f"|format(total) }} {{ currency }}</span></div>
+      </div>
+      <div class="polling" id="pollingNotice"><span class="dot">&#9679;</span> Waiting for your transfer...</div>
+      </div>
+    </div>
+    </div>
+    {% elif payment_method == "crypto" %}
+    <div class="banner crypto">
+      <div class="banner-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+      <h1>Complete Your Payment</h1>
+      <p>Scan the QR code or click Pay in wallet to send Bitcoin.</p>
+    </div>
+    <div class="card-body">
+      <div class="ref-box">
+        <div class="ref-label">Your reference code</div>
+        <div class="ref-code">
+          <span id="refCodeDisplay">{{ order_id }}</span>
+          <button class="copy-code-btn" onclick="copyRef()">Copy</button>
+        </div>
+        <div class="ref-note"><strong>Keep this page open</strong> until your payment is confirmed. Your invoice expires in 60 minutes.</div>
+      </div>
+      <span class="status-pill status-{{ payment_status }}" id="statusPill">
+        {% if payment_status == "paid" %}&#10003; Payment confirmed{% else %}&#8987; Awaiting payment{% endif %}
+      </span>
+      <div class="interac-steps">
+        <div class="interac-steps-title">How to pay with Bitcoin</div>
+        <ol class="step-list">
+          <li><span class="step-num-badge">1</span><span>Open your Bitcoin wallet app</span></li>
+          <li><span class="step-num-badge">2</span><span>Scan the QR code below or copy the Bitcoin address</span></li>
+          <li><span class="step-num-badge">3</span><span>Send exactly <span class="amount-highlight">${{ "%.2f"|format(total) }} {{ currency }}</span> worth of BTC</span></li>
+          <li><span class="step-num-badge">4</span><span>Wait for confirmation — this page will update automatically</span></li>
+        </ol>
+      </div>
+      {% if btcpay_url %}
+      <div style="border-radius:12px;overflow:hidden;border:1.5px solid #c5d7f5;margin-bottom:2.4rem;">
+        <iframe
+          src="{{ btcpay_url }}"
+          style="width:100%;height:580px;border:none;display:block;"
+          scrolling="no"
+          allowtransparency="true">
+        </iframe>
+      </div>
+      {% endif %}
+      <div>
+        <div class="summary-row"><span class="summary-label">Order reference</span><span class="summary-value" style="font-family:'DM Mono',monospace">{{ order_id }}</span></div>
+        <div class="summary-row total"><span class="summary-label">Total</span><span class="summary-value">${{ "%.2f"|format(total) }} {{ currency }}</span></div>
+      </div>
+      <div class="polling" id="pollingNotice" style="margin-top:1.6rem"><span class="dot">&#9679;</span> Waiting for payment...</div>
+    </div>
+    {% elif payment_method == "card" and is_pymtz %}
+    <!-- ── pymtz: verify on return, poll until confirmed ── -->
+    <div class="banner {% if payment_status == 'paid' %}paid{% else %}placed{% endif %}" id="pymtzBanner">
+      <div class="banner-icon">
+        {% if payment_status == "paid" %}
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        {% else %}
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        {% endif %}
+      </div>
+      <h1 id="pymtzBannerTitle">{% if payment_status == "paid" %}Payment Confirmed!{% else %}Verifying Payment…{% endif %}</h1>
+      <p id="pymtzBannerSub">{% if payment_status == "paid" %}Thank you — your order is being processed.{% else %}Please wait while we confirm your payment.{% endif %}</p>
+    </div>
+    <div class="card-body">
+      <span class="status-pill status-{{ payment_status }}" id="statusPill">
+        {% if payment_status == "paid" %}&#10003; Payment confirmed{% else %}&#9203; Verifying…{% endif %}
+      </span>
+      <div>
+        <div class="summary-row"><span class="summary-label">Order reference</span><span class="summary-value" style="font-family:'DM Mono',monospace">{{ order_id }}</span></div>
+        <div class="summary-row"><span class="summary-label">Payment method</span><span class="summary-value">Credit card</span></div>
+        {% if voucher_discount > 0 %}
+        <div class="summary-row"><span class="summary-label">Original subtotal</span><span class="summary-value">${{ "%.2f"|format(original_subtotal) }}</span></div>
+        <div class="summary-row"><span class="summary-label">Promo Code: {{ discount_code }}</span><span class="summary-value" style="color:var(--green)">-${{ "%.2f"|format(voucher_discount) }}</span></div>
+        {% endif %}
+        <div class="summary-row total"><span class="summary-label">Total charged</span><span class="summary-value">${{ "%.2f"|format(total) }} {{ currency }}</span></div>
+      </div>
+      <div class="polling" id="pollingNotice">
+        {% if payment_status == "paid" %}
+        <span class="check-big">&#10003;</span>Payment confirmed! Your order is being processed.
+        {% else %}
+        <span class="dot">&#9679;</span> Confirming your payment…
+        {% endif %}
+      </div>
+    </div>
+    {% else %}
+    <!-- ── other card (Whop / Helcim / Stripe) — synchronous confirmation ── -->
+    <div class="banner paid">
+      <div class="banner-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h1>Payment Confirmed!</h1>
+      <p>Thank you — your order is being processed.</p>
+    </div>
+    <div class="card-body">
+      <span class="status-pill status-paid">&#10003; Paid</span>
+      <div>
+        <div class="summary-row"><span class="summary-label">Order reference</span><span class="summary-value" style="font-family:'DM Mono',monospace">{{ order_id }}</span></div>
+        <div class="summary-row"><span class="summary-label">Payment method</span><span class="summary-value">Credit card</span></div>
+        <div class="summary-row total"><span class="summary-label">Total charged</span><span class="summary-value">${{ "%.2f"|format(total) }} {{ currency }}</span></div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</main>
+<footer class="footer">{{ store_name }} — Questions? Contact our support team.</footer>
+<script>
+var ORDER_ID      = "{{ order_id }}";
+var PAY_METHOD    = "{{ payment_method }}";
+var INTERAC_EMAIL = "{{ interac_email }}";
+var ZELLE_EMAIL   = "{{ zelle_email }}";
+var IS_PYMTZ      = {{ "true" if is_pymtz else "false" }};
+
+function showNotif(msg) {
+  var el = document.getElementById("notif");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(function() { el.classList.remove("show"); }, 3000);
+}
+function copyRef() {
+  navigator.clipboard.writeText(ORDER_ID).then(function() {
+    showNotif("Reference code copied!");
+    var btn = document.querySelector(".copy-code-btn");
+    if (btn) { btn.textContent = "Copied!"; setTimeout(function(){ btn.textContent = "Copy"; }, 2000); }
+  });
+}
+function copyEmail() {
+  var email = PAY_METHOD === "zelle" ? ZELLE_EMAIL : INTERAC_EMAIL;
+  navigator.clipboard.writeText(email).then(function() { showNotif("Email copied!"); });
+}
+
+// ── pymtz: verify-on-return + poll until confirmed ────────────────────────────
+if (IS_PYMTZ) {
+  var pymtzPolls = 0;
+
+  function updatePymtzUI(status) {
+    var pill   = document.getElementById("statusPill");
+    var notice = document.getElementById("pollingNotice");
+    var banner = document.getElementById("pymtzBanner");
+    var title  = document.getElementById("pymtzBannerTitle");
+    var sub    = document.getElementById("pymtzBannerSub");
+
+    var s = String(status || "").toLowerCase();
+    var isPaid    = s === "paid" || s.endsWith(".paid");
+    var isFailed  = s === "failed" || s === "expired" || s.endsWith(".failed") || s.endsWith(".expired");
+
+    if (isPaid) {
+      if (banner) { banner.classList.remove("placed"); banner.classList.add("paid"); }
+      if (title)  title.textContent  = "Payment Confirmed!";
+      if (sub)    sub.textContent    = "Thank you — your order is being processed.";
+      if (pill)   { pill.textContent = "\u2713 Payment confirmed"; pill.className = "status-pill status-paid"; }
+      if (notice) { notice.className = "polling confirmed"; notice.innerHTML = '<span class="check-big">\u2713</span>Payment confirmed! Your order is being processed.'; }
+      return true;
+    }
+    if (isFailed) {
+      if (title)  title.textContent  = "Payment Unsuccessful";
+      if (sub)    sub.textContent    = "Your payment could not be processed. Please try again.";
+      if (pill)   { pill.textContent = "\u2715 Payment failed"; pill.className = "status-pill status-expired"; }
+      if (notice) notice.textContent = "Your payment was not completed. Please return to checkout and try again.";
+      return true;
+    }
+    return false;
+  }
+
+  function pollPymtz() {
+    if (pymtzPolls++ > 12) {  // stop after ~2 min (12 × 10s)
+      var notice = document.getElementById("pollingNotice");
+      if (notice) notice.textContent = "Payment verification timed out. If you completed payment, your order will be confirmed shortly.";
+      return;
+    }
+    fetch("/api/checkout/pymtz-verify/" + ORDER_ID)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!updatePymtzUI(data.paymentStatus)) {
+          setTimeout(pollPymtz, 10000);  // retry every 10s
+        }
+      })
+      .catch(function() { setTimeout(pollPymtz, 10000); });
+  }
+
+  // Call verify immediately on page load — this is what triggers side effects
+  fetch("/api/checkout/pymtz-verify/" + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!updatePymtzUI(data.paymentStatus)) {
+        // Still pending — start polling (pymtz may take a moment)
+        setTimeout(pollPymtz, 10000);
+      }
+    })
+    .catch(function() { setTimeout(pollPymtz, 10000); });
+}
+
+// ── Interac / Zelle / crypto: existing status polling ────────────────────────
+if (PAY_METHOD === "interac" || PAY_METHOD === "zelle" || PAY_METHOD === "crypto") {
+  var polls = 0;
+
+  function updateUI(status) {
+    var pill   = document.getElementById("statusPill");
+    var notice = document.getElementById("pollingNotice");
+    var steps  = document.querySelector(".interac-steps");
+    var refBox = document.querySelector(".ref-box");
+
+    // Normalize — backend may return enum like "PaymentStatus.paid" or just "paid"
+    var statusStr = String(status || "").toLowerCase();
+    var isPaid    = statusStr === "paid" || statusStr.endsWith(".paid");
+    var isExpired = statusStr === "expired" || statusStr === "failed" || statusStr.endsWith(".expired") || statusStr.endsWith(".failed");
+
+    if (isPaid) {
+
+      var banner = document.querySelector(".banner");
+      if (banner) {
+        banner.classList.remove("placed", "crypto");
+        banner.classList.add("paid");
+        var h1 = banner.querySelector("h1");
+        var p  = banner.querySelector("p");
+        if (h1) h1.textContent = "Payment Received!";
+        if (p)  p.textContent  = "Thank you — your order is being processed.";
+      }
+
+      if (pill) {
+        pill.textContent = "\u2713 Payment received";
+        pill.className = "status-pill status-paid";
+      }
+      if (notice) {
+        notice.className = "polling confirmed";
+        notice.innerHTML = '<span class="check-big">\u2713</span>Payment received! Your order is confirmed.';
+      }
+      // Hide the now-irrelevant "how to send" instructions and reference code box
+      if (steps)  steps.style.display  = "none";
+      if (refBox) refBox.style.display = "none";
+      return true;
+    }
+    if (isExpired) {
+      if (notice) {
+        notice.textContent = "This order has expired. Please place a new order.";
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function poll() {
+    if (polls++ > 60) {
+      var notice = document.getElementById("pollingNotice");
+      if (notice) notice.textContent = "Payment not detected yet. It may take a few minutes.";
+      return;
+    }
+    fetch("/api/checkout/status/" + ORDER_ID)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!updateUI(data.paymentStatus)) {
+          setTimeout(poll, 20000);
+        }
+      })
+      .catch(function() { setTimeout(poll, 20000); });
+  }
+
+  // Check immediately on page load
+  fetch("/api/checkout/status/" + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!updateUI(data.paymentStatus)) {
+        setTimeout(poll, 20000);
+      }
+    })
+    .catch(function() { setTimeout(poll, 20000); });
+}
+</script>
+</body>
+</html>

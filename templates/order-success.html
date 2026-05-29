@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Order Confirmed — {{ store_name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:62.5%}
+body{
+  font-family:'DM Sans',sans-serif;
+  font-size:1.5rem;
+  line-height:1.5;
+  color:#111;
+  background:#f8f7f4;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+:root{
+  --accent:{{ accent_color }};
+  --accent-dark:{{ accent_hover }};
+  --green:#1a7e2e;
+  --green-bg:#edfbee;
+  --border:#e2e0da;
+  --muted:#888;
+  --radius:10px;
+}
+
+.header{
+  background:#0f1117;
+  padding:1.8rem 4rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.header-brand{display:flex;align-items:center;gap:1.2rem;text-decoration:none}
+.header-logo{
+  width:3.2rem;height:3.2rem;
+  background:var(--accent);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+}
+.header-logo svg{width:1.8rem;height:1.8rem;fill:#fff}
+.header-name{font-size:1.7rem;font-weight:600;color:#fff;letter-spacing:-0.02em}
+
+.container{
+  max-width:680px;
+  margin:5rem auto 8rem;
+  padding:0 2rem;
+}
+
+/* Loading state */
+.loading-state{
+  background:#fff;
+  border-radius:var(--radius);
+  padding:8rem 4rem;
+  text-align:center;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+}
+.spinner{
+  width:5rem;height:5rem;
+  border:4px solid var(--border);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+  margin:0 auto 2rem;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{
+  font-size:1.5rem;
+  color:var(--muted);
+}
+
+/* Success state */
+.success-card{
+  background:#fff;
+  border-radius:var(--radius);
+  padding:4rem;
+  box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  display:none;
+}
+.success-card.show{display:block}
+
+.success-icon{
+  width:7rem;height:7rem;
+  background:var(--green-bg);
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 2rem;
+}
+.success-icon svg{
+  width:3.6rem;height:3.6rem;
+  stroke:var(--green);
+  fill:none;
+  stroke-width:3;
+}
+.success-title{
+  font-size:2.6rem;
+  font-weight:600;
+  text-align:center;
+  letter-spacing:-0.02em;
+  color:#111;
+  margin-bottom:0.6rem;
+}
+.success-subtitle{
+  font-size:1.5rem;
+  text-align:center;
+  color:var(--muted);
+  margin-bottom:3rem;
+}
+.success-subtitle strong{
+  color:var(--accent);
+  font-weight:600;
+}
+
+.section-divider{
+  height:1px;
+  background:var(--border);
+  margin:2.5rem 0;
+}
+
+.section-label{
+  font-size:1.2rem;
+  font-weight:500;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:0.08em;
+  margin-bottom:1.4rem;
+}
+
+/* Items */
+.items{
+  background:#faf8f4;
+  border-radius:var(--radius);
+  padding:2rem;
+}
+.item{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:1.6rem;
+  padding:1.4rem 0;
+  border-bottom:1px solid var(--border);
+}
+.item:first-child{padding-top:0}
+.item:last-child{border-bottom:none;padding-bottom:0}
+.item-name{
+  font-size:1.45rem;
+  font-weight:500;
+  color:#111;
+}
+.item-variant{
+  font-size:1.25rem;
+  color:var(--muted);
+  margin-top:0.2rem;
+}
+.item-price{
+  font-family:'DM Mono',monospace;
+  font-size:1.45rem;
+  font-weight:500;
+  color:#111;
+  white-space:nowrap;
+  text-align:right;
+}
+.item-qty{
+  font-size:1.2rem;
+  color:var(--muted);
+  margin-top:0.2rem;
+}
+
+/* Totals */
+.totals{
+  margin-top:1.6rem;
+}
+.total-row{
+  display:flex;
+  justify-content:space-between;
+  padding:0.8rem 0;
+  font-size:1.45rem;
+  color:#444;
+}
+.total-row.grand{
+  border-top:1px solid var(--border);
+  padding-top:1.4rem;
+  margin-top:0.4rem;
+}
+.total-row.grand .total-label{
+  font-size:1.6rem;
+  font-weight:600;
+  color:#111;
+}
+.total-row.grand .total-value{
+  font-size:1.9rem;
+  font-weight:600;
+  color:#111;
+  font-family:'DM Mono',monospace;
+}
+
+/* Customer info */
+.info-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:2rem;
+}
+.info-block-label{
+  font-size:1.2rem;
+  font-weight:500;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  margin-bottom:0.6rem;
+}
+.info-block-value{
+  font-size:1.4rem;
+  color:#111;
+  line-height:1.5;
+}
+
+/* CTAs */
+.cta-row{
+  display:flex;
+  gap:1.2rem;
+  margin-top:3rem;
+  flex-wrap:wrap;
+}
+.btn{
+  flex:1;
+  min-width:200px;
+  height:5rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0.8rem;
+  border-radius:8px;
+  text-decoration:none;
+  font-size:1.45rem;
+  font-weight:600;
+  font-family:'DM Sans',sans-serif;
+  letter-spacing:-0.01em;
+  cursor:pointer;
+  transition:transform 0.1s,background 0.15s;
+  border:none;
+}
+.btn-primary{
+  background:var(--accent);
+  color:#fff;
+}
+.btn-primary:hover{background:var(--accent-dark)}
+.btn-secondary{
+  background:#fff;
+  color:#111;
+  border:1.5px solid var(--border);
+}
+.btn-secondary:hover{background:#faf8f4}
+.btn:active{transform:scale(0.99)}
+
+/* Email reminder */
+.email-note{
+  margin-top:2rem;
+  padding:1.6rem;
+  background:#f0f5ff;
+  border:1px solid #c5d7f5;
+  border-radius:var(--radius);
+  font-size:1.35rem;
+  color:#1a3a5c;
+  text-align:center;
+}
+.email-note strong{color:#0d2240;font-weight:600}
+
+/* Bank statement notice */
+.statement-note{
+  margin-top:1.6rem;
+  padding:1.6rem;
+  background:#fef9e7;
+  border:1px solid #f5e6a8;
+  border-radius:var(--radius);
+  display:flex;
+  gap:1.2rem;
+  align-items:flex-start;
+}
+.statement-note-icon{font-size:2rem;line-height:1;flex-shrink:0}
+.statement-note-content{flex:1}
+.statement-note-title{
+  font-size:1.4rem;
+  font-weight:600;
+  color:#7a5c00;
+  margin-bottom:0.4rem;
+}
+.statement-note-text{
+  font-size:1.3rem;
+  color:#5c4400;
+  line-height:1.5;
+}
+.statement-note-text strong{
+  background:#fff;
+  padding:0.1rem 0.5rem;
+  border-radius:4px;
+  font-family:'DM Mono',monospace;
+  font-weight:600;
+  color:#7a5c00;
+}
+
+/* Support notice */
+.support-note{
+  margin-top:1.2rem;
+  padding:1.6rem;
+  background:#f0fbf3;
+  border:1px solid #b8e6c1;
+  border-radius:var(--radius);
+  display:flex;
+  gap:1.2rem;
+  align-items:flex-start;
+}
+.support-note-icon{font-size:2rem;line-height:1;flex-shrink:0}
+.support-note-content{flex:1}
+.support-note-title{
+  font-size:1.4rem;
+  font-weight:600;
+  color:#1a5c2e;
+  margin-bottom:0.4rem;
+}
+.support-note-text{
+  font-size:1.3rem;
+  color:#1a4a26;
+  line-height:1.5;
+}
+.support-note-text strong:not(#orderIdInSupport){
+  color:#0d3a1a;
+  font-weight:600;
+}
+#orderIdInSupport{
+  background:#fff;
+  padding:0.1rem 0.5rem;
+  border-radius:4px;
+  font-family:'DM Mono',monospace;
+  font-weight:600;
+  color:#1a5c2e;
+}
+
+/* Error state */
+.error-card{
+  background:#fff;
+  border-radius:var(--radius);
+  padding:4rem;
+  text-align:center;
+  display:none;
+}
+.error-card.show{display:block}
+.error-icon{font-size:4rem;margin-bottom:1.6rem}
+
+@media(max-width:640px){
+  .header{padding:1.6rem 2rem}
+  .container{margin:3rem auto 4rem;padding:0 1.6rem}
+  .success-card{padding:3rem 2rem}
+  .info-grid{grid-template-columns:1fr;gap:1.6rem}
+  .cta-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <a class="header-brand" href="#">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ store_name }}" style="max-height:3.6rem;"/>
+    {% else %}
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.1-1.3 3.9-3.1 4.7L16 19H8l2.1-7.3A5 5 0 0112 2z"/></svg>
+    </div>
+    <span class="header-name">{{ store_name }}</span>
+    {% endif %}
+  </a>
+</header>
+
+<div class="container">
+
+  <!-- LOADING -->
+  <div class="loading-state" id="loadingState">
+    <div class="spinner"></div>
+    <div class="loading-text">Confirming your order...</div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="success-card" id="successCard">
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+
+    <h1 class="success-title">Order confirmed!</h1>
+    <p class="success-subtitle">
+      Order <strong id="orderName">—</strong>
+    </p>
+
+    <!-- ITEMS -->
+    <div class="section-label">Order summary</div>
+    <div class="items" id="itemsList"></div>
+
+    <!-- TOTALS -->
+    <div class="totals" id="totalsSection"></div>
+
+    <div class="section-divider"></div>
+
+    <!-- CUSTOMER INFO -->
+    <div class="info-grid">
+      <div class="info-block">
+        <div class="info-block-label">Contact</div>
+        <div class="info-block-value" id="customerInfo"></div>
+      </div>
+      <div class="info-block">
+        <div class="info-block-label">Shipping address</div>
+        <div class="info-block-value" id="shippingInfo"></div>
+      </div>
+    </div>
+
+    <!-- EMAIL REMINDER -->
+    <div class="email-note" id="emailNote">
+      📧 A confirmation email has been sent to <strong id="emailReminder">your inbox</strong>.
+    </div>
+
+    <!-- BANK STATEMENT NOTICE -->
+    <div class="statement-note">
+      <div class="statement-note-icon">💳</div>
+      <div class="statement-note-content">
+        <div class="statement-note-title">On your bank statement</div>
+        <div class="statement-note-text">
+          You'll see a charge with your order ID <strong id="orderIdInStatement">—</strong> next to your bank's reference.
+          This helps us identify your order quickly if you contact us.
+        </div>
+      </div>
+    </div>
+
+    <!-- SUPPORT NOTICE -->
+    <div class="support-note">
+      <div class="support-note-icon">💬</div>
+      <div class="support-note-content">
+        <div class="support-note-title">Need help?</div>
+        <div class="support-note-text">
+          For <strong>refunds</strong>, <strong>cancellations</strong>, <strong>disputes</strong>, or any questions —
+          message us through the chat support on our store. Please mention your order ID
+          <strong id="orderIdInSupport">—</strong> for faster assistance.
+        </div>
+      </div>
+    </div>
+
+    <!-- CTAs -->
+    <div class="cta-row">
+      <a class="btn btn-primary" id="continueShoppingBtn" href="#">
+        Continue shopping
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-card" id="errorCard">
+    <div class="error-icon">⚠️</div>
+    <h2 style="font-size:2rem;margin-bottom:1rem;color:#111">Couldn't load order details</h2>
+    <p style="color:var(--muted);margin-bottom:2rem;font-size:1.4rem" id="errorMessage">
+      Your payment was successful but we couldn't display order details right now.
+    </p>
+    <p style="color:var(--muted);font-size:1.35rem">
+      Don't worry — you'll receive a confirmation email shortly with all details.
+    </p>
+  </div>
+
+</div>
+
+<script>
+  var SESSION_ID = "{{ session_id }}";
+  var STRIPE_WORKER_URL = "{{ stripe_worker_url }}";
+  var HELCIM_WORKER_URL = "{{ helcim_worker_url }}";
+
+  // ── Detect processor from URL params ──
+  // Whop   redirects to: /order/success?processor=whop&account=whop_1&worker_url=...&receipt_id=pay_xxx
+  // Helcim redirects to: /order/success?processor=helcim&session_id={checkoutToken}
+  // Stripe redirects to: /order/success?session_id=pi_xxx
+  var urlParams = new URLSearchParams(window.location.search);
+  var PROCESSOR = (urlParams.get('processor') || 'stripe').toLowerCase();
+  var WHOP_WORKER_URL = urlParams.get('worker_url') || '';
+  var WHOP_ACCOUNT = urlParams.get('account') || '';
+  // For Whop, prefer the receipt_id from URL over the template SESSION_ID
+  if (PROCESSOR === 'whop') {
+    var receiptFromUrl = urlParams.get('receipt_id') || urlParams.get('payment_id') || '';
+    if (receiptFromUrl) SESSION_ID = receiptFromUrl;
+  }
+  // For Helcim, session_id is the checkoutToken — pull from URL since template
+  // SESSION_ID may be empty when this route is hit directly
+  if (PROCESSOR === 'helcim') {
+    var sidFromUrl = urlParams.get('session_id') || '';
+    if (sidFromUrl) SESSION_ID = sidFromUrl;
+  }
+
+  function showError(msg) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('successCard').classList.remove('show');
+    document.getElementById('errorCard').classList.add('show');
+    if (msg) document.getElementById('errorMessage').textContent = msg;
+  }
+
+  function fmtMoney(amount, currency) {
+    return (currency || 'CAD') + ' $' + parseFloat(amount).toFixed(2);
+  }
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function cleanSourceDomain(source) {
+    if (!source) return '';
+    return source.split('|')[0].split(' ')[0].trim()
+      .replace(/^https?:\/\//, '').replace(/\/$/, '');
+  }
+
+  function renderOrder(data) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('successCard').classList.add('show');
+
+    // Use the portal order ID — falls back to generated name if not present
+    var fallbackPrefix = '#S-';
+    if (PROCESSOR === 'whop')   fallbackPrefix = '#W-';
+    if (PROCESSOR === 'helcim') fallbackPrefix = '#H-';
+    var fallbackId = data.session_id || data.payment_id || data.receipt_id || SESSION_ID || '';
+    var orderName = data.order_id || (fallbackPrefix + String(fallbackId).slice(-6).toUpperCase());
+    document.getElementById('orderName').textContent = orderName;
+
+    // Items
+    var items = (data.cart && data.cart.lines) || [];
+    var itemsHtml = '';
+    var subtotal = 0;
+    items.forEach(function(item) {
+      var unitPrice = parseFloat(item.price || 0);
+      var qty = parseInt(item.quantity || 1);
+      var lineTotal = unitPrice * qty;
+      subtotal += lineTotal;
+      var name = escapeHtml(item.title || 'Item');
+      var variant = item.variant || item.variant_title || '';
+      itemsHtml += '<div class="item">';
+      itemsHtml += '<div>';
+      itemsHtml += '<div class="item-name">' + name + '</div>';
+      if (variant) itemsHtml += '<div class="item-variant">' + escapeHtml(variant) + '</div>';
+      itemsHtml += '<div class="item-qty">Qty: ' + qty + '</div>';
+      itemsHtml += '</div>';
+      itemsHtml += '<div class="item-price">' + fmtMoney(lineTotal, data.currency) + '</div>';
+      itemsHtml += '</div>';
+    });
+    document.getElementById('itemsList').innerHTML = itemsHtml || '<div style="text-align:center;color:#888;font-size:1.3rem;padding:2rem 0">No items recorded</div>';
+
+    // Totals
+    var totalsHtml = '';
+    var total = parseFloat(data.amount_total || subtotal);
+    var discount = subtotal - total;
+
+    if (subtotal > 0 && discount > 0) {
+      totalsHtml += '<div class="total-row"><span class="total-label">Subtotal</span><span class="total-value" style="font-family:DM Mono,monospace">' + fmtMoney(subtotal, data.currency) + '</span></div>';
+      var discLabel = data.discount_code ? data.discount_code : 'Discount';
+      totalsHtml += '<div class="total-row" style="color:#1a7e2e"><span class="total-label">' + escapeHtml(discLabel) + '</span><span class="total-value" style="font-family:DM Mono,monospace;color:#1a7e2e">−' + fmtMoney(discount, data.currency) + '</span></div>';
+    }
+    totalsHtml += '<div class="total-row"><span class="total-label">Shipping</span><span class="total-value" style="color:#1a7e2e">Free</span></div>';
+    totalsHtml += '<div class="total-row grand"><span class="total-label">Total paid</span><span class="total-value">' + fmtMoney(total, data.currency) + '</span></div>';
+    document.getElementById('totalsSection').innerHTML = totalsHtml;
+
+    // Customer info
+    var customerName = (data.customer_name || '').trim() || 'Customer';
+    var customerEmail = data.customer_email || '';
+    var customerHtml = escapeHtml(customerName) + '<br>' + escapeHtml(customerEmail);
+    document.getElementById('customerInfo').innerHTML = customerHtml;
+
+    // Shipping address — prefer cart data (your form), fall back to Stripe shipping
+    var shipping = (data.cart && data.cart.shipping_address) || data.shipping_details?.address || {};
+    var shippingName = '';
+    if (data.cart && data.cart.shipping_address) {
+      shippingName = ((shipping.first_name || '') + ' ' + (shipping.last_name || '')).trim();
+    } else if (data.shipping_details?.name) {
+      shippingName = data.shipping_details.name;
+    }
+    var shippingHtml = '';
+    if (shippingName) shippingHtml += escapeHtml(shippingName) + '<br>';
+    if (shipping.address1 || shipping.line1) shippingHtml += escapeHtml(shipping.address1 || shipping.line1) + '<br>';
+    if (shipping.address2 || shipping.line2) shippingHtml += escapeHtml(shipping.address2 || shipping.line2) + '<br>';
+    var cityLine = [
+      shipping.city,
+      shipping.province || shipping.state,
+      shipping.postal_code || shipping.zip
+    ].filter(Boolean).join(', ');
+    if (cityLine) shippingHtml += escapeHtml(cityLine) + '<br>';
+    if (shipping.country) shippingHtml += escapeHtml(shipping.country);
+    document.getElementById('shippingInfo').innerHTML = shippingHtml || '<span style="color:#888">No shipping info</span>';
+
+    // Email reminder
+    if (customerEmail) {
+      document.getElementById('emailReminder').textContent = customerEmail;
+    } else {
+      document.getElementById('emailNote').style.display = 'none';
+    }
+
+    // Order ID for bank statement & support notices
+    var orderRef = data.order_id || orderName;
+    var statementSpan = document.getElementById('orderIdInStatement');
+    var supportSpan = document.getElementById('orderIdInSupport');
+    if (statementSpan) statementSpan.textContent = orderRef;
+    if (supportSpan) supportSpan.textContent = orderRef;
+
+    // Continue Shopping button → back to source store
+    var sourceClean = cleanSourceDomain(data.source_store);
+    var continueUrl = sourceClean ? 'https://' + sourceClean : 'https://montrealpeptides.ca';
+    document.getElementById('continueShoppingBtn').href = continueUrl;
+  }
+
+  // Fetch session details from Stripe worker (with retry, since webhook may be delayed)
+  function fetchSession(retriesLeft) {
+    if (retriesLeft === undefined) retriesLeft = 3;
+
+    if (!SESSION_ID) {
+      showError('Missing session ID. If you completed payment, you should receive an email shortly.');
+      return;
+    }
+
+    // Pick URL based on processor
+    var fetchUrl;
+    if (PROCESSOR === 'whop' && WHOP_WORKER_URL) {
+      fetchUrl = WHOP_WORKER_URL + '/payment/' + encodeURIComponent(SESSION_ID);
+    } else if (PROCESSOR === 'helcim') {
+      fetchUrl = HELCIM_WORKER_URL + '/order/' + encodeURIComponent(SESSION_ID);
+    } else {
+      fetchUrl = STRIPE_WORKER_URL + '/intent/' + encodeURIComponent(SESSION_ID);
+    }
+
+    fetch(fetchUrl)
+      .then(function(r) {
+        if (!r.ok) throw new Error('Status ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        if (data.error) throw new Error(data.error);
+        renderOrder(data);
+      })
+      .catch(function(err) {
+        console.error('Fetch session error:', err);
+        if (retriesLeft > 0) {
+          setTimeout(function(){ fetchSession(retriesLeft - 1); }, 1500);
+        } else {
+          showError('Could not load order details: ' + err.message);
+        }
+      });
+  }
+
+  // Start fetching
+  fetchSession();
+</script>
+
+</body>
+</html>

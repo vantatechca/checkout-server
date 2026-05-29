@@ -1,0 +1,589 @@
+"""
+POST /api/checkout/card      → Helcim credit card
+POST /api/checkout/interac   → Interac e-Transfer (create pending order)
+POST /api/checkout/crypto    → BTCPay Server invoice
+GET  /api/checkout/status/{order_id}
+"""
+import logging
+from decimal import Decimal
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, Request, HTTPException
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from database import get_db
+from models.order import Order, OrderItem, InteracPayment, CryptoInvoice, ZellePayment, PaymentMethod, PaymentStatus
+from models.brand import Brand
+from services.order_id import generate_order_id
+from services.helcim import HelcimClient, HelcimError
+from services.btcpay import BTCPayClient, BTCPayError
+from config import settings
+from services.shopify_draft import create_draft_order, ShopifyError
+
+router  = APIRouter(prefix="/api/checkout", tags=["checkout"])
+logger  = logging.getLogger(__name__)
+
+
+# ─── Shared input schemas ─────────────────────────────────────────────────────
+
+class CartItem(BaseModel):
+    product_id: str | None = Field(None, max_length=50)
+    title:      str        = Field(..., min_length=1, max_length=500)
+    variant:    str | None = Field(None, max_length=200)
+    qty:        int        = Field(1, ge=1, le=100)
+    price:      float      = Field(..., ge=0, le=10000)
+
+
+class CheckoutBase(BaseModel):
+    # Optional pre-reserved order ID (from /api/checkout/reserve on page load)
+    order_id: str | None = None
+
+    # Contact
+    email:      str
+    first_name: str | None = None
+    last_name:  str
+
+    # Shipping
+    address1:    str | None = None
+    address2:    str | None = None
+    city:        str | None = None
+    province:    str | None = None
+    postal_code: str | None = None
+    country:     str        = "CA"
+
+    # Billing
+    bill_same:     str = "1"
+    bill_address1: str | None = None
+    bill_address2: str | None = None
+    bill_city:     str | None = None
+    bill_province: str | None = None
+    bill_postal:   str | None = None
+    bill_country:  str | None = None
+
+    # Cart (JSON-encoded from frontend)
+    items: list[CartItem] = Field(default_factory=list)
+
+    # Totals (we validate server-side)
+    subtotal: float
+    currency: str = "CAD"
+    source_domain: str | None = None
+    store_country: str = "CA"   # "CA" or "US" — which store the order came from (not shipping)
+
+
+class CardCheckoutRequest(CheckoutBase):
+    helcim_pay_token: str | None = None
+
+
+class InteracCheckoutRequest(CheckoutBase):
+    pass
+
+
+class CryptoCheckoutRequest(CheckoutBase):
+    pass
+
+
+class ReserveRequest(BaseModel):
+    """Payload for POST /api/checkout/reserve — creates a bare pending order."""
+    items:         list[CartItem] = Field(default_factory=list)
+    subtotal:      float
+    currency:      str = "CAD"
+    source_domain: str | None = None
+
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+
+def _get_brand(request: Request) -> Brand | None:
+    return getattr(request.state, "brand", None)
+
+
+def _compute_total(subtotal: float, discount_pct: float) -> tuple[float, float]:
+    discount_amount = round(subtotal * discount_pct / 100, 2)
+    total = round(subtotal - discount_amount, 2)
+    return discount_amount, total
+
+MAX_ITEMS_PER_ORDER = 50
+MAX_TOTAL_ORDER     = 100000.0
+
+
+def _validate_cart(items: list, claimed_subtotal: float) -> None:
+    if not items:
+        raise HTTPException(400, "Cart is empty")
+    if len(items) > MAX_ITEMS_PER_ORDER:
+        raise HTTPException(400, "Too many items in cart")
+
+    computed = 0.0
+    for it in items:
+        computed += float(it.price) * int(it.qty)
+    computed = round(computed, 2)
+
+    if computed > MAX_TOTAL_ORDER:
+        raise HTTPException(400, "Order total exceeds maximum")
+
+    if abs(computed - round(float(claimed_subtotal), 2)) > 0.01:
+        raise HTTPException(400, "Cart total mismatch")
+
+
+async def _create_base_order(
+    db: AsyncSession,
+    data: CheckoutBase,
+    payment_method: PaymentMethod,
+    brand: Brand | None,
+    discount_pct: float,
+    request: Request,
+) -> Order:
+    """
+    Create OR update an Order + OrderItems. Returns the Order.
+
+    If data.order_id is provided AND matches an existing pending order,
+    we UPDATE that row instead of inserting a new one. This prevents
+    duplicate orders when a customer switches payment methods, double-clicks,
+    or refreshes the checkout page.
+    """
+    store_name = brand.store_name if brand else "Checkout"
+    discount_amount, total = _compute_total(data.subtotal, discount_pct)
+
+    # Try to reuse an existing reserved order
+    order: Order | None = None
+    if data.order_id:
+        result = await db.execute(select(Order).where(Order.id == data.order_id))
+        order  = result.scalar_one_or_none()
+        # Guard: only reuse if it's still pending — don't touch paid/failed/cancelled
+        if order and order.payment_status != PaymentStatus.pending:
+            order = None
+
+    if order:
+        # UPDATE path — reuse the reserved order
+        order.brand_id        = brand.id if brand else order.brand_id or 1
+        order.store_name      = store_name
+        order.email           = data.email
+        order.first_name      = data.first_name
+        order.last_name       = data.last_name
+        order.address1        = data.address1
+        order.address2        = data.address2
+        order.city            = data.city
+        order.province        = data.province
+        order.postal_code     = data.postal_code
+        order.country         = data.country
+        order.bill_same       = data.bill_same
+        order.bill_address1   = data.bill_address1
+        order.bill_address2   = data.bill_address2
+        order.bill_city       = data.bill_city
+        order.bill_province   = data.bill_province
+        order.bill_postal     = data.bill_postal
+        order.bill_country    = data.bill_country
+        order.subtotal        = Decimal(str(data.subtotal))
+        order.discount_pct    = Decimal(str(discount_pct))
+        order.discount_amount = Decimal(str(discount_amount))
+        order.total           = Decimal(str(total))
+        order.currency        = data.currency
+        order.payment_method  = payment_method
+        order.ip_address      = request.client.host if request.client else None
+        order.user_agent      = request.headers.get("user-agent", "")
+        if data.source_domain:
+            order.source_domain = data.source_domain
+
+        # Replace line items — delete existing, re-add from payload
+        await db.execute(
+            OrderItem.__table__.delete().where(OrderItem.order_id == order.id)
+        )
+        for item in data.items:
+            db.add(OrderItem(
+                order_id   = order.id,
+                product_id = item.product_id,
+                title      = item.title,
+                variant    = item.variant,
+                qty        = item.qty,
+                price      = Decimal(str(item.price)),
+                total      = Decimal(str(round(item.price * item.qty, 2))),
+            ))
+
+        await db.flush()
+        return order
+
+    # INSERT path — no reserved order, create fresh
+    order_id = generate_order_id()
+    while True:
+        existing = await db.execute(select(Order).where(Order.id == order_id))
+        if not existing.scalar_one_or_none():
+            break
+        order_id = generate_order_id()
+
+    order = Order(
+        id              = order_id,
+        brand_id        = brand.id if brand else 1,
+        store_name      = store_name,
+        email           = data.email,
+        first_name      = data.first_name,
+        last_name       = data.last_name,
+        address1        = data.address1,
+        address2        = data.address2,
+        city            = data.city,
+        province        = data.province,
+        postal_code     = data.postal_code,
+        country         = data.country,
+        bill_same       = data.bill_same,
+        bill_address1   = data.bill_address1,
+        bill_address2   = data.bill_address2,
+        bill_city       = data.bill_city,
+        bill_province   = data.bill_province,
+        bill_postal     = data.bill_postal,
+        bill_country    = data.bill_country,
+        subtotal        = Decimal(str(data.subtotal)),
+        discount_pct    = Decimal(str(discount_pct)),
+        discount_amount = Decimal(str(discount_amount)),
+        total           = Decimal(str(total)),
+        currency        = data.currency,
+        payment_method  = payment_method,
+        payment_status  = PaymentStatus.pending,
+        ip_address      = request.client.host if request.client else None,
+        user_agent      = request.headers.get("user-agent", ""),
+        source_domain   = data.source_domain or request.query_params.get("source") or request.headers.get("host", ""),
+    )
+    db.add(order)
+
+    for item in data.items:
+        db.add(OrderItem(
+            order_id   = order_id,
+            product_id = item.product_id,
+            title      = item.title,
+            variant    = item.variant,
+            qty        = item.qty,
+            price      = Decimal(str(item.price)),
+            total      = Decimal(str(round(item.price * item.qty, 2))),
+        ))
+
+    await db.flush()
+    return order
+
+
+# ─── POST /api/checkout/reserve ──────────────────────────────────────────────
+
+@router.post("/reserve")
+async def checkout_reserve(
+    payload: ReserveRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reserves an order ID on page load. Creates a bare pending Order with items
+    but no customer details yet. The customer's details are filled in later
+    when they submit via /api/checkout/{card,interac,crypto}.
+
+    This prevents duplicate orders when the customer switches payment methods
+    or double-clicks Pay Now.
+    """
+    _validate_cart(payload.items, payload.subtotal)
+    brand = _get_brand(request)
+
+    order_id = generate_order_id()
+    while True:
+        existing = await db.execute(select(Order).where(Order.id == order_id))
+        if not existing.scalar_one_or_none():
+            break
+        order_id = generate_order_id()
+
+    order = Order(
+        id             = order_id,
+        brand_id       = brand.id if brand else 1,
+        store_name     = brand.store_name if brand else "Checkout",
+        email          = "",                            # filled on submit
+        first_name     = None,
+        last_name      = "",                            # filled on submit
+        subtotal       = Decimal(str(payload.subtotal)),
+        total          = Decimal(str(payload.subtotal)),  # before discount
+        discount_pct   = Decimal("0"),
+        discount_amount= Decimal("0"),
+        currency       = payload.currency,
+        payment_method = PaymentMethod.card,            # placeholder, overwritten on submit
+        payment_status = PaymentStatus.pending,
+        ip_address     = request.client.host if request.client else None,
+        user_agent     = request.headers.get("user-agent", ""),
+        source_domain  = payload.source_domain or request.query_params.get("source") or request.headers.get("host", ""),
+    )
+    db.add(order)
+
+    for item in payload.items:
+        db.add(OrderItem(
+            order_id   = order_id,
+            product_id = item.product_id,
+            title      = item.title,
+            variant    = item.variant,
+            qty        = item.qty,
+            price      = Decimal(str(item.price)),
+            total      = Decimal(str(round(item.price * item.qty, 2))),
+        ))
+
+    await db.commit()
+    logger.info(f"Reserved order {order_id}")
+    return {"order_id": order_id}
+
+
+# ─── POST /api/checkout/card ─────────────────────────────────────────────────
+
+@router.post("/card")
+async def checkout_card(
+    payload: CardCheckoutRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    brand = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal)
+    order = await _create_base_order(db, payload, PaymentMethod.card, brand, 0.0, request)
+    
+    billing = None
+    if payload.bill_same != "1":
+        billing = {
+            "first_name":  payload.first_name or "",
+            "last_name":   payload.last_name,
+            "address1":    payload.bill_address1 or "",
+            "address2":    payload.bill_address2 or "",
+            "city":        payload.bill_city or "",
+            "province":    payload.bill_province or "",
+            "postal_code": payload.bill_postal or "",
+            "country":     payload.bill_country or payload.country,
+        }
+
+    try:
+        invoice_url = await create_draft_order(
+            order_id     = order.id,
+            email        = payload.email,
+            first_name   = payload.first_name or "",
+            last_name    = payload.last_name,
+            address1     = payload.address1 or "",
+            address2     = payload.address2 or "",
+            city         = payload.city or "",
+            province     = payload.province or "",
+            postal_code  = payload.postal_code or "",
+            country      = payload.country,
+            items        = payload.items,
+            currency     = payload.currency,
+            source_domain = payload.source_domain or "",
+            billing       = billing,
+            store_country = payload.store_country,
+        )
+
+        order.payment_notes = f"Shopify draft order → {invoice_url}"
+        await db.commit()
+
+        return {
+            "success":     True,
+            "orderId":     order.id,
+            "redirectUrl": invoice_url,
+        }
+
+    except ShopifyError as e:
+        logger.exception(f"Shopify Draft Order failed for {order.id}")
+        order.payment_status = PaymentStatus.failed
+        order.payment_notes  = str(e)
+        await db.commit()
+        raise HTTPException(status_code=502, detail=f"Could not create checkout: {e}")
+
+
+# ─── POST /api/checkout/interac ──────────────────────────────────────────────
+
+@router.post("/interac")
+async def checkout_interac(
+    payload: InteracCheckoutRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    brand        = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal)
+    discount_pct = float(brand.interac_discount if brand else 5.0)
+
+    order = await _create_base_order(db, payload, PaymentMethod.interac, brand, discount_pct, request)
+
+    # Reuse existing InteracPayment if present (customer re-submitted); else create
+    existing = await db.execute(
+        select(InteracPayment).where(InteracPayment.order_id == order.id)
+    )
+    ip = existing.scalar_one_or_none()
+    if ip:
+        if ip.status != "matched":
+            ip.expected_amount = order.total
+            ip.status          = "waiting"
+    else:
+        db.add(InteracPayment(
+            order_id        = order.id,
+            expected_amount = order.total,
+            status          = "waiting",
+        ))
+
+    await db.commit()
+
+    interac_email = (
+        brand.interac_email if brand and brand.interac_email
+        else settings.INTERAC_DEFAULT_EMAIL
+    )
+
+    return {
+        "success":      True,
+        "orderId":      order.id,
+        "total":        float(order.total),
+        "currency":     order.currency,
+        "interacEmail": interac_email,
+        "discountPct":  discount_pct,
+        "instructions": (
+            f"Send ${float(order.total):.2f} {order.currency} via Interac e-Transfer to "
+            f"{interac_email}. In the message/note field, enter your Order ID: {order.id}"
+        ),
+    }
+
+
+# ─── POST /api/checkout/zelle ────────────────────────────────────────────────
+
+class ZelleCheckoutRequest(CheckoutBase):
+    pass
+
+
+@router.post("/zelle")
+async def checkout_zelle(
+    payload: ZelleCheckoutRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    US equivalent of Interac. Customer sends Zelle manually to our US email.
+    Admin matches the payment manually via the admin dashboard.
+    """
+    brand        = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal)
+    # Same 5% default discount as Interac — both are manual bank transfers
+    discount_pct = float(brand.interac_discount if brand else 5.0)
+
+    order = await _create_base_order(db, payload, PaymentMethod.zelle, brand, discount_pct, request)
+
+    # Reuse existing ZellePayment if present (customer re-submitted); else create
+    existing = await db.execute(
+        select(ZellePayment).where(ZellePayment.order_id == order.id)
+    )
+    zp = existing.scalar_one_or_none()
+    if zp:
+        if zp.status != "matched":
+            zp.expected_amount = order.total
+            zp.status          = "waiting"
+    else:
+        db.add(ZellePayment(
+            order_id        = order.id,
+            expected_amount = order.total,
+            status          = "waiting",
+        ))
+
+    await db.commit()
+
+    zelle_email = settings.ZELLE_DEFAULT_EMAIL or ""
+
+    return {
+        "success":     True,
+        "orderId":     order.id,
+        "total":       float(order.total),
+        "currency":    order.currency,
+        "zelleEmail":  zelle_email,
+        "discountPct": discount_pct,
+        "instructions": (
+            f"Send ${float(order.total):.2f} {order.currency} via Zelle to "
+            f"{zelle_email}. In the memo/note field, enter your Order ID: {order.id}"
+        ),
+    }
+
+
+# ─── POST /api/checkout/crypto ───────────────────────────────────────────────
+
+@router.post("/crypto")
+async def checkout_crypto(
+    payload: CryptoCheckoutRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    brand        = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal)
+    discount_pct = float(brand.crypto_discount if brand else 10.0)
+
+    order = await _create_base_order(db, payload, PaymentMethod.crypto, brand, discount_pct, request)
+
+    # Use brand-specific BTCPay store if configured
+    btcpay_store = (brand.btcpay_store_id if brand and brand.btcpay_store_id else None)
+    client       = BTCPayClient(store_id=btcpay_store)
+
+    webhook_url = f"{settings.BASE_URL}/webhooks/btcpay"
+
+    try:
+        invoice = await client.create_invoice(
+            order_id       = order.id,
+            amount         = float(order.total),
+            currency       = order.currency,
+            customer_email = payload.email,
+            customer_name  = f"{payload.first_name or ''} {payload.last_name}".strip(),
+            webhook_url    = webhook_url,
+        )
+
+        btcpay_id  = invoice["id"]
+        invoice_url = invoice.get("checkoutLink", "")
+
+        # Reuse existing CryptoInvoice if present (customer re-submitted); else create
+        existing = await db.execute(
+            select(CryptoInvoice).where(CryptoInvoice.order_id == order.id)
+        )
+        ci = existing.scalar_one_or_none()
+        if ci:
+            ci.btcpay_invoice_id  = btcpay_id
+            ci.btcpay_invoice_url = invoice_url
+            ci.amount_fiat        = order.total
+            ci.status             = "New"
+        else:
+            db.add(CryptoInvoice(
+                order_id           = order.id,
+                btcpay_invoice_id  = btcpay_id,
+                btcpay_invoice_url = invoice_url,
+                amount_fiat        = order.total,
+                status             = "New",
+            ))
+
+        order.payment_ref = btcpay_id
+        await db.commit()
+
+        # Kick off background polling as webhook fallback
+        from tasks.celery_app import check_btcpay_invoice
+        check_btcpay_invoice.apply_async(
+            args=[order.id, btcpay_id],
+            countdown=120,   # start checking after 2 minutes
+        )
+
+        return {
+            "success":          True,
+            "orderId":          order.id,
+            "btcpayInvoiceUrl": invoice_url,
+            "discountPct":      discount_pct,
+            "total":            float(order.total),
+            "currency":         order.currency,
+        }
+
+    except BTCPayError as e:
+        logger.exception(f"BTCPay invoice creation failed for {order.id}")
+        order.payment_status = PaymentStatus.failed
+        await db.commit()
+        raise HTTPException(status_code=502, detail=f"Crypto payment unavailable: {e}")
+
+
+# ─── GET /api/checkout/status/{order_id} ──────────────────────────────────────
+
+@router.get("/status/{order_id}")
+async def order_status(order_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order  = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found.")
+
+    return {
+        "orderId":       order.id,
+        "storeName":     order.store_name,
+        "paymentMethod": order.payment_method.value if hasattr(order.payment_method, 'value') else str(order.payment_method),
+        "paymentStatus": order.payment_status.value if hasattr(order.payment_status, 'value') else str(order.payment_status),
+        "total":         float(order.total),
+        "currency":      order.currency,
+        "createdAt":     order.created_at.isoformat() if order.created_at else None,
+        "paidAt":        order.paid_at.isoformat() if order.paid_at else None,
+    }

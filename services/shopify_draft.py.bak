@@ -1,0 +1,128 @@
+"""
+Shopify Draft Orders service
+Creates a pre-filled draft order and returns the invoice URL
+"""
+import logging
+import httpx
+from config import settings
+import json
+
+logger = logging.getLogger(__name__)
+
+
+class ShopifyError(Exception):
+    pass
+
+
+async def create_draft_order(
+    order_id: str,
+    email: str,
+    first_name: str,
+    last_name: str,
+    address1: str,
+    address2: str,
+    city: str,
+    province: str,
+    postal_code: str,
+    country: str,
+    items: list,
+    currency: str = "CAD",
+    source_domain: str = "",
+    billing: dict = None,
+    store_country: str = "CA",
+) -> str:
+    """
+    Creates a Shopify Draft Order with customer details pre-filled.
+    Returns the invoice_url (Shopify checkout URL with fields pre-filled).
+    """
+
+    shipping_address = {
+        "first_name":    first_name or "",
+        "last_name":     last_name  or "",
+        "address1":      address1   or "",
+        "address2":      address2   or "",
+        "city":          city       or "",
+        "province":      province   or "",
+        "province_code": province   or "",
+        "zip":           postal_code or "",
+        "country":       country    or "CA",
+        "country_code":  country    or "CA",
+    }
+
+    if billing:
+        billing_address = {
+            "first_name":    billing.get("first_name")  or first_name or "",
+            "last_name":     billing.get("last_name")   or last_name  or "",
+            "address1":      billing.get("address1")    or "",
+            "address2":      billing.get("address2")    or "",
+            "city":          billing.get("city")        or "",
+            "province":      billing.get("province")    or "",
+            "province_code": billing.get("province")    or "",
+            "zip":           billing.get("postal_code") or "",
+            "country":       billing.get("country")     or "CA",
+            "country_code":  billing.get("country")     or "CA",
+        }
+    else:
+        billing_address = shipping_address
+
+
+    lines = [
+            {
+                "title":    str(item.title),
+                "price":    f"{float(item.price):.2f}",
+                "quantity": int(item.qty),
+            }
+            for item in items
+        ]
+
+    src = f"{source_domain} | ref:{order_id}" if source_domain else f"ref:{order_id}"
+
+    bridge_payload = {
+            "lines":            lines,
+            "currency":         currency,
+            "email":            email,
+            "shipping_address": shipping_address,
+            "billing_address":  billing_address,
+            "source_store":     src,
+        }
+
+    # Pick bridge based on the *store's* country (not customer shipping country)
+    if (store_country or "CA").upper() == "US":
+        bridge_url    = getattr(settings, "BRIDGE_URL_US", "")
+        bridge_secret = getattr(settings, "BRIDGE_SECRET_US", "")
+        if not bridge_url:
+            raise ShopifyError("BRIDGE_URL_US not configured — cannot route US order")
+    else:
+        bridge_url = getattr(
+            settings, "BRIDGE_URL",
+            "https://bridge-9.120sportsllc.workers.dev/s2s",
+        )
+        bridge_secret = getattr(settings, "BRIDGE_SECRET", "")
+
+    origin = getattr(settings, "BASE_URL", "https://pepscheckoutportal.com")
+
+    headers = {
+            "Content-Type":    "application/json",
+            "Origin":          origin,
+            "X-Bridge-Secret": bridge_secret,
+        }
+
+    logger.info(f"Routing draft {order_id} via {(store_country or 'CA').upper()} bridge → {bridge_url}")
+
+    async with httpx.AsyncClient(timeout=15.0, follow_redirects=False) as client:
+        resp = await client.post(bridge_url, json=bridge_payload, headers=headers)
+
+    if resp.status_code == 302:
+            invoice_url = resp.headers.get("Location", "")
+            if not invoice_url:
+                raise ShopifyError("Bridge returned 302 with no Location header")
+            logger.info(f"✅ Bridge routed draft for {order_id} → {invoice_url}")
+            return invoice_url
+
+    if resp.status_code == 403:
+            raise ShopifyError(
+                f"Bridge rejected Origin '{origin}'. "
+                f"Add it to ALLOWED_ORIGINS on the bridge worker."
+            )
+
+    raise ShopifyError(f"Bridge call failed: {resp.status_code} — {resp.text[:300]}")

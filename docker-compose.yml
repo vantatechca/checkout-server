@@ -1,0 +1,21 @@
+version: "3.8"
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: localpass
+      MYSQL_DATABASE: checkout_db
+      MYSQL_USER: checkout_user
+      MYSQL_PASSWORD: localpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  mariadb_data:

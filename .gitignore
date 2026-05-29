@@ -1,0 +1,6 @@
+# Environment files (contain secrets)
+.env
+.env.*
+
+# Keep the safe template
+!.env.example
