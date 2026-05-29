@@ -104,10 +104,10 @@ class Order(Base):
     payment_status  = Column(Enum(PaymentStatus), default=PaymentStatus.pending, index=True)
     payment_ref     = Column(String(255), nullable=True)  # Helcim/Stripe txn ID, BTCPay invoice ID, etc.
     payment_notes   = Column(Text, nullable=True)
-    paid_at         = Column(DateTime, nullable=True)
+    paid_at         = Column(DateTime(timezone=True), nullable=True)
 
     # --- Customer email tracking ---
-    last_customer_email_at = Column(DateTime, nullable=True)
+    last_customer_email_at = Column(DateTime(timezone=True), nullable=True)
     customer_emails_sent   = Column(Integer, default=0)
 
     # --- Metadata ---
@@ -115,8 +115,8 @@ class Order(Base):
     user_agent      = Column(Text, nullable=True)
     source_domain   = Column(String(255), nullable=True)   # which checkout domain was used
 
-    created_at  = Column(DateTime, server_default=func.now())
-    updated_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at  = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at  = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     # --- Relationships ---
     items           = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
@@ -195,14 +195,14 @@ class InteracPayment(Base):
     received_amount = Column(Numeric(10, 2), nullable=True)   # actual amount received
     sender_name     = Column(String(255), nullable=True)
     sender_email    = Column(String(255), nullable=True)
-    matched_at      = Column(DateTime, nullable=True)
+    matched_at      = Column(DateTime(timezone=True), nullable=True)
     raw_email_id    = Column(String(255), nullable=True, unique=True)   # Gmail message ID
     status          = Column(
         Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="interac_status"),
         default="waiting"
     )
     notes           = Column(Text, nullable=True)
-    created_at      = Column(DateTime, server_default=func.now())
+    created_at      = Column(DateTime(timezone=True), server_default=func.now())
 
     order = relationship("Order", back_populates="interac_payment")
 
@@ -219,9 +219,9 @@ class CryptoInvoice(Base):
     amount_fiat        = Column(Numeric(10, 2), nullable=False)
     received_fiat      = Column(Numeric(10, 2), nullable=True)
     status             = Column(String(50), default="New")
-    expires_at         = Column(DateTime, nullable=True)
-    settled_at         = Column(DateTime, nullable=True)
-    created_at         = Column(DateTime, server_default=func.now())
+    expires_at         = Column(DateTime(timezone=True), nullable=True)
+    settled_at         = Column(DateTime(timezone=True), nullable=True)
+    created_at         = Column(DateTime(timezone=True), server_default=func.now())
 
     order = relationship("Order", back_populates="crypto_invoice")
 
@@ -236,14 +236,14 @@ class ZellePayment(Base):
     received_amount = Column(Numeric(10, 2), nullable=True)   # actual amount received
     sender_name     = Column(String(255), nullable=True)
     sender_email    = Column(String(255), nullable=True)
-    matched_at      = Column(DateTime, nullable=True)
+    matched_at      = Column(DateTime(timezone=True), nullable=True)
     raw_email_id    = Column(String(255), nullable=True, unique=True)
     status          = Column(
         Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="zelle_status"),
         default="waiting"
     )
     notes           = Column(Text, nullable=True)
-    created_at      = Column(DateTime, server_default=func.now())
+    created_at      = Column(DateTime(timezone=True), server_default=func.now())
 
     order = relationship("Order", back_populates="zelle_payment")
 
@@ -264,7 +264,7 @@ class CustomerEmailLog(Base):
     body_html  = Column(Text, nullable=True)
     sent_by    = Column(String(100), default="admin")
     success    = Column(Integer, default=1)
-    sent_at    = Column(DateTime, server_default=func.now())
+    sent_at    = Column(DateTime(timezone=True), server_default=func.now())
     
 class NowPaymentsInvoice(Base):
     __tablename__ = "nowpayments_invoices"
@@ -278,7 +278,7 @@ class NowPaymentsInvoice(Base):
     amount_fiat   = Column(Numeric(10, 2), nullable=False)
     received_fiat = Column(Numeric(10, 2), nullable=True)
     status        = Column(String(50), default="waiting")
-    settled_at    = Column(DateTime, nullable=True)
-    created_at    = Column(DateTime, server_default=func.now())
+    settled_at    = Column(DateTime(timezone=True), nullable=True)
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
     order = relationship("Order", back_populates="nowpayments_invoice")

@@ -31,8 +31,8 @@ class Brand(Base):
     allowed_origins = Column(Text, nullable=True)   # comma-separated
 
     active          = Column(Boolean, default=True)
-    created_at      = Column(DateTime, server_default=func.now())
-    updated_at      = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at      = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at      = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     def to_public_dict(self) -> dict:
         """Safe config returned to frontend — NO secret keys."""
