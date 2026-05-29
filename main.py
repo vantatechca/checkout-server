@@ -278,7 +278,7 @@ async def brand_config(request: Request):
             "accentColor":     "#dd1d1d",
             "accentHover":     "#b01515",
             "interacEmail":    settings.INTERAC_DEFAULT_EMAIL,
-            "interacDiscount": 5.0,
+            "interacDiscount": 10.0,
             "cryptoDiscount":  10.0,
         }
 
@@ -374,7 +374,7 @@ async def checkout_page(request: Request):
         "accent_hover":     brand.accent_hover      if brand else "#b01515",
         "interac_email":    brand.interac_email     if brand else settings.INTERAC_DEFAULT_EMAIL,
         "zelle_email":      settings.ZELLE_DEFAULT_EMAIL,
-        "interac_discount": float(brand.interac_discount if brand else 5),
+        "interac_discount": float(brand.interac_discount if brand else 10),
         "crypto_discount":  float(brand.crypto_discount  if brand else 10),
         "store_country":    country,
         "store_currency":   currency,
@@ -466,8 +466,8 @@ async def confirmation_page(order_id: str, request: Request):
         "voucher_discount":        float(order.promo_discount_amount or 0),
         "voucher_discount_pct":    float(order.promo_discount_pct or 0),
         "payment_method_discount": float(order.discount_amount or 0),
-        "interac_discount_pct":    float(brand.interac_discount if brand else 5),
-        "zelle_discount_pct":      float(brand.interac_discount if brand else 5),
+        "interac_discount_pct":    float(brand.interac_discount if brand else 10),
+        "zelle_discount_pct":      float(brand.interac_discount if brand else 10),
         "currency":       order.currency,
         "interac_email": (
             brand.interac_email if brand and brand.interac_email
