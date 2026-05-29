@@ -428,7 +428,7 @@
       }
       function fmtTime(dateStr) {
         if (!dateStr) return "—";
-        var d = new Date(dateStr + "Z");
+        var d = new Date(/[+\-]\d\d:?\d\d$|Z$/.test(dateStr) ? dateStr : dateStr + "Z");
         return d.toLocaleString("en-US", {
           month: "short",
           day: "numeric",
@@ -439,7 +439,7 @@
       }
       function isToday(dateStr) {
         if (!dateStr) return false;
-        var d = new Date(dateStr + "Z");
+        var d = new Date(/[+\-]\d\d:?\d\d$|Z$/.test(dateStr) ? dateStr : dateStr + "Z");
         var now = new Date();
         return (
           d.getDate() === now.getDate() &&
