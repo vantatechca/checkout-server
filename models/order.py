@@ -198,7 +198,7 @@ class InteracPayment(Base):
     matched_at      = Column(DateTime, nullable=True)
     raw_email_id    = Column(String(255), nullable=True, unique=True)   # Gmail message ID
     status          = Column(
-        Enum("waiting", "matched", "unmatched", "manual", "underpaid"),
+        Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="interac_status"),
         default="waiting"
     )
     notes           = Column(Text, nullable=True)
@@ -239,7 +239,7 @@ class ZellePayment(Base):
     matched_at      = Column(DateTime, nullable=True)
     raw_email_id    = Column(String(255), nullable=True, unique=True)
     status          = Column(
-        Enum("waiting", "matched", "unmatched", "manual", "underpaid"),
+        Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="zelle_status"),
         default="waiting"
     )
     notes           = Column(Text, nullable=True)
@@ -257,7 +257,7 @@ class CustomerEmailLog(Base):
 
     id         = Column(Integer, primary_key=True, autoincrement=True)
     order_id   = Column(String(20), nullable=False, index=True)
-    email_type = Column(Enum("reminder", "underpaid"), nullable=False)
+    email_type = Column(Enum("reminder", "underpaid", name="email_log_type"), nullable=False)
     sent_to    = Column(String(255), nullable=False)
     subject    = Column(String(255), nullable=False)
     body_text  = Column(Text, nullable=True)
