@@ -22,6 +22,8 @@ services:
     name: checkout-redis
     plan: starter          # smallest paid tier; "free" works for light use
     maxmemoryPolicy: noeviction   # never drop queued tasks
+    ipAllowList: []        # required by Render; empty = reachable only from
+                           # your Render services on the private network
 
   # ── FastAPI web service ───────────────────────────────────────────────────
   - type: web
