@@ -1,6 +1,14 @@
 import os
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+from dotenv import load_dotenv
+
+# Load .env into the process environment so os.getenv("DB_URL") below sees it.
+# (pydantic-settings reads .env for declared fields, but DB_URL is read via
+# os.getenv inside DATABASE_URL, so it needs to be in os.environ.) On hosts
+# that set real env vars and have no .env (Render/VPS), this is a no-op and
+# never overrides existing values (override=False by default).
+load_dotenv()
 
 
 class Settings(BaseSettings):

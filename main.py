@@ -231,7 +231,7 @@ async def brand_middleware(request: Request, call_next):
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(
-            select(Brand).where(Brand.domain == host, Brand.active == True)
+            select(Brand).where(Brand.domain == host, Brand.active == 1)
         )
         brand = result.scalar_one_or_none()
 
@@ -278,7 +278,7 @@ async def brand_config(request: Request):
             "accentColor":     "#dd1d1d",
             "accentHover":     "#b01515",
             "interacEmail":    settings.INTERAC_DEFAULT_EMAIL,
-            "interacDiscount": 10.0,
+            "interacDiscount": 5.0,
             "cryptoDiscount":  10.0,
         }
 
@@ -320,7 +320,7 @@ async def _is_whop_available_today() -> bool:
         from datetime import datetime, timezone
         from sqlalchemy import select, func
         from models.order import Order, PaymentMethod
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(func.coalesce(func.sum(Order.total), 0))
@@ -375,6 +375,7 @@ async def checkout_page(request: Request):
         "interac_email":    brand.interac_email     if brand else settings.INTERAC_DEFAULT_EMAIL,
         "zelle_email":      settings.ZELLE_DEFAULT_EMAIL,
         "interac_discount": float(brand.interac_discount if brand else 10),
+        "zelle_discount":   float(getattr(brand, "zelle_discount", None) or 5),
         "crypto_discount":  float(brand.crypto_discount  if brand else 10),
         "store_country":    country,
         "store_currency":   currency,
@@ -450,7 +451,7 @@ async def confirmation_page(order_id: str, request: Request):
     )
 
     ctx = {
-        "store_name":    brand.store_name if brand else order.store_name,
+        "store_name":    order.store_name or (brand.store_name if brand else "Checkout"),
         "logo_url":      brand.logo_url   if brand else "",
         "accent_color":  brand.accent_color if brand else "#dd1d1d",
         "order":         order,
@@ -466,8 +467,8 @@ async def confirmation_page(order_id: str, request: Request):
         "voucher_discount":        float(order.promo_discount_amount or 0),
         "voucher_discount_pct":    float(order.promo_discount_pct or 0),
         "payment_method_discount": float(order.discount_amount or 0),
-        "interac_discount_pct":    float(brand.interac_discount if brand else 10),
-        "zelle_discount_pct":      float(brand.interac_discount if brand else 10),
+        "interac_discount_pct":    float(brand.interac_discount if brand else 5),
+        "zelle_discount_pct":      float(brand.interac_discount if brand else 5),
         "currency":       order.currency,
         "interac_email": (
             brand.interac_email if brand and brand.interac_email

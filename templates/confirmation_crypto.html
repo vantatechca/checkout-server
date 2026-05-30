@@ -153,14 +153,22 @@ body{font-family:"DM Sans",sans-serif;font-size:1.5rem;line-height:1.5;color:#11
 .footer{text-align:center;padding:2.4rem;font-size:1.2rem;color:#aaa}
 
 /* ── RESPONSIVE ── */
+.mobile-orderref{display:none}
 @media(max-width:860px){
   .body-grid{grid-template-columns:1fr;grid-template-rows:auto auto}
-  .left-panel{border-right:none;border-bottom:1px solid var(--border)}
-  .right-panel{min-height:540px}
-  .banner{flex-direction:column;text-align:center}
-  .banner-status{margin-left:0}
+  /* Mobile order: order-ID bar → how-to-pay steps → Bitcoin payment frame */
+  .left-panel{order:1;border-right:none;border-bottom:1px solid var(--border);padding:2rem 1.6rem}
+  .right-panel{order:2;min-height:auto;border-bottom:none}
+  .left-panel .ref-box{display:none}   /* shown as the top bar instead */
+  .right-header{padding:1.4rem 1.6rem 1rem}
+  .btcpay-wrap{padding:1.2rem}
+  .btcpay-wrap iframe{min-height:620px}   /* full QR + invoice, no crop */
+  .banner{display:none}
   .header{padding:1.4rem 1.6rem}
-  .left-panel{padding:2rem 1.6rem}
+  /* order reference bar, sits right under the header above the QR frame */
+  .mobile-orderref{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.2rem 1.6rem;background:#fff;border-bottom:1px solid var(--border)}
+  .mobile-orderref .mor-label{font-size:1.05rem;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem}
+  .mobile-orderref .mor-code{font-family:'DM Mono',monospace;font-size:1.5rem;font-weight:600;color:#111}
 }
 </style>
 </head>
@@ -204,6 +212,15 @@ body{font-family:"DM Sans",sans-serif;font-size:1.5rem;line-height:1.5;color:#11
           {% if payment_status == "paid" %}&#10003; Confirmed{% else %}&#8987; Awaiting payment{% endif %}
         </span>
       </div>
+    </div>
+
+    <!-- MOBILE-ONLY order reference bar (above the payment frame) -->
+    <div class="mobile-orderref">
+      <div>
+        <div class="mor-label">Your order reference</div>
+        <div class="mor-code">{{ order_id }}</div>
+      </div>
+      <button class="copy-code-btn" onclick="copyRef()">Copy</button>
     </div>
 
     <!-- TWO-COLUMN BODY -->

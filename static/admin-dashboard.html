@@ -8,7 +8,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/style.css" >
+    <link rel="stylesheet" href="/static/style.css?v=5" >
 
 
     <script>
@@ -144,6 +144,10 @@
               <div class="stat-label">Revenue today</div>
               <div class="stat-value" id="statRevenue">—</div>
             </div>
+            <div class="stat">
+              <div class="stat-label">Devices</div>
+              <div class="stat-value" id="statDevices" style="font-size:1.5rem;line-height:1.4;">—</div>
+            </div>
           </div>
 
       <!-- Orders view -->
@@ -176,7 +180,11 @@
             </button>
 
             <button class="clear-btn" onclick="clearFilters()" style="display:flex;">Clear</button>
-            <button class="refresh-btn" onclick="loadOrders()">
+            <button class="refresh-btn" onclick="exportCSV()" title="Export the orders shown below to CSV">
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+              <span class="hide-mobile">Export</span>
+            </button>
+            <button class="refresh-btn" id="refreshBtn" onclick="loadOrders()">
               <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
               <span class="hide-mobile">Refresh</span>
             </button>
@@ -209,7 +217,21 @@
             <div class="loading-row">Loading orders...</div>
           </div>
         </div>
-        <div class="pagination" id="ordersPagination"></div>
+        <div class="orders-footer">
+          <div class="bulk-bar" id="bulkBar">
+            <label class="bulk-selectall" title="Select all orders on this page">
+              <input type="checkbox" id="bulkSelectPage" onclick="toggleSelectPage(this.checked)" />
+              <span class="hide-mobile">Select all</span>
+            </label>
+            <span class="bulk-count" id="bulkCount">0 selected</span>
+            <span class="bulk-divider"></span>
+            <button class="bulk-icon-btn bulk-pay" id="bulkPayBtn" onclick="bulkMarkPaid()" disabled title="Mark selected as paid" aria-label="Mark selected as paid"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></button>
+            <button class="bulk-icon-btn bulk-cancel" id="bulkCancelBtn" onclick="bulkCancel()" disabled title="Cancel selected" aria-label="Cancel selected"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="5.6" y1="5.6" x2="18.4" y2="18.4"/></svg></button>
+            <button class="bulk-icon-btn bulk-export" id="bulkExportBtn" onclick="bulkExport()" disabled title="Export selected to CSV" aria-label="Export selected to CSV"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+            <button class="bulk-icon-btn bulk-clear" id="bulkClearBtn" onclick="clearSelection()" disabled title="Clear selection" aria-label="Clear selection"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          </div>
+          <div class="pagination" id="ordersPagination"></div>
+        </div>
       </div>
 
       <!-- Revenue view -->
@@ -449,7 +471,13 @@
       }
       function loadOrders(opts) {
         var preservePage = opts && opts.preservePage;
+        var silent = opts && opts.silent;
         var loaderEl = document.getElementById("ordersLoading");
+        var refreshBtn = document.getElementById("refreshBtn");
+        if (!silent) {
+          if (loaderEl) loaderEl.classList.add("active");
+          if (refreshBtn) refreshBtn.classList.add("spinning");
+        }
 
         var url = "/admin/orders?limit=500";
 
@@ -491,6 +519,7 @@
           })
           .finally(function () {
             if (loaderEl) loaderEl.classList.remove("active");
+            if (refreshBtn) refreshBtn.classList.remove("spinning");
           });
       }
 
@@ -563,12 +592,20 @@
             if (!s) throw new Error("stats failed");
 
             document.getElementById("statPending").textContent = s.pending;
+            checkNewOrders(s.pending);
             document.getElementById("statUnderpaid").textContent = s.underpaid;
             document.getElementById("statPaidToday").textContent = s.paidToday;
             document.getElementById("statTotal").textContent = s.all;
             document.getElementById("statRevenue").textContent = fmt(
               s.revenueToday,
             );
+            (function () {
+              var dp = s.devicePct || {}, parts = [];
+              if (dp.Mobile)  parts.push("Mobile "  + dp.Mobile  + "%");
+              if (dp.Desktop) parts.push("Desktop " + dp.Desktop + "%");
+              if (dp.Tablet)  parts.push("Tablet "  + dp.Tablet  + "%");
+              document.getElementById("statDevices").innerHTML = parts.length ? parts.join("<br>") : "—";
+            })();
 
             updateTabCount("pendingCount", s.pending);
             updateTabCount("awaitingCount", s.pending + s.underpaid); 
@@ -597,6 +634,18 @@
               paidToday.length;
             document.getElementById("statTotal").textContent = allOrders.length;
             document.getElementById("statRevenue").textContent = fmt(revenue);
+            (function () {
+              var dc = { Mobile: 0, Desktop: 0, Tablet: 0 };
+              allOrders.forEach(function (o) { if (dc[o.device] !== undefined) dc[o.device]++; });
+              var dt = allOrders.length || 1, parts = [];
+              var m = Math.round(dc.Mobile / dt * 100),
+                  d = Math.round(dc.Desktop / dt * 100),
+                  t = Math.round(dc.Tablet / dt * 100);
+              if (m) parts.push("Mobile " + m + "%");
+              if (d) parts.push("Desktop " + d + "%");
+              if (t) parts.push("Tablet " + t + "%");
+              document.getElementById("statDevices").innerHTML = parts.length ? parts.join("<br>") : "—";
+            })();
           });
       }
 
@@ -785,13 +834,18 @@
           }
 
           html +=
-            '<div class="order-row" onclick="openDetail(\'' + o.id + "')\">";
+            '<div class="order-row' + (selectedOrders.has(o.id) ? " selected" : "") +
+            '" onclick="openDetail(\'' + o.id + "')\">";
           html +=
-            '<div><div class="order-id">' +
+            '<div class="order-id-cell">' +
+            '<input type="checkbox" class="bulk-check" ' +
+            (selectedOrders.has(o.id) ? "checked " : "") +
+            "onclick=\"event.stopPropagation();toggleSelect('" + o.id + "',this.checked,this)\" />" +
+            '<div style="min-width:0;"><div class="order-id">' +
             o.id +
             '</div><div class="order-time">' +
             timeHtml +
-            "</div></div>";
+            "</div></div></div>";
           html +=
             '<div><div class="order-email">' +
             (o.email || "\u2014") +
@@ -809,6 +863,7 @@
           html += "</div>";
         });
         body.innerHTML = html;
+        updateBulkBar();
         renderPagination(
           "ordersPagination",
           orders.length,
@@ -889,6 +944,7 @@
       function switchTab(tab) {
         var isSameTab = currentTab === tab;
         currentTab = tab;
+        if (typeof clearSelection === "function") clearSelection();
 
         document.querySelectorAll(".sidebar-item").forEach(function (t, i) {
           t.classList.toggle(
@@ -2254,6 +2310,207 @@
         .addEventListener("click", function (e) {
           if (e.target === this) closeModal();
         });
+
+      // ── New-order alerts (sound + toast + tab-title badge) ────────────
+      var _prevPending = null;   // last seen pending count
+      var _newOrderTotal = 0;    // accrued unseen new orders (for the tab title)
+
+      function _audioCtx() {
+        if (!window._adAudio) {
+          try { window._adAudio = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+        }
+        return window._adAudio || null;
+      }
+      function _beep() {
+        var ctx = _audioCtx();
+        if (!ctx) return;
+        try {
+          if (ctx.state === "suspended") ctx.resume();
+          var o = ctx.createOscillator(), g = ctx.createGain();
+          o.connect(g); g.connect(ctx.destination);
+          o.type = "sine"; o.frequency.value = 880;
+          g.gain.setValueAtTime(0.0001, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.4);
+          o.start(); o.stop(ctx.currentTime + 0.42);
+        } catch (e) {}
+      }
+      function _orderToast(n) {
+        var t = document.getElementById("newOrderToast");
+        if (!t) {
+          t = document.createElement("div");
+          t.id = "newOrderToast";
+          t.style.cssText = "position:fixed;top:1.6rem;right:1.6rem;z-index:99999;background:#0f7a3d;color:#fff;padding:1rem 1.5rem;border-radius:10px;font-weight:600;font-size:1.4rem;box-shadow:0 10px 30px rgba(0,0,0,0.3);cursor:pointer";
+          t.onclick = function () { switchTab("pending"); if (t.parentNode) t.remove(); };
+          document.body.appendChild(t);
+        }
+        t.textContent = n + " new order" + (n > 1 ? "s" : "") + " — click to view";
+        clearTimeout(t._timer);
+        t._timer = setTimeout(function () { if (t && t.parentNode) t.remove(); }, 9000);
+      }
+      function checkNewOrders(pending) {
+        if (_prevPending !== null && pending > _prevPending) {
+          var n = pending - _prevPending;
+          _newOrderTotal += n;
+          document.title = "(" + _newOrderTotal + ") New · Payments Admin";
+          _beep();
+          _orderToast(n);
+        }
+        _prevPending = pending;
+      }
+      window.addEventListener("focus", function () {
+        _newOrderTotal = 0;
+        document.title = "Payments Admin";
+      });
+      // Resume audio after the first user gesture (browser autoplay policy)
+      document.addEventListener("click", function () {
+        var c = _audioCtx();
+        if (c && c.state === "suspended") c.resume();
+      });
+
+      // ── CSV export of the orders currently shown (respects filters/tab) ─
+      function exportCSV(rowsArg) {
+        var rows = rowsArg || filteredOrders || [];
+        if (!rows.length) { alert("No orders to export in the current view."); return; }
+        if (!confirm(
+          "Export " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " to CSV?\n\n" +
+          "The file includes customer names, emails, phone numbers and shipping addresses — handle it securely."
+        )) { return; }
+        var cols = [
+          ["Order ID",     function (o) { return o.id; }],
+          ["Created",      function (o) { return o.createdAt || ""; }],
+          ["Customer",     function (o) { return ((o.firstName || "") + " " + (o.lastName || "")).trim(); }],
+          ["Email",        function (o) { return o.email || ""; }],
+          ["Phone",        function (o) { return o.phone || ""; }],
+          ["Address",      function (o) { return o.address1 || ""; }],
+          ["City",         function (o) { return o.city || ""; }],
+          ["Province",     function (o) { return o.province || ""; }],
+          ["Postal Code",  function (o) { return o.postalCode || ""; }],
+          ["Country",      function (o) { return o.country || ""; }],
+          ["Source Store", function (o) { return o.sourceDomain || o.storeName || ""; }],
+          ["Device",       function (o) { return o.device || ""; }],
+          ["Amount",       function (o) { return o.total; }],
+          ["Currency",     function (o) { return o.currency || ""; }],
+          ["Method",       function (o) { return o.paymentMethod || ""; }],
+          ["Status",       function (o) { return o.paymentStatus || ""; }],
+          ["Paid At",      function (o) { return o.paidAt || ""; }]
+        ];
+        function esc(v) { v = (v == null ? "" : String(v)); return '"' + v.replace(/"/g, '""') + '"'; }
+        var lines = [cols.map(function (c) { return esc(c[0]); }).join(",")];
+        rows.forEach(function (o) {
+          lines.push(cols.map(function (c) { return esc(c[1](o)); }).join(","));
+        });
+        var blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "orders-" + currentTab + "-" + new Date().toISOString().slice(0, 10) + ".csv";
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { if (a.parentNode) document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 100);
+      }
+
+      // ── Bulk selection + actions ──────────────────────────────────────
+      var selectedOrders = new Set();
+      var _bulkRunning = false;
+
+      function toggleSelect(id, checked, el) {
+        if (checked) selectedOrders.add(id); else selectedOrders.delete(id);
+        if (el) { var row = el.closest(".order-row"); if (row) row.classList.toggle("selected", checked); }
+        updateBulkBar();
+      }
+      function toggleSelectPage(checked) {
+        document.querySelectorAll("#ordersBody .bulk-check").forEach(function (b) {
+          b.checked = checked;
+          var row = b.closest(".order-row"); if (row) row.classList.toggle("selected", checked);
+        });
+        var start = (ordersPage - 1) * PAGE_SIZE;
+        (filteredOrders || []).slice(start, start + PAGE_SIZE).forEach(function (o) {
+          if (checked) selectedOrders.add(o.id); else selectedOrders.delete(o.id);
+        });
+        updateBulkBar();
+      }
+      function clearSelection() {
+        selectedOrders.clear();
+        document.querySelectorAll("#ordersBody .bulk-check").forEach(function (b) {
+          b.checked = false;
+          var row = b.closest(".order-row"); if (row) row.classList.remove("selected");
+        });
+        var sp = document.getElementById("bulkSelectPage"); if (sp) sp.checked = false;
+        updateBulkBar();
+      }
+      function updateBulkBar() {
+        var n = selectedOrders.size;
+        var bar = document.getElementById("bulkBar");
+        if (bar) bar.classList.toggle("has-selection", n > 0);
+        var c = document.getElementById("bulkCount");
+        if (c && !_bulkRunning) c.textContent = n + " selected";
+        ["bulkPayBtn", "bulkCancelBtn", "bulkExportBtn", "bulkClearBtn"].forEach(function (id) {
+          var b = document.getElementById(id); if (b) b.disabled = (n === 0) || _bulkRunning;
+        });
+      }
+      function _selectedOrderObjs() {
+        return (allOrders || []).filter(function (o) { return selectedOrders.has(o.id); });
+      }
+      function _bulkDone(verb, ok, fail) {
+        _bulkRunning = false;
+        ["bulkPayBtn", "bulkCancelBtn"].forEach(function (id) {
+          var b = document.getElementById(id); if (b) b.classList.remove("loading");
+        });
+        showToast(fail ? "error" : "success",
+          ok + " order" + (ok !== 1 ? "s" : "") + " " + verb + (fail ? " · " + fail + " failed" : ""));
+        selectedOrders.clear();
+        loadOrders();
+        updateStats();
+      }
+      function _bulkRun(rows, urlSuffix, notes, verb, activeBtnId) {
+        var n = rows.length, done = 0, ok = 0, fail = 0;
+        _bulkRunning = true;
+        var countEl = document.getElementById("bulkCount");
+        var sp = document.getElementById("bulkSelectPage"); if (sp) sp.disabled = true;
+        ["bulkPayBtn", "bulkCancelBtn", "bulkExportBtn", "bulkClearBtn"].forEach(function (id) {
+          var b = document.getElementById(id); if (!b) return;
+          if (id === activeBtnId) b.classList.add("loading");
+          else b.disabled = true;
+        });
+        function progress() { if (countEl) countEl.textContent = "Processing " + done + " / " + n + "…"; }
+        progress();
+        rows.forEach(function (o) {
+          fetch("/admin/orders/" + o.id + urlSuffix, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ notes: notes }),
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d && d.success) ok++; else fail++; })
+            .catch(function () { fail++; })
+            .finally(function () {
+              done++; progress();
+              if (done === n) {
+                if (sp) sp.disabled = false;
+                _bulkDone(verb, ok, fail);
+              }
+            });
+        });
+      }
+      function bulkMarkPaid() {
+        var rows = _selectedOrderObjs();
+        if (!rows.length || _bulkRunning) return;
+        if (!confirm(
+          "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " as PAID?\n\n" +
+          "This sends each customer a confirmation email and creates the Shopify order. It cannot be undone."
+        )) return;
+        _bulkRun(rows, "/mark-paid", "Marked paid by admin (bulk)", "marked paid", "bulkPayBtn");
+      }
+      function bulkCancel() {
+        var rows = _selectedOrderObjs();
+        if (!rows.length || _bulkRunning) return;
+        if (!confirm("Cancel " + rows.length + " order" + (rows.length > 1 ? "s" : "") + "? This cannot be undone.")) return;
+        _bulkRun(rows, "/cancel", "Cancelled by admin (bulk)", "cancelled", "bulkCancelBtn");
+      }
+      function bulkExport() {
+        var rows = _selectedOrderObjs();
+        if (rows.length) exportCSV(rows);
+      }
+
       setInterval(function () {
         var modalOpen =
           document.getElementById("modalOverlay").classList.contains("open") ||
@@ -2266,7 +2523,7 @@
 
         if (Date.now() - lastUserActivity < 5000) return;
 
-        loadOrders({ preservePage: true });
+        loadOrders({ preservePage: true, silent: true });
       }, 30000);
 
       // --- Theme Toggle Logic ---

@@ -466,8 +466,10 @@ async def autosave_order_field(
             )
             brand = brand_result.scalar_one_or_none()
 
-            if new_method in (PaymentMethod.interac, PaymentMethod.zelle):
-                pct = float(brand.interac_discount) if brand and brand.interac_discount else 5.0
+            if new_method == PaymentMethod.interac:
+                pct = float(brand.interac_discount) if brand and brand.interac_discount else 10.0
+            elif new_method == PaymentMethod.zelle:
+                pct = float(getattr(brand, "zelle_discount", None) or 5.0)
             elif new_method == PaymentMethod.crypto:
                 pct = float(brand.crypto_discount) if brand and brand.crypto_discount else 10.0
             elif new_method == PaymentMethod.altcoin:
@@ -584,7 +586,7 @@ async def checkout_interac(
 ):
     brand        = _get_brand(request)
     _validate_cart(payload.items, payload.subtotal)
-    discount_pct = float(brand.interac_discount if brand else 5.0)
+    discount_pct = float(brand.interac_discount if brand else 10.0)
 
     order = await _create_base_order(db, payload, PaymentMethod.interac, brand, discount_pct, request)
 
@@ -644,7 +646,7 @@ async def checkout_zelle(
     brand        = _get_brand(request)
     _validate_cart(payload.items, payload.subtotal)
     # Same 5% default discount as Interac — both are manual bank transfers
-    discount_pct = float(brand.interac_discount if brand else 5.0)
+    discount_pct = float(getattr(brand, "zelle_discount", None) or 5.0)
 
     order = await _create_base_order(db, payload, PaymentMethod.zelle, brand, discount_pct, request)
 

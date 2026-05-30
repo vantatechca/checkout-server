@@ -74,7 +74,7 @@
       }
       .stats {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 1.2rem;
         margin-bottom: 3rem;
       }
@@ -115,7 +115,7 @@
       }
       .filters-primary {
         display: grid;
-        grid-template-columns: 2fr 1.5fr auto auto auto;
+        grid-template-columns: 2fr 1.5fr auto auto auto auto;
         gap: 1rem;
         align-items: center;
       }
@@ -227,6 +227,16 @@
         stroke: #fff;
         stroke-width: 2;
       }
+      .refresh-btn.spinning {
+        opacity: 0.85;
+        pointer-events: none;
+      }
+      .refresh-btn.spinning svg {
+        animation: adminSpin 0.8s linear infinite;
+      }
+      @keyframes adminSpin {
+        to { transform: rotate(360deg); }
+      }
       .app-layout {
         display: grid;
         grid-template-columns: 240px 1fr;
@@ -320,7 +330,7 @@
       }
       .table-header {
         display: grid;
-        grid-template-columns: 1.1fr 1.3fr 1.1fr 0.7fr 0.6fr 0.7fr 1.4fr;
+        grid-template-columns: 1.1fr 1.6fr 1.1fr 0.7fr 0.6fr 0.7fr 1.1fr;
         gap: 0;
         padding: 1.4rem 2.4rem;
         background: #ffffff; 
@@ -343,7 +353,7 @@
       }
       .order-row {
         display: grid;
-        grid-template-columns: 1.1fr 1.3fr 1.1fr 0.7fr 0.6fr 0.7fr 1.4fr;
+        grid-template-columns: 1.1fr 1.6fr 1.1fr 0.7fr 0.6fr 0.7fr 1.1fr;
         gap: 0;
         padding: 1.6rem 2.4rem;
         border-bottom: 1px solid var(--border);
@@ -554,6 +564,148 @@
         transition: all 0.15s;
         white-space: nowrap;
       }
+      .action-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+        pointer-events: none;
+      }
+      /* Brand-colored checkboxes */
+      .bulk-check,
+      .bulk-selectall input {
+        accent-color: var(--red);
+      }
+      .order-id-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        padding-right: 1.8rem;
+      }
+      .bulk-check {
+        width: 1.7rem;
+        height: 1.7rem;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      /* Highlight selected rows */
+      .order-row.selected {
+        background: rgba(200, 16, 46, 0.05);
+        box-shadow: inset 3px 0 0 var(--red);
+      }
+      /* Footer row: bulk actions (left) + pagination (right) */
+      .orders-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 1.4rem;
+      }
+      .orders-footer .pagination {
+        margin: 0;
+      }
+      /* Bulk-action toolbar */
+      .bulk-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        flex-wrap: wrap;
+        background: #fff;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.6rem 1rem;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      .bulk-divider {
+        width: 1px;
+        height: 2.2rem;
+        background: var(--border);
+        margin: 0 0.2rem;
+      }
+      .bulk-bar.has-selection {
+        border-color: var(--red);
+        background: rgba(200, 16, 46, 0.04);
+      }
+      .bulk-selectall {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        font-size: 1.35rem;
+        color: #444;
+        cursor: pointer;
+        white-space: nowrap;
+        user-select: none;
+      }
+      .bulk-selectall input {
+        width: 1.7rem;
+        height: 1.7rem;
+        cursor: pointer;
+      }
+      .bulk-count {
+        font-size: 1.3rem;
+        color: #999;
+        transition: color 0.15s;
+      }
+      .bulk-bar.has-selection .bulk-count {
+        color: var(--red);
+        font-weight: 700;
+      }
+      /* Bulk icon buttons (tooltip via title attr) */
+      .bulk-icon-btn {
+        width: 3.4rem;
+        height: 3.4rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1.5px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        color: #555;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .bulk-icon-btn svg {
+        width: 1.7rem;
+        height: 1.7rem;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .bulk-icon-btn:disabled {
+        opacity: 0.4;
+        cursor: default;
+        pointer-events: none;
+      }
+      .bulk-icon-btn.bulk-pay:hover    { background: var(--green); border-color: var(--green); color: #fff; }
+      .bulk-icon-btn.bulk-cancel:hover { background: #c8102e; border-color: #c8102e; color: #fff; }
+      .bulk-icon-btn.bulk-export:hover { background: var(--dark); border-color: var(--dark); color: #fff; }
+      .bulk-icon-btn.bulk-clear:hover  { background: #f0f0f0; color: #111; }
+      /* Loading spinner on the active bulk button while it runs */
+      .bulk-icon-btn.loading {
+        opacity: 1;
+        pointer-events: none;
+      }
+      .bulk-icon-btn.loading svg { display: none; }
+      .bulk-icon-btn.loading::after {
+        content: "";
+        width: 1.5rem;
+        height: 1.5rem;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: adminSpin 0.7s linear infinite;
+      }
+
+      /* Dark mode — bulk UI */
+      [data-theme="dark"] .bulk-bar { background: #1a1d27; }
+      [data-theme="dark"] .bulk-bar.has-selection { background: rgba(200, 16, 46, 0.13); border-color: var(--red); }
+      [data-theme="dark"] .bulk-selectall { color: #cbd1da; }
+      [data-theme="dark"] .bulk-count { color: #9ca3af; }
+      [data-theme="dark"] .bulk-divider { background: rgba(255, 255, 255, 0.12); }
+      [data-theme="dark"] .bulk-icon-btn { background: #252a36; color: #cbd1da; border-color: rgba(255, 255, 255, 0.12); }
+      [data-theme="dark"] .bulk-icon-btn.bulk-clear:hover { background: #333a4a; color: #fff; }
+      [data-theme="dark"] .order-row.selected { background: rgba(200, 16, 46, 0.16); }
       .btn-pay {
         background: var(--green);
         color: #fff;

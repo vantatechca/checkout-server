@@ -4,3 +4,19 @@
 
 # Keep the safe template
 !.env.example
+
+# Python virtualenv + caches
+venv/
+__pycache__/
+*.py[cod]
+
+# Editor/OS
+.DS_Store
+
+# Backups
+*.bak
+*.bak.*
+
+# Data dumps — contain real customer PII, never commit
+render_data_only*.sql
+*.pg.sql

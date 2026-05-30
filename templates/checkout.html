@@ -500,12 +500,18 @@ body{
 .notif.error{background:#c8102e;color:#fff}
 .notif.info{background:var(--dark);color:#fff}
 
+/* "Why choose us?" — desktop shows the sidebar copy; mobile shows the
+   light-background copy at the bottom (see media query below). */
+.why-mobile{display:none}
+
 /* responsive */@media(max-width:900px){
   .body{
     grid-template-columns:1fr;
     display:flex;
     flex-direction:column;
   }
+  .why-desktop{display:none}
+  .why-mobile{display:block;order:2}
   .sidebar{
     display:none;
     min-height:auto;
@@ -756,7 +762,7 @@ body{
                 <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
               </div>
             </div>
-            <div class="pay-desc">Visa, Mastercard, Amex · Pay securely with your card</div>
+            <div class="pay-desc">Visa, Mastercard · Pay securely with your card</div>
             <div class="pay-body">
               <div style="background:#f8f7f4;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#666;">
                 🔒 You'll be securely redirected to enter your card details.
@@ -893,7 +899,8 @@ body{
         </label>
         {% endif %}
 
-        <!-- CRYPTO -->
+        <!-- ALTCOIN — hidden. Remove the {# #} wrapper below to re-enable. -->
+        {#
         <label class="pay-method" id="pm-altcoin">
           <input type="radio" name="paymentMethod" value="altcoin" onchange="selectMethod('altcoin')"/>
           <div class="pay-info">
@@ -924,6 +931,7 @@ body{
             </div>
           </div>
         </label>
+        #}
 
 
         <label class="pay-method" id="pm-crypto" style="display:none">
@@ -1060,7 +1068,47 @@ body{
       </div>
     </div>
 
+    <!-- Trust / reassurance block under the order total (desktop sidebar) -->
+    <div class="why-choose-us why-desktop" style="margin-top:4rem;">
+      <div style="font-size:1.7rem;font-weight:700;color:#fff;margin-bottom:2.4rem;letter-spacing:-0.01em;text-align:center;">Why choose us?</div>
+      <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3.4rem;">
+        <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#e8eaed;">
+          <svg width="40" height="40" viewBox="0 0 20 20" style="flex-shrink:0;margin-top:0.15rem;color:#ffffff;"><path fill="currentColor" d="m17.421 4.992l-3.046 1.219l-7.5-3L8.7 2.48a3.5 3.5 0 0 1 2.6 0l5.757 2.303a1.5 1.5 0 0 1 .364.208m-7.42 2.969l3.028-1.212l-7.5-3l-2.586 1.035a1.5 1.5 0 0 0-.364.208zM2 6.176q0-.166.035-.324L9.5 8.838v3.367a5.5 5.5 0 0 0-.5 2.294c0 .82.18 1.597.5 2.295v.938q-.409-.058-.8-.214l-5.757-2.303A1.5 1.5 0 0 1 2 13.822zm16 0v4.08A5.48 5.48 0 0 0 14.5 9a5.5 5.5 0 0 0-4 1.724V8.838l7.465-2.986q.035.158.035.324M14.5 19a4.5 4.5 0 1 0 0-9a4.5 4.5 0 0 0 0 9m-1-3.708l2.646-2.646a.5.5 0 0 1 .708.707l-3 3a.5.5 0 0 1-.708 0l-1-1a.5.5 0 0 1 .708-.707z"/></svg>
+          <span>We stand behind our products — your satisfaction is our top priority.</span>
+        </li>
+        <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#e8eaed;">
+          <svg width="40" height="40" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:0.15rem;color:#ffffff;"><path fill="currentColor" d="M21 8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1.062A8 8 0 0 1 12 23v-2a6 6 0 0 0 6-6V9A6 6 0 0 0 6 9v7H3a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.062a8.001 8.001 0 0 1 15.876 0zM7.76 15.785l1.06-1.696A5.97 5.97 0 0 0 12 15a5.97 5.97 0 0 0 3.18-.911l1.06 1.696A7.96 7.96 0 0 1 12 17a7.96 7.96 0 0 1-4.24-1.215"/></svg>
+          <span>Amazing customer service — we answer every request the same day, within minutes when possible.</span>
+        </li>
+        <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#e8eaed;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="#ffffff" style="flex-shrink:0;margin-top:0.15rem;"><path d="M12 1.4 12.59 3.19 14.47 3.2 12.95 4.31 13.53 6.1 12 5 10.47 6.1 11.05 4.31 9.53 3.2 11.41 3.19Z"/><path d="M5.3 3 5.75 4.39 7.2 4.38 6.02 5.23 6.48 6.62 5.3 5.76 4.12 6.62 4.58 5.23 3.4 4.38 4.85 4.39Z"/><path d="M18.7 3 19.15 4.39 20.6 4.38 19.42 5.23 19.88 6.62 18.7 5.76 17.52 6.62 17.98 5.23 16.8 4.38 18.25 4.39Z"/><circle cx="12" cy="13" r="2.9"/><path d="M12 16.4c-2.6 0-4.7 1.7-4.7 3.8V21a1 1 0 0 0 1 1h7.4a1 1 0 0 0 1-1v-.8c0-2.1-2.1-3.8-4.7-3.8z"/><circle cx="4.6" cy="14.4" r="2"/><path d="M6 17.2c-.43-.1-.89-.16-1.4-.16-2 0-3.6 1.25-3.6 2.9V21a1 1 0 0 0 1 1h3v-1.9c0-1.16.43-2.2 1.18-2.9z"/><circle cx="19.4" cy="14.4" r="2"/><path d="M18 17.2c.43-.1.89-.16 1.4-.16 2 0 3.6 1.25 3.6 2.9V21a1 1 0 0 1-1 1h-3v-1.9c0-1.16-.43-2.2-1.18-2.9z"/></svg>
+          <span>Over <strong style="color:#fff;">137,000 happy customers</strong> — we'll always make it right, no matter what!</span>
+        </li>
+      </ul>
+    </div>
+
   </aside>
+
+  <!-- Trust / reassurance block — mobile only, sits below everything on a
+       light background (dark text). Hidden on desktop where the sidebar copy
+       shows instead. -->
+  <div class="why-choose-us why-mobile" style="padding:2.8rem 2rem 3.6rem;">
+    <div style="font-size:1.7rem;font-weight:700;color:#111;margin-bottom:2.4rem;letter-spacing:-0.01em;text-align:center;">Why choose us?</div>
+    <ul style="list-style:none;margin:0 auto;padding:0;max-width:42rem;display:flex;flex-direction:column;gap:3.4rem;">
+      <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#444;">
+        <svg width="40" height="40" viewBox="0 0 20 20" style="flex-shrink:0;margin-top:0.15rem;color:#111111;"><path fill="currentColor" d="m17.421 4.992l-3.046 1.219l-7.5-3L8.7 2.48a3.5 3.5 0 0 1 2.6 0l5.757 2.303a1.5 1.5 0 0 1 .364.208m-7.42 2.969l3.028-1.212l-7.5-3l-2.586 1.035a1.5 1.5 0 0 0-.364.208zM2 6.176q0-.166.035-.324L9.5 8.838v3.367a5.5 5.5 0 0 0-.5 2.294c0 .82.18 1.597.5 2.295v.938q-.409-.058-.8-.214l-5.757-2.303A1.5 1.5 0 0 1 2 13.822zm16 0v4.08A5.48 5.48 0 0 0 14.5 9a5.5 5.5 0 0 0-4 1.724V8.838l7.465-2.986q.035.158.035.324M14.5 19a4.5 4.5 0 1 0 0-9a4.5 4.5 0 0 0 0 9m-1-3.708l2.646-2.646a.5.5 0 0 1 .708.707l-3 3a.5.5 0 0 1-.708 0l-1-1a.5.5 0 0 1 .708-.707z"/></svg>
+        <span>We stand behind our products — your satisfaction is our top priority.</span>
+      </li>
+      <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#444;">
+        <svg width="40" height="40" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:0.15rem;color:#111111;"><path fill="currentColor" d="M21 8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1.062A8 8 0 0 1 12 23v-2a6 6 0 0 0 6-6V9A6 6 0 0 0 6 9v7H3a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.062a8.001 8.001 0 0 1 15.876 0zM7.76 15.785l1.06-1.696A5.97 5.97 0 0 0 12 15a5.97 5.97 0 0 0 3.18-.911l1.06 1.696A7.96 7.96 0 0 1 12 17a7.96 7.96 0 0 1-4.24-1.215"/></svg>
+        <span>Amazing customer service — we answer every request the same day, within minutes when possible.</span>
+      </li>
+      <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#444;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="#111111" style="flex-shrink:0;margin-top:0.15rem;"><path d="M12 1.4 12.59 3.19 14.47 3.2 12.95 4.31 13.53 6.1 12 5 10.47 6.1 11.05 4.31 9.53 3.2 11.41 3.19Z"/><path d="M5.3 3 5.75 4.39 7.2 4.38 6.02 5.23 6.48 6.62 5.3 5.76 4.12 6.62 4.58 5.23 3.4 4.38 4.85 4.39Z"/><path d="M18.7 3 19.15 4.39 20.6 4.38 19.42 5.23 19.88 6.62 18.7 5.76 17.52 6.62 17.98 5.23 16.8 4.38 18.25 4.39Z"/><circle cx="12" cy="13" r="2.9"/><path d="M12 16.4c-2.6 0-4.7 1.7-4.7 3.8V21a1 1 0 0 0 1 1h7.4a1 1 0 0 0 1-1v-.8c0-2.1-2.1-3.8-4.7-3.8z"/><circle cx="4.6" cy="14.4" r="2"/><path d="M6 17.2c-.43-.1-.89-.16-1.4-.16-2 0-3.6 1.25-3.6 2.9V21a1 1 0 0 0 1 1h3v-1.9c0-1.16.43-2.2 1.18-2.9z"/><circle cx="19.4" cy="14.4" r="2"/><path d="M18 17.2c.43-.1.89-.16 1.4-.16 2 0 3.6 1.25 3.6 2.9V21a1 1 0 0 1-1 1h-3v-1.9c0-1.16-.43-2.2-1.18-2.9z"/></svg>
+        <span>Over <strong style="color:#111;">137,000 happy customers</strong> — we'll always make it right, no matter what!</span>
+      </li>
+    </ul>
+  </div>
 
 </div>
 </div>
@@ -1197,7 +1245,7 @@ body{
     card:    0,
     whop:    0,
     interac: {{ interac_discount / 100 }},
-    zelle:   {{ interac_discount / 100 }},
+    zelle:   {{ zelle_discount / 100 }},
     crypto:  {{ crypto_discount / 100 }},
     altcoin: 0.07
   };
@@ -2710,13 +2758,13 @@ var _autoSaveQueue = [];
         if (pmInterac) pmInterac.style.display = isCA ? '' : 'none';
         if (pmZelle)   pmZelle.style.display   = isCA ? 'none' : '';
         if (!isCA && currentMethod === 'interac') {
-          var fallback = CARD_ENABLED ? 'card' : 'altcoin';
+          var fallback = CARD_ENABLED ? 'card' : 'zelle';
           var rb = document.querySelector('input[value="' + fallback + '"]');
           if (rb) rb.checked = true;
           selectMethod(fallback);
         }
         if (isCA && currentMethod === 'zelle') {
-          var fallback = CARD_ENABLED ? 'card' : 'altcoin';
+          var fallback = CARD_ENABLED ? 'card' : 'interac';
           var rb = document.querySelector('input[value="' + fallback + '"]');
           if (rb) rb.checked = true;
           selectMethod(fallback);

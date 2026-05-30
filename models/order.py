@@ -100,8 +100,8 @@ class Order(Base):
     currency        = Column(String(3), default="CAD")
 
     # --- Payment ---
-    payment_method  = Column(Enum(PaymentMethod), nullable=False)
-    payment_status  = Column(Enum(PaymentStatus), default=PaymentStatus.pending, index=True)
+    payment_method  = Column(Enum(PaymentMethod, native_enum=False), nullable=False)
+    payment_status  = Column(Enum(PaymentStatus, native_enum=False), default=PaymentStatus.pending, index=True)
     payment_ref     = Column(String(255), nullable=True)  # Helcim/Stripe txn ID, BTCPay invoice ID, etc.
     payment_notes   = Column(Text, nullable=True)
     paid_at         = Column(DateTime(timezone=True), nullable=True)
@@ -198,7 +198,7 @@ class InteracPayment(Base):
     matched_at      = Column(DateTime(timezone=True), nullable=True)
     raw_email_id    = Column(String(255), nullable=True, unique=True)   # Gmail message ID
     status          = Column(
-        Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="interac_status"),
+        Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="interac_status", native_enum=False),
         default="waiting"
     )
     notes           = Column(Text, nullable=True)
@@ -239,7 +239,7 @@ class ZellePayment(Base):
     matched_at      = Column(DateTime(timezone=True), nullable=True)
     raw_email_id    = Column(String(255), nullable=True, unique=True)
     status          = Column(
-        Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="zelle_status"),
+        Enum("waiting", "matched", "unmatched", "manual", "underpaid", name="zelle_status", native_enum=False),
         default="waiting"
     )
     notes           = Column(Text, nullable=True)
@@ -257,7 +257,7 @@ class CustomerEmailLog(Base):
 
     id         = Column(Integer, primary_key=True, autoincrement=True)
     order_id   = Column(String(20), nullable=False, index=True)
-    email_type = Column(Enum("reminder", "underpaid", name="email_log_type"), nullable=False)
+    email_type = Column(Enum("reminder", "underpaid", name="email_log_type", native_enum=False), nullable=False)
     sent_to    = Column(String(255), nullable=False)
     subject    = Column(String(255), nullable=False)
     body_text  = Column(Text, nullable=True)
