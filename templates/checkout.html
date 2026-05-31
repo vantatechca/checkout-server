@@ -392,10 +392,26 @@ body{
 }
 
 .sidebar-title{
-  font-size:1.3rem;font-weight:700;
-  color:var(--red);
-  text-transform:uppercase;letter-spacing:0.1em;
-  margin-bottom:2rem;
+  display:flex;align-items:center;gap:0.9rem;
+  font-size:1.5rem;font-weight:800;
+  color:#fff;
+  text-transform:uppercase;letter-spacing:0.14em;
+  margin-bottom:2.4rem;
+  padding:0 0 1.4rem;
+  position:relative;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.sidebar-title::after{
+  content:'';
+  position:absolute;left:0;bottom:-1px;
+  width:5rem;height:2px;
+  background:linear-gradient(90deg,#34d399,transparent);
+}
+.sidebar-title svg{
+  width:1.7rem;height:1.7rem;
+  stroke:#34d399;stroke-width:2;
+  fill:none;stroke-linecap:round;stroke-linejoin:round;
+  flex-shrink:0;
 }
 
 /* line items */
@@ -751,25 +767,28 @@ body{
       <div class="pay-methods">
 
         {% if card_enabled %}
-        <!-- CREDIT CARD ENABLED for whitelisted source stores -->
+        <!-- CREDIT CARD — temporarily disabled. Remove the {# #} wrapper to re-enable. -->
+        {#
         <label class="pay-method active" id="pm-card">
           <input type="radio" name="paymentMethod" value="card" checked onchange="selectMethod('card')"/>
           <div class="pay-info">
             <div class="pay-header">
-              <span class="pay-name">Credit card</span>
+              <span class="pay-name">Credit Card</span>
               <div class="pay-icons">
                 <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text></svg>
                 <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
               </div>
             </div>
-            <div class="pay-desc">Visa, Mastercard · Pay securely with your card</div>
+            <div class="pay-desc">Visa, Mastercard · Pay with your Credit Card</div>
             <div class="pay-body">
+              <div id="cardUsdEquiv" style="display:none;background:rgba(52,211,153,0.10);border:1px solid rgba(52,211,153,0.35);border-radius:8px;padding:1rem 1.4rem;margin-bottom:0.8rem;font-size:1.4rem;color:#0f7a52;text-align:center;"></div>
               <div style="background:#f8f7f4;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#666;">
-                🔒 You'll be securely redirected to enter your card details.
+                🔒 After placing your order, you will be redirected to Pymtz to complete your payment
               </div>
             </div>
           </div>
         </label>
+        #}
 
         {% if whop_enabled %}
         <!-- CARD (WHOP) — parallel cloaked credit card processor via Whop's embedded checkout.
@@ -1041,7 +1060,10 @@ body{
   <!-- RIGHT: SIDEBAR -->
   <aside class="sidebar" id="sidebar">
 
-    <div class="sidebar-title">Your order</div>
+    <div class="sidebar-title">
+      <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      Your order
+    </div>
 
     <!-- ITEMS (rendered by JS from URL params) -->
     <div class="items" id="itemList"></div>
@@ -1129,7 +1151,9 @@ body{
   })();
 
   // ── Server-rendered flag: is credit card enabled for this source store?
-  var CARD_ENABLED = {{ 'true' if card_enabled else 'false' }};
+  // Credit Card option is temporarily commented out in the markup above —
+  // force CARD_ENABLED=false so the default method falls back to Interac/Zelle.
+  var CARD_ENABLED = false;
 
   // ── DISCOUNT CODES (from URL only) ────────────────────
   var VALID_DISCOUNT_CODES = {};
