@@ -11,11 +11,11 @@ POST /admin/brands              → create brand
 PUT  /admin/brands/{id}         → update brand
 """
 import logging
-import httpx 
+import httpx
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -24,8 +24,41 @@ from sqlalchemy import select, desc
 from database import get_db
 from models.order import Order, InteracPayment, ZellePayment, CryptoInvoice, NowPaymentsInvoice, PaymentStatus, PaymentMethod
 from models.brand import Brand
+from models.admin_activity import AdminActivity
 from routes.auth_routes import require_admin
 from config import settings
+
+
+async def log_admin_activity(
+    db: AsyncSession,
+    request: Optional[Request],
+    *,
+    action: str,
+    target_type: str = "",
+    target_id: str = "",
+    details: str = "",
+) -> None:
+    """
+    Record an admin action to the audit log. Safe to call from any admin
+    endpoint; failures are swallowed (logging an audit row must never break
+    the actual action).
+    """
+    try:
+        ip = ""
+        if request and request.client:
+            ip = request.client.host or ""
+        row = AdminActivity(
+            admin_user  = settings.ADMIN_USERNAME or "admin",
+            action      = action,
+            target_type = target_type or None,
+            target_id   = target_id   or None,
+            details     = (details or "")[:1000] or None,
+            ip_address  = ip or None,
+        )
+        db.add(row)
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"audit-log write failed for action={action}: {e}")
 
 router = APIRouter(
     prefix="/admin",
@@ -150,15 +183,15 @@ async def list_orders(
         elif o.zelle_payment and o.zelle_payment.status == "underpaid":
             d["receivedAmount"]  = float(o.zelle_payment.received_amount or 0)
             d["underpaidMethod"] = "zelle"
-            
+
         elif o.crypto_invoice and o.crypto_invoice.status == "Underpaid":
             d["receivedAmount"]  = float(o.crypto_invoice.received_fiat or 0)
             d["underpaidMethod"] = "crypto"
-            
-        elif o.nowpayments_invoice and o.nowpayments_invoice.status == "underpaid":   # ← add
-            d["receivedAmount"]  = float(o.nowpayments_invoice.received_fiat or 0)    # ← add
-            d["underpaidMethod"] = "altcoin"   
-            
+
+        elif o.nowpayments_invoice and o.nowpayments_invoice.status == "underpaid":
+            d["receivedAmount"]  = float(o.nowpayments_invoice.received_fiat or 0)
+            d["underpaidMethod"] = "altcoin"
+
         # Flag abandoned orders (customer info saved, never clicked Place Order)
         if (
             o.payment_status == PaymentStatus.pending
@@ -172,6 +205,19 @@ async def list_orders(
             )   # pymtz pending card orders are NOT abandoned
         ):
             d["isAbandoned"] = True
+
+        # Flag orders that were previously paid then reverted via unmark-paid.
+        # The audit prefix is set in `unmark_order_paid` — see this file.
+        notes = o.payment_notes or ""
+        if notes.startswith("[unmark-paid @ "):
+            d["wasUnmarked"] = True
+            # Best-effort extract the timestamp inside `[unmark-paid @ <iso>]`
+            try:
+                end = notes.index("]")
+                d["unmarkedAt"] = notes[len("[unmark-paid @ "):end].strip()
+            except ValueError:
+                pass
+
         out.append(d)
     return out
 
@@ -204,7 +250,7 @@ async def order_stats(
         )
     )
 
-    start_today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    start_today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     paid_q = select(sa_func.count()).select_from(Order).where(
         and_(*base_filter, Order.payment_status == PaymentStatus.paid)
     )
@@ -264,6 +310,18 @@ async def order_stats(
     failed_count     = (await db.execute(failed_q)).scalar_one()
     revenue_today    = float((await db.execute(revenue_today_q)).scalar_one() or 0)
 
+    # Device breakdown across all orders (derived from stored user-agents).
+    from models.order import _classify_device
+    ua_q = select(Order.user_agent)
+    if base_filter:
+        ua_q = ua_q.where(and_(*base_filter))
+    ua_rows = (await db.execute(ua_q)).scalars().all()
+    device_counts = {"Mobile": 0, "Desktop": 0, "Tablet": 0, "Unknown": 0}
+    for ua in ua_rows:
+        device_counts[_classify_device(ua)] += 1
+    device_total = sum(device_counts.values()) or 1
+    device_pct = {k: round(v / device_total * 100) for k, v in device_counts.items()}
+
     return {
         "pending":         pending_count,
         "paid":            paid_count,
@@ -272,6 +330,8 @@ async def order_stats(
         "underpaid":       underpaid_count,
         "failed":          failed_count,
         "revenueToday":    revenue_today,
+        "deviceCounts":    device_counts,
+        "devicePct":       device_pct,
     }
 
 @router.get("/orders/{order_id}")
@@ -359,6 +419,7 @@ def _apply_overrides(template: dict, override: CustomerEmailOverride) -> dict:
 async def mark_order_paid(
     order_id: str,
     body: MarkPaidRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -375,13 +436,13 @@ async def mark_order_paid(
         raise HTTPException(400, "Order already marked as paid")
 
     order.payment_status = PaymentStatus.paid
-    order.paid_at        = datetime.utcnow()
+    order.paid_at        = datetime.now(timezone.utc)
     order.payment_notes  = body.notes or "Manually marked paid by admin"
 
     # If Interac, also update interac_payment record (clears underpaid flag if it was set)
     if order.payment_method == PaymentMethod.interac and order.interac_payment:
         order.interac_payment.status          = "manual"
-        order.interac_payment.matched_at      = datetime.utcnow()
+        order.interac_payment.matched_at      = datetime.now(timezone.utc)
         # If was underpaid, set received_amount to the full total now that balance is in
         if order.interac_payment.received_amount is not None:
             order.interac_payment.received_amount = order.total
@@ -389,11 +450,16 @@ async def mark_order_paid(
     # If Zelle, also update zelle_payment record (clears underpaid flag if it was set)
     if order.payment_method == PaymentMethod.zelle and order.zelle_payment:
         order.zelle_payment.status            = "manual"
-        order.zelle_payment.matched_at        = datetime.utcnow()
+        order.zelle_payment.matched_at        = datetime.now(timezone.utc)
         if order.zelle_payment.received_amount is not None:
             order.zelle_payment.received_amount = order.total
 
     await db.commit()
+    await log_admin_activity(
+        db, request,
+        action="mark_paid", target_type="order", target_id=order_id,
+        details=(body.notes or "no note")[:200],
+    )
 
     result = await db.execute(
         select(Order).where(Order.id == order_id)
@@ -469,7 +535,7 @@ async def email_preview(
     return tpl
 
 
-# ─── List emails sent for an order ────────────────────────────────────────────
+# ─── List emails sent for an order ──────────────────────────────────────────
 
 @router.get("/orders/{order_id}/emails")
 async def list_order_emails(order_id: str, db: AsyncSession = Depends(get_db)):
@@ -589,7 +655,7 @@ async def send_payment_reminder(
         else f"Reminded — full ${total:.2f} outstanding"
     )
 
-    order.last_customer_email_at = datetime.utcnow()
+    order.last_customer_email_at = datetime.now(timezone.utc)
     order.customer_emails_sent   = (order.customer_emails_sent or 0) + 1
 
     await db.commit()
@@ -625,6 +691,7 @@ async def mark_order_underpaid(
 async def cancel_order(
     order_id: str,
     body: MarkPaidRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
@@ -642,6 +709,11 @@ async def cancel_order(
     order.payment_notes = body.notes or "Cancelled by admin"
 
     await db.commit()
+    await log_admin_activity(
+        db, request,
+        action="cancel", target_type="order", target_id=order_id,
+        details=(body.notes or "Cancelled by admin")[:200],
+    )
     return {"success": True, "orderId": order_id}
 
 
@@ -656,6 +728,7 @@ class RecoverRequest(BaseModel):
 async def recover_order(
     order_id: str,
     body: RecoverRequest,
+    request: Request,
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -711,7 +784,91 @@ async def recover_order(
             logger.error(f"Recovery email failed for {order_id}: {e}")
 
     logger.info(f"✅ Order {order_id} recovered ({prev_status} → pending)")
+    await log_admin_activity(
+        db, request,
+        action="recover", target_type="order", target_id=order_id,
+        details=f"{prev_status} → pending",
+    )
     return {"success": True, "orderId": order_id, "previousStatus": prev_status}
+
+
+# ─── Unmark paid (revert accidentally-paid orders) ────────────────────────────
+
+class UnmarkPaidRequest(BaseModel):
+    notes:       Optional[str] = None
+    new_status:  str           = "pending"   # "pending" | "cancelled" | "failed"
+
+
+@router.post("/orders/{order_id}/unmark-paid")
+async def unmark_order_paid(
+    order_id: str,
+    body: UnmarkPaidRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Reverse an accidental mark-paid. Flips a paid order back to pending (default),
+    cancelled, or failed. Clears paid_at and preserves the prior payment_notes
+    in an audit trail.
+
+    Downstream side effects this endpoint does NOT undo (admin must handle):
+      - Shopify order already created → manually cancel in Shopify admin
+      - Affiliate webhook already fired → may need a reversal ping
+      - Customer email already sent → may need a follow-up
+    The reasoning is left to the admin since each case is different.
+    """
+    valid_targets = {"pending", "cancelled", "failed"}
+    target = (body.new_status or "pending").lower()
+    if target not in valid_targets:
+        raise HTTPException(
+            400, f"new_status must be one of {sorted(valid_targets)}"
+        )
+
+    result = await db.execute(
+        select(Order).where(Order.id == order_id)
+        .options(selectinload(Order.items))
+    )
+    order = result.scalar_one_or_none()
+
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if order.payment_status != PaymentStatus.paid:
+        raise HTTPException(
+            400,
+            f"Order is {order.payment_status.value} — only paid orders can be unmarked",
+        )
+
+    prior_notes = order.payment_notes or ""
+    prior_paid_at = order.paid_at.isoformat() if order.paid_at else "unknown"
+    audit_line   = (
+        f"[unmark-paid @ {datetime.now(timezone.utc).isoformat()}] "
+        f"reverted from paid (paid_at={prior_paid_at}) → {target}. "
+        f"Reason: {body.notes or 'no reason given'}. "
+        f"Prior notes: {prior_notes[:200]}"
+    )
+
+    order.payment_status = PaymentStatus(target)
+    order.paid_at        = None
+    order.payment_notes  = audit_line[:1000]   # cap to keep the column sane
+
+    await db.commit()
+
+    logger.warning(
+        f"⚠️  Order {order_id} unmarked-paid by admin: paid → {target}. "
+        f"Reason: {body.notes or 'no reason given'}"
+    )
+    await log_admin_activity(
+        db, request,
+        action="unmark_paid", target_type="order", target_id=order_id,
+        details=f"paid → {target}. Reason: {(body.notes or 'no reason given')[:200]}",
+    )
+    return {
+        "success":        True,
+        "orderId":        order_id,
+        "newStatus":      target,
+        "priorPaidAt":    prior_paid_at,
+        "warning":        "Shopify/affiliate side effects are NOT auto-reversed.",
+    }
 
 
 # ─── Interac manual matching ──────────────────────────────────────────────────
@@ -768,10 +925,10 @@ async def manual_interac_match(
     # Update both
     ip.order_id   = body.order_id
     ip.status     = "manual"
-    ip.matched_at = datetime.utcnow()
+    ip.matched_at = datetime.now(timezone.utc)
 
     order.payment_status = PaymentStatus.paid
-    order.paid_at        = datetime.utcnow()
+    order.paid_at        = datetime.now(timezone.utc)
     order.payment_notes  = f"Manually matched to Interac payment #{ip.id}"
 
     await db.commit()
@@ -855,10 +1012,10 @@ async def manual_zelle_match(
 
     zp.order_id   = body.order_id
     zp.status     = "manual"
-    zp.matched_at = datetime.utcnow()
+    zp.matched_at = datetime.now(timezone.utc)
 
     order.payment_status = PaymentStatus.paid
-    order.paid_at        = datetime.utcnow()
+    order.paid_at        = datetime.now(timezone.utc)
     order.payment_notes  = f"Manually matched to Zelle payment #{zp.id}"
 
     await db.commit()
@@ -891,7 +1048,325 @@ async def manual_zelle_match(
     return {"success": True, "orderId": order.id}
 
 
-# ─── Brands ──────────────────────────────────────────────────────────────────
+# ─── Monitoring / system-health dashboard ─────────────────────────────────────
+
+@router.get("/monitoring/health")
+async def monitoring_health(db: AsyncSession = Depends(get_db)):
+    """
+    Aggregate health snapshot for the Dashboard tab in the admin UI.
+    Returns: server, processors, today_kpis, sources, recent_events.
+    Designed to be polled every 30s; no expensive queries.
+    """
+    from sqlalchemy import func
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # ── server ──────────────────────────────────────────────────────────────
+    db_ok = True
+    try:
+        from sqlalchemy import text as _sqltext
+        await db.execute(_sqltext("SELECT 1"))
+    except Exception:
+        db_ok = False
+
+    server = {
+        "env":   settings.ENVIRONMENT,
+        "db_ok": db_ok,
+        "base_url": settings.BASE_URL,
+    }
+
+    # ── processors (configured + most-recent activity) ────────────────────────
+    # "Last activity" = paid_at of the most recent paid order using that method
+    # (falls back to created_at when nothing paid yet).
+    async def _last_activity(method: PaymentMethod, ref_filter=None) -> dict:
+        q = select(Order.paid_at, Order.created_at, Order.total, Order.currency).where(
+            Order.payment_method == method
+        )
+        if ref_filter is not None:
+            q = q.where(ref_filter)
+        q = q.order_by(desc(Order.created_at)).limit(1)
+        row = (await db.execute(q)).first()
+        return {
+            "last_paid":    row[0].isoformat() if row and row[0] else None,
+            "last_created": row[1].isoformat() if row and row[1] else None,
+        }
+
+    async def _today_volume(method: PaymentMethod, ref_filter=None) -> dict:
+        q = (
+            select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0))
+            .where(Order.payment_method == method)
+            .where(Order.payment_status == PaymentStatus.paid)
+            .where(Order.paid_at >= today_start)
+        )
+        if ref_filter is not None:
+            q = q.where(ref_filter)
+        cnt, rev = (await db.execute(q)).first()
+        return {"paid_count": int(cnt or 0), "paid_revenue": float(rev or 0)}
+
+    processors = {}
+
+    # pymtz — same payment_method ("card") for both CA and US; disambiguate
+    # by metadata. payment_ref starts with "pay_" → pymtz; we can split by
+    # the order.currency to attribute CA vs US.
+    pymtz_ca_act = await _last_activity(PaymentMethod.card, Order.currency == "CAD")
+    pymtz_ca_vol = await _today_volume(PaymentMethod.card, Order.currency == "CAD")
+    processors["pymtz_ca"] = {
+        "label":      "pymtz CA",
+        "configured": bool(settings.PYMTZ_API_KEY_CA or settings.PYMTZ_API_KEY),
+        "enabled":    bool(settings.PYMTZ_API_KEY_CA or settings.PYMTZ_API_KEY),
+        "mode":       "LIVE" if (settings.PYMTZ_API_KEY_CA or "").startswith("pymtz_live_") else "TEST",
+        **pymtz_ca_act, **pymtz_ca_vol,
+    }
+
+    pymtz_us_act = await _last_activity(PaymentMethod.card, Order.currency == "USD")
+    pymtz_us_vol = await _today_volume(PaymentMethod.card, Order.currency == "USD")
+    processors["pymtz_us"] = {
+        "label":      "pymtz US",
+        "configured": bool(settings.PYMTZ_API_KEY_US or settings.PYMTZ_API_KEY),
+        "enabled":    bool(settings.PYMTZ_API_KEY_US or settings.PYMTZ_API_KEY),
+        "mode":       "LIVE" if (settings.PYMTZ_API_KEY_US or "").startswith("pymtz_live_") else "TEST",
+        **pymtz_us_act, **pymtz_us_vol,
+    }
+
+    # Whop
+    whop_configured = bool(settings.WHOP_API_KEY or settings.WHOP_SANDBOX_API_KEY)
+    processors["whop"] = {
+        "label":      "Whop",
+        "configured": whop_configured,
+        "enabled":    bool(getattr(settings, "WHOP_ENABLED", False)),
+        "mode":       "SANDBOX" if getattr(settings, "WHOP_SANDBOX", False) else "LIVE",
+        "last_paid":    None,
+        "last_created": None,
+        "paid_count":   0,
+        "paid_revenue": 0.0,
+    }
+
+    # BTCPay (crypto)
+    btcpay_configured = bool(settings.BTCPAY_API_KEY and settings.BTCPAY_STORE_ID)
+    btcpay_act = await _last_activity(PaymentMethod.crypto)
+    btcpay_vol = await _today_volume(PaymentMethod.crypto)
+    processors["btcpay"] = {
+        "label":      "BTCPay (crypto)",
+        "configured": btcpay_configured,
+        "enabled":    btcpay_configured,
+        "mode":       "LIVE",
+        **btcpay_act, **btcpay_vol,
+    }
+
+    # NowPayments (altcoin)
+    nowp_configured = bool(settings.NOWPAYMENTS_API_KEY)
+    nowp_act = await _last_activity(PaymentMethod.altcoin)
+    nowp_vol = await _today_volume(PaymentMethod.altcoin)
+    processors["nowpayments"] = {
+        "label":      "NowPayments",
+        "configured": nowp_configured,
+        "enabled":    nowp_configured,
+        "mode":       "LIVE",
+        **nowp_act, **nowp_vol,
+    }
+
+    # Interac
+    interac_act = await _last_activity(PaymentMethod.interac)
+    interac_vol = await _today_volume(PaymentMethod.interac)
+    processors["interac"] = {
+        "label":      "Interac",
+        "configured": bool(settings.INTERAC_DEFAULT_EMAIL),
+        "enabled":    bool(settings.INTERAC_DEFAULT_EMAIL),
+        "mode":       "LIVE",
+        **interac_act, **interac_vol,
+    }
+
+    # Zelle
+    zelle_act = await _last_activity(PaymentMethod.zelle)
+    zelle_vol = await _today_volume(PaymentMethod.zelle)
+    processors["zelle"] = {
+        "label":      "Zelle",
+        "configured": bool(settings.ZELLE_DEFAULT_EMAIL),
+        "enabled":    bool(settings.ZELLE_DEFAULT_EMAIL),
+        "mode":       "LIVE",
+        **zelle_act, **zelle_vol,
+    }
+
+    # Onramp WP (the experimental rail)
+    processors["onramp_wp"] = {
+        "label":      "Onramp (WP)",
+        "configured": bool(getattr(settings, "ONRAMP_WP_URL", "")),
+        "enabled":    bool(getattr(settings, "ONRAMP_WP_ENABLED", False)),
+        "mode":       "LIVE",
+        "last_paid":  None,
+        "last_created": None,
+        "paid_count": 0,
+        "paid_revenue": 0.0,
+    }
+
+    # ── today's KPIs ──────────────────────────────────────────────────────────
+    # Two separate queries — "orders today" (created_at) is different from
+    # "paid today" (paid_at). A pending order from yesterday marked paid
+    # today should show up in paid_count/revenue even though it wasn't
+    # created today.
+
+    # 1. Orders created today, grouped by status — for orders_total + status breakdown
+    created_today_q = (
+        select(Order.payment_status, func.count(Order.id))
+        .where(Order.created_at >= today_start)
+        .group_by(Order.payment_status)
+    )
+    created_rows = (await db.execute(created_today_q)).all()
+    created_by_status = {r[0].value: int(r[1]) for r in created_rows}
+    total_today = sum(created_by_status.values())
+
+    # 2. Orders PAID today (regardless of when created) — true revenue today
+    paid_today_q = (
+        select(func.count(Order.id), func.coalesce(func.sum(Order.total), 0))
+        .where(Order.paid_at >= today_start)
+        .where(Order.payment_status == PaymentStatus.paid)
+    )
+    paid_row = (await db.execute(paid_today_q)).first()
+    paid_count_today   = int(paid_row[0] or 0)
+    paid_revenue_today = float(paid_row[1] or 0)
+
+    # 3. Currently pending (queue size, no date filter) — must match the same
+    # filter the /admin/orders/stats endpoint uses for the top "Pending" stat
+    # card, otherwise the dashboard KPI disagrees with the header card.
+    # Excludes: dead non-pymtz card orders (never produced a payment intent)
+    # and orders that already had a reminder email sent (tracked elsewhere).
+    from sqlalchemy import or_
+    pending_now_q = (
+        select(func.count(Order.id))
+        .where(Order.payment_status == PaymentStatus.pending)
+        .where(or_(
+            Order.payment_method != PaymentMethod.card,
+            Order.payment_ref.like("pay_%"),   # pymtz pending card orders count
+        ))
+        .where(or_(
+            Order.customer_emails_sent == 0,
+            Order.customer_emails_sent.is_(None),
+        ))
+    )
+    pending_now = int((await db.execute(pending_now_q)).scalar() or 0)
+
+    today_kpis = {
+        "orders_total":    total_today,
+        "paid_count":      paid_count_today,
+        "pending_count":   pending_now,
+        "failed_count":    created_by_status.get("failed", 0),
+        "refunded_count":  created_by_status.get("refunded", 0),
+        "revenue":         round(paid_revenue_today, 2),
+        # Conversion: of orders that came in today, what % paid (today OR later).
+        # Approx since paid_today may include older orders. Best-effort metric.
+        "conversion_rate": round((paid_count_today / total_today * 100), 1) if total_today > 0 else 0.0,
+    }
+
+    # ── sources (top 10 by PAID orders today, ranked by revenue) ──────────────
+    # Filter on paid_at so an order created yesterday but paid today still
+    # counts. Only include paid orders — pending/failed clutter the table.
+    src_q = (
+        select(Order.source_domain, func.count(Order.id), func.coalesce(func.sum(Order.total), 0))
+        .where(Order.paid_at >= today_start)
+        .where(Order.payment_status == PaymentStatus.paid)
+        .group_by(Order.source_domain)
+        .order_by(desc(func.coalesce(func.sum(Order.total), 0)))
+        .limit(10)
+    )
+    src_rows = (await db.execute(src_q)).all()
+    sources = [
+        {
+            "domain":  (r[0] or "(unknown)").replace("www.", ""),
+            "orders":  int(r[1]),
+            "revenue": float(r[2]),
+        }
+        for r in src_rows
+    ]
+
+    # ── recent events (last 50) ───────────────────────────────────────────────
+    recent_q = (
+        select(
+            Order.id, Order.payment_status, Order.payment_method,
+            Order.total, Order.currency, Order.source_domain,
+            Order.created_at, Order.paid_at, Order.payment_notes,
+        )
+        .order_by(desc(Order.created_at))
+        .limit(50)
+    )
+    recent_rows = (await db.execute(recent_q)).all()
+    recent_events = [
+        {
+            "order_id":   r[0],
+            "status":     r[1].value if r[1] else "unknown",
+            "method":     r[2].value if r[2] else "unknown",
+            "amount":     float(r[3] or 0),
+            "currency":   r[4] or "CAD",
+            "source":     (r[5] or "").replace("www.", ""),
+            "created_at": r[6].isoformat() if r[6] else None,
+            "paid_at":    r[7].isoformat() if r[7] else None,
+            "notes":      (r[8] or "")[:140],
+        }
+        for r in recent_rows
+    ]
+
+    return {
+        "server":         server,
+        "processors":     processors,
+        "today_kpis":     today_kpis,
+        "sources":        sources,
+        "recent_events":  recent_events,
+        "generated_at":   datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@router.get("/monitoring/activities")
+async def list_admin_activities(
+    limit: int = Query(100, ge=1, le=500),
+    action: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Recent admin actions for the Dashboard tab's activity feed."""
+    q = select(AdminActivity).order_by(desc(AdminActivity.created_at)).limit(limit)
+    if action:
+        q = q.where(AdminActivity.action == action)
+    rows = (await db.execute(q)).scalars().all()
+    return [
+        {
+            "id":          r.id,
+            "createdAt":   r.created_at.isoformat() if r.created_at else None,
+            "adminUser":   r.admin_user,
+            "action":      r.action,
+            "targetType":  r.target_type,
+            "targetId":    r.target_id,
+            "details":     r.details,
+            "ipAddress":   r.ip_address,
+        }
+        for r in rows
+    ]
+
+
+class LogActivityRequest(BaseModel):
+    action:      str
+    target_type: Optional[str] = None
+    target_id:   Optional[str] = None
+    details:     Optional[str] = None
+
+
+@router.post("/monitoring/log")
+async def post_admin_activity(
+    body: LogActivityRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Client-side audit logger — used for things like CSV exports that
+    don't go through any other admin endpoint. Same authn as everything
+    else under /admin."""
+    # Whitelist actions the client is allowed to log so this can't be
+    # abused to spam fake audit rows.
+    ALLOWED = {"export_csv", "view_email_history", "switch_email_mode"}
+    if body.action not in ALLOWED:
+        raise HTTPException(400, f"action '{body.action}' is not allowed via client logger")
+    await log_admin_activity(
+        db, request,
+        action=body.action, target_type=body.target_type or "",
+        target_id=body.target_id or "", details=body.details or "",
+    )
+    return {"success": True}
+
 
 @router.get("/brands")
 async def list_brands(db: AsyncSession = Depends(get_db)):

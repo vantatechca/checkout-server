@@ -30,6 +30,11 @@ from utils.cloaking import cloak_items, cloak_items_lasso, build_lasso_cart
 router  = APIRouter(prefix="/api/checkout", tags=["checkout"])
 logger  = logging.getLogger(__name__)
 
+# pymtz settles in USD, so CAD orders must be converted before we send the
+# amount. This MUST stay in sync with USD_CONVERSION_RATE in checkout.html
+# (the "= $X USD" badge), or the charge won't match what the customer was shown.
+USD_CONVERSION_RATE = 1.38  # 1 USD = 1.38 CAD
+
 
 # ─── Shared input schemas ─────────────────────────────────────────────────────
 
@@ -541,19 +546,53 @@ async def checkout_card(
     return_url = f"{settings.BASE_URL}/order/{order.id}/confirmation"
     cancel_url = f"{settings.BASE_URL}/"
 
+    # pymtz settles in USD. Convert CAD totals so the customer is charged the
+    # USD equivalent shown by the "= $X USD" badge on checkout — not the raw
+    # CAD number relabeled as USD.
+    if (order.currency or "").upper() == "CAD":
+        pymtz_amount   = round(float(order.total) / USD_CONVERSION_RATE, 2)
+        pymtz_currency = "USD"
+    else:
+        pymtz_amount   = float(order.total)
+        pymtz_currency = order.currency
+
     try:
-        client  = PymtzClient()
+        pymtz_country = "US" if (order.currency or "").upper() == "USD" else "CA"
+        client  = PymtzClient(country=pymtz_country)
+
+        # Use billing address if the customer entered one, else fall back to
+        # shipping. payload.bill_same == "1" means "billing == shipping".
+        bill_same = (payload.bill_same or "1") == "1"
+        b_addr1   = (payload.address1 if bill_same else payload.bill_address1) or ""
+        b_addr2   = (payload.address2 if bill_same else payload.bill_address2) or ""
+        b_city    = (payload.city     if bill_same else payload.bill_city)     or ""
+        b_state   = (payload.province if bill_same else payload.bill_province) or ""
+        b_zip     = (payload.postal_code if bill_same else payload.bill_postal) or ""
+        b_country = (payload.country  if bill_same else payload.bill_country)  or "CA"
+
         payment = await client.create_payment(
             order_id    = order.id,
-            amount      = float(order.total),
-            currency    = order.currency,
+            amount      = pymtz_amount,
+            currency    = pymtz_currency,
             description = description,
             email       = payload.email,
             return_url  = return_url,
             cancel_url  = cancel_url,
+            first_name  = payload.first_name or "",
+            last_name   = payload.last_name  or "",
+            phone       = payload.phone      or "",
+            address1    = b_addr1,
+            address2    = b_addr2,
+            city        = b_city,
+            state       = b_state,
+            postal_code = b_zip,
+            country     = b_country,
             metadata    = {
-                "source_domain": payload.source_domain or "",
-                "store_name":    order.store_name or "",
+                "source_domain":    payload.source_domain or "",
+                "store_name":       order.store_name or "",
+                "order_currency":   order.currency or "",
+                "order_total_cad":  str(order.total),
+                "pymtz_account":    pymtz_country,
             },
         )
 
@@ -574,6 +613,89 @@ async def checkout_card(
         order.payment_notes  = str(e)
         await db.commit()
         raise HTTPException(status_code=502, detail=f"Could not start card payment: {e}")
+
+
+# ─── POST /api/checkout/onramp_wp ────────────────────────────────────────────
+
+@router.post("/onramp_wp")
+async def checkout_onramp_wp(
+    payload: CardCheckoutRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Card payment via the WordPress + 2530gateway onramp plugin.
+
+    Creates the pending order, then creates a WooCommerce order on the WP
+    site running the Insta-Onramp plugin. Returns the WC `payment_url` so the
+    frontend can redirect the customer to complete payment there. WC fires
+    /webhooks/onramp_wp on completion, which marks the order paid and runs
+    the same downstream flow as card/pymtz (Shopify create, affiliate ping).
+    """
+    from services.onramp_wp import OnrampWPClient, OnrampWPError
+
+    if not getattr(settings, "ONRAMP_WP_ENABLED", False):
+        raise HTTPException(503, "Onramp WP not enabled")
+
+    brand = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal)
+    # Reuse the `card` PaymentMethod — the customer-facing UX is still a card,
+    # we disambiguate via payment_notes/payment_ref which carries the WC id.
+    order = await _create_base_order(db, payload, PaymentMethod.card, brand, 0.0, request)
+    await db.commit()
+
+    # Send the cart amount + currency through to WC as-is. WooCommerce + the
+    # 2530gateway plugin handle FX themselves — pre-converting CAD→USD here
+    # caused the onramp UI (Kryptonim et al.) to label the USD value as CAD,
+    # undercharging the customer by ~28%.
+    wc_amount   = float(order.total)
+    wc_currency = (order.currency or "USD").upper()
+
+    bill_same = (payload.bill_same or "1") == "1"
+    b_addr1   = (payload.address1 if bill_same else payload.bill_address1) or ""
+    b_addr2   = (payload.address2 if bill_same else payload.bill_address2) or ""
+    b_city    = (payload.city     if bill_same else payload.bill_city)     or ""
+    b_state   = (payload.province if bill_same else payload.bill_province) or ""
+    b_zip     = (payload.postal_code if bill_same else payload.bill_postal) or ""
+    b_country = (payload.country  if bill_same else payload.bill_country)  or "CA"
+
+    try:
+        client  = OnrampWPClient()
+        wc_resp = await client.create_order(
+            external_order_id = order.id,
+            amount      = wc_amount,
+            currency    = wc_currency,
+            first_name  = payload.first_name or "",
+            last_name   = payload.last_name  or "",
+            email       = payload.email,
+            phone       = payload.phone      or "",
+            address1    = b_addr1,
+            address2    = b_addr2,
+            city        = b_city,
+            state       = b_state,
+            postal_code = b_zip,
+            country     = b_country,
+        )
+        wc_order_id = wc_resp.get("id")
+        pay_url     = wc_resp["payment_url"]
+
+        order.payment_ref   = f"wc:{wc_order_id}"
+        order.payment_notes = f"onramp_wp via WC order #{wc_order_id} → {pay_url}"
+        await db.commit()
+
+        return {
+            "success":     True,
+            "orderId":     order.id,
+            "redirectUrl": pay_url,
+            "paymentId":   f"wc:{wc_order_id}",
+        }
+
+    except OnrampWPError as e:
+        logger.error(f"[onramp_wp] order create failed for {order.id}: {e}")
+        order.payment_status = PaymentStatus.failed
+        order.payment_notes  = f"onramp_wp error: {str(e)[:300]}"
+        await db.commit()
+        raise HTTPException(502, f"Onramp payment setup failed: {e}")
 
 
 # ─── POST /api/checkout/interac ──────────────────────────────────────────────
@@ -1105,8 +1227,11 @@ async def pymtz_verify(
         return {"orderId": order.id, "paymentStatus": "pending"}
 
     # ── Ask pymtz for current payment status ──────────────────────────────────
+    # Use the same per-country account the payment was created on, otherwise the
+    # GET hits the wrong merchant and returns 404 / 401.
+    pymtz_country = "US" if (order.currency or "").upper() == "USD" else "CA"
     try:
-        payment = await PymtzClient().get_payment(order.payment_ref)
+        payment = await PymtzClient(country=pymtz_country).get_payment(order.payment_ref)
     except Exception as e:
         logger.warning(f"[pymtz-verify] get_payment failed for {order.id}: {e}")
         return {"orderId": order.id, "paymentStatus": "pending"}

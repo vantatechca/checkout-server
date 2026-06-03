@@ -351,16 +351,43 @@ async def checkout_page(request: Request):
     country = request.query_params.get("country", "CA").upper()
     currency = "USD" if country == "US" else "CAD"
 
-    # Source store determines if credit card is enabled (and default)
+    # Source store determines per-method gating. Per-store overrides come
+    # from STORE_CONFIG_CSV (a CSV file). If a source has no row, fall back
+    # to the global env defaults — preserves current behavior for stores
+    # not yet in the file.
     source_domain = request.query_params.get("source", "")
 
-    source_allowed = _is_card_enabled_for_source(source_domain)
-    card_enabled = source_allowed   # per-store whitelist (pymtz)
+    from services import store_config as _store_cfg
 
-    # Whop availability — checked on page load so the option only renders
-    # when there's still daily capacity. Otherwise customers see a button
-    # that just errors out, which is bad UX.
-    whop_enabled = card_enabled and await _is_whop_available_today()
+    # Defaults pulled from the existing env machinery — same as before.
+    _env_card    = _is_card_enabled_for_source(source_domain)
+    _env_whop    = bool(getattr(settings, "WHOP_ENABLED", False))
+    _env_altcoin = (
+        bool(getattr(settings, "ALTCOIN_ENABLED", True))
+        and bool(settings.NOWPAYMENTS_API_KEY)
+    )
+    _env_onramp  = (
+        bool(getattr(settings, "ONRAMP_WP_ENABLED", False))
+        and bool(getattr(settings, "ONRAMP_WP_URL", ""))
+        and (
+            bool(getattr(settings, "ONRAMP_WP_CONSUMER_KEY", ""))
+            or bool(getattr(settings, "ONRAMP_WP_APP_PASSWORD", ""))
+        )
+    )
+
+    # CSV per-store overrides (None = no override, fall back to default)
+    card_enabled    = _store_cfg.is_enabled(source_domain, "card",    _env_card)
+    whop_enabled_pre = _store_cfg.is_enabled(source_domain, "whop",   _env_whop)
+    altcoin_enabled = _store_cfg.is_enabled(source_domain, "altcoin", _env_altcoin)
+    onramp_enabled  = _store_cfg.is_enabled(source_domain, "onramp",  _env_onramp)
+
+    # Whop also requires daily-cap headroom — apply that *after* the CSV
+    # override so a store that's enabled but over cap still gets hidden.
+    whop_enabled = (
+        whop_enabled_pre
+        and card_enabled                       # whop UI is coupled to card
+        and await _is_whop_available_today()
+    )
 
     ctx = {
         "store_name": (
@@ -381,8 +408,10 @@ async def checkout_page(request: Request):
         "store_currency":   currency,
         "base_url":         settings.BASE_URL,
         "source_domain":    source_domain,
-        "card_enabled":     card_enabled,
-        "whop_enabled":     whop_enabled,
+        "card_enabled":      card_enabled,
+        "whop_enabled":      whop_enabled,
+        "altcoin_enabled":   altcoin_enabled,
+        "onramp_wp_enabled": onramp_enabled,
         "stripe_publishable_key": settings.STRIPE_PUBLISHABLE_KEY or "",
         "helcim_worker_url": getattr(settings, "HELCIM_WORKER_URL", "https://hc-worker.flystarcafe7.workers.dev"),
     }

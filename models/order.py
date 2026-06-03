@@ -50,6 +50,22 @@ class PaymentStatus(str, enum.Enum):
     cancelled = "cancelled"
 
 
+def _classify_device(ua: str) -> str:
+    """
+    Bucket a raw User-Agent string into Mobile / Tablet / Desktop / Unknown.
+    Used by the admin order list (to_dict) and the monitoring dashboard's
+    device breakdown. Deliberately simple — good enough for rough analytics.
+    """
+    s = (ua or "").lower()
+    if not s:
+        return "Unknown"
+    if "ipad" in s or ("tablet" in s and "mobile" not in s):
+        return "Tablet"
+    if "mobi" in s or "iphone" in s or "android" in s or "ipod" in s:
+        return "Mobile"
+    return "Desktop"
+
+
 class Order(Base):
     __tablename__ = "orders"
 
@@ -167,6 +183,9 @@ class Order(Base):
             # Email tracking
             "lastCustomerEmailAt":  self.last_customer_email_at.isoformat() if self.last_customer_email_at else None,
             "customerEmailsSent":   self.customer_emails_sent or 0,
+
+            # Derived device class (from the stored User-Agent)
+            "device":               _classify_device(self.user_agent),
         }
 
 

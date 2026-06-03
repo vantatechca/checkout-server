@@ -970,3 +970,131 @@ async def whop_webhook(
                     )
 
     return {"received": True, "action": our_status}
+
+
+# ─── POST /webhooks/onramp_wp ─────────────────────────────────────────────────
+# WooCommerce (running the 2530gateway plugin) fires this on order status
+# changes. We match by our order_id (stored in WC meta_data) and run the same
+# post-payment pipeline as card/pymtz: mark paid → Shopify create → affiliate.
+
+def _verify_wc_signature(raw_body: bytes, signature: str, secret: str) -> bool:
+    """
+    WooCommerce webhooks sign the raw body with HMAC-SHA256 + base64 encoded.
+    Header: X-WC-Webhook-Signature: <base64-hmac-sha256-of-body>
+    Secret: the value you set in WP admin → WooCommerce → Settings → Advanced
+            → Webhooks → (your webhook) → Secret
+    """
+    if not secret or not signature:
+        return False
+    try:
+        digest = hmac.new(secret.encode(), raw_body, hashlib.sha256).digest()
+        expected = base64.b64encode(digest).decode()
+        return hmac.compare_digest(expected, signature.strip())
+    except Exception:
+        return False
+
+
+@router.post("/onramp_wp")
+async def onramp_wp_webhook(
+    request: Request,
+    x_wc_webhook_signature: str = Header(None, alias="x-wc-webhook-signature"),
+    x_wc_webhook_topic:     str = Header(None, alias="x-wc-webhook-topic"),
+):
+    """
+    Receive WooCommerce webhook from the WP site running the 2530gateway plugin.
+    Topics we care about: `order.updated`, `order.created`. We act on status
+    transitions to "processing" or "completed" (both = paid in WC parlance).
+    """
+    raw_body = await request.body()
+
+    secret = getattr(settings, "ONRAMP_WP_WEBHOOK_SECRET", "") or ""
+    if secret:
+        if not _verify_wc_signature(raw_body, x_wc_webhook_signature or "", secret):
+            logger.warning("onramp_wp webhook: invalid signature")
+            raise HTTPException(status_code=401, detail="Invalid webhook signature.")
+    elif settings.ENVIRONMENT == "production":
+        logger.warning("onramp_wp webhook: ONRAMP_WP_WEBHOOK_SECRET not set in production")
+        raise HTTPException(status_code=401, detail="Webhook secret not configured.")
+
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body.")
+
+    wc_order_id = data.get("id", "")
+    wc_status   = (data.get("status") or "").lower()
+
+    # Pull our external order_id out of meta_data
+    order_id = ""
+    for meta in (data.get("meta_data") or []):
+        if meta.get("key") in ("_external_order_id", "external_order_id"):
+            order_id = str(meta.get("value") or "")
+            break
+
+    # Fallback — match by stored payment_ref `wc:<id>`
+    if not order_id and wc_order_id:
+        async with AsyncSessionLocal() as db:
+            res = await db.execute(
+                select(Order).where(Order.payment_ref == f"wc:{wc_order_id}")
+            )
+            ord_match = res.scalar_one_or_none()
+            if ord_match:
+                order_id = ord_match.id
+
+    logger.info(
+        f"onramp_wp webhook: topic={x_wc_webhook_topic} wc_order={wc_order_id} "
+        f"wc_status={wc_status} order={order_id}"
+    )
+
+    if not order_id:
+        logger.warning(f"onramp_wp webhook: could not resolve order for WC order {wc_order_id}")
+        return {"received": True, "action": "no_order"}
+
+    from services.onramp_wp import WC_STATUS_MAP
+    our_status = WC_STATUS_MAP.get(wc_status)
+    if not our_status or our_status == "pending":
+        return {"received": True, "action": "none", "status": wc_status}
+
+    should_create_shopify = False
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Order).where(Order.id == order_id))
+        order  = result.scalar_one_or_none()
+        if not order:
+            logger.warning(f"onramp_wp webhook: no order found for {order_id}")
+            return {"received": True, "action": "not_found"}
+
+        if order.payment_status == PaymentStatus.pending:
+            order.payment_status = PaymentStatus(our_status)
+            order.payment_ref    = f"wc:{wc_order_id}"
+            if our_status == "paid":
+                order.paid_at       = datetime.now(timezone.utc)
+                order.payment_notes = f"onramp_wp WC #{wc_order_id} {wc_status}."
+                should_create_shopify = True
+                logger.info(f"✅ Card payment confirmed (onramp_wp): order {order.id} / WC #{wc_order_id}")
+            elif our_status == "failed":
+                order.payment_notes = f"onramp_wp WC #{wc_order_id} failed."
+            elif our_status == "cancelled":
+                order.payment_notes = f"onramp_wp WC #{wc_order_id} cancelled."
+            elif our_status == "refunded":
+                order.payment_notes = f"onramp_wp WC #{wc_order_id} refunded."
+        await db.commit()
+
+    if should_create_shopify:
+        async with AsyncSessionLocal() as db:
+            from sqlalchemy.orm import selectinload
+            result = await db.execute(
+                select(Order).where(Order.id == order_id).options(selectinload(Order.items))
+            )
+            order = result.scalar_one_or_none()
+            if order:
+                try:
+                    from services.shopify import create_shopify_order
+                    await create_shopify_order(order)
+                except Exception as e:
+                    logger.error(f"Shopify create failed for {order_id} (onramp_wp): {e}")
+                try:
+                    await _send_affiliate_webhook(order)
+                except Exception as e:
+                    logger.error(f"Affiliate webhook failed for {order_id} (onramp_wp): {e}")
+
+    return {"received": True, "action": "processed", "order_id": order_id, "status": our_status}

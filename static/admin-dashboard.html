@@ -20,6 +20,56 @@
   <body>
     <div class="toast" id="toast"></div>
 
+    <!-- Styled confirm / prompt dialog (replaces native browser dialogs) -->
+    <style>
+      .ui-dialog-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 99999;
+        display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+      .ui-dialog-overlay.open { display: flex; }
+      .ui-dialog { background: #fff; border-radius: 12px; max-width: 480px; width: 92%;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.35); font-family: 'DM Sans', sans-serif;
+        animation: ui-dialog-in 0.18s ease-out; overflow: hidden; }
+      @keyframes ui-dialog-in { from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); } }
+      .ui-dialog__head { padding: 2rem 2.4rem 0.6rem; }
+      .ui-dialog__title { margin: 0; font-size: 2rem; font-weight: 700; color: #111; }
+      .ui-dialog__body { padding: 0.4rem 2.4rem 1.8rem; color: #444; font-size: 1.5rem; line-height: 1.5; white-space: pre-wrap; }
+      .ui-dialog__input { width: 100%; box-sizing: border-box; padding: 1.1rem 1.2rem;
+        font-size: 1.5rem; border: 1.5px solid #e1e1e1; border-radius: 8px; font-family: inherit;
+        margin-top: 0.8rem; outline: none; }
+      .ui-dialog__input:focus { border-color: #0070f3; }
+      .ui-dialog__buttons { display: flex; gap: 0.8rem; padding: 1.2rem 2.4rem 2rem; justify-content: flex-end; }
+      .ui-dialog__btn { padding: 1.1rem 2rem; min-width: 9rem; border-radius: 8px; font-size: 1.4rem;
+        font-weight: 600; font-family: inherit; cursor: pointer; border: 1.5px solid transparent; transition: 0.15s; }
+      .ui-dialog__btn--cancel { background: #f3f3f3; color: #333; border-color: #e1e1e1; }
+      .ui-dialog__btn--cancel:hover { background: #ebebeb; }
+      .ui-dialog__btn--ok { background: #0070f3; color: #fff; }
+      .ui-dialog__btn--ok:hover { background: #0058c4; }
+      .ui-dialog__btn--danger { background: #c8102e; color: #fff; }
+      .ui-dialog__btn--danger:hover { background: #a40c25; }
+      /* Dark mode for the dialog */
+      [data-theme="dark"] .ui-dialog { background: #1a1d22; box-shadow: 0 24px 60px rgba(0,0,0,0.6); }
+      [data-theme="dark"] .ui-dialog__title { color: #eee; }
+      [data-theme="dark"] .ui-dialog__body  { color: #c0c0c0; }
+      [data-theme="dark"] .ui-dialog__input { background: #0f1115; border-color: #2a2e35; color: #eee; }
+      [data-theme="dark"] .ui-dialog__input:focus { border-color: #3b82f6; }
+      [data-theme="dark"] .ui-dialog__btn--cancel { background: #22262d; color: #ddd; border-color: #2a2e35; }
+      [data-theme="dark"] .ui-dialog__btn--cancel:hover { background: #2c3038; }
+      /* "Previously paid → unmarked" badge shown in the order list */
+      .status-badge.status-reverted { background:#fef3c7; color:#92400e; margin-left:0.4rem; }
+      [data-theme="dark"] .status-badge.status-reverted { background:#3b2e0c; color:#fbbf24; }
+    </style>
+    <div class="ui-dialog-overlay" id="uiDialogOverlay">
+      <div class="ui-dialog" role="dialog" aria-modal="true">
+        <div class="ui-dialog__head"><h3 class="ui-dialog__title" id="uiDialogTitle">Confirm</h3></div>
+        <div class="ui-dialog__body" id="uiDialogBody"></div>
+        <input class="ui-dialog__input" id="uiDialogInput" style="display:none;margin:0 2.4rem 1rem;width:calc(100% - 4.8rem);"/>
+        <div class="ui-dialog__buttons">
+          <button class="ui-dialog__btn ui-dialog__btn--cancel" id="uiDialogCancel">Cancel</button>
+          <button class="ui-dialog__btn ui-dialog__btn--ok" id="uiDialogOk">OK</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Detail / Confirm Modal -->
     <div class="modal-overlay" id="modalOverlay">
       <div class="modal">
@@ -53,7 +103,14 @@
       
       <aside class="sidebar">
         <nav class="sidebar-nav">
-          <div class="sidebar-item active" onclick="switchTab('pending')">
+          <div class="sidebar-item active" onclick="switchTab('dashboard')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+              Dashboard
+            </div>
+          </div>
+
+          <div class="sidebar-item" onclick="switchTab('pending')">
             <div style="display: flex; align-items: center; gap: 1rem;">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Pending
@@ -234,6 +291,109 @@
         </div>
       </div>
 
+      <!-- Dashboard / Monitoring view -->
+      <style>
+        #dashboardView { padding: 1.6rem 2rem; }
+        .dash-pills { display:flex; gap:0.8rem; flex-wrap:wrap; margin-bottom:1.6rem; }
+        .dash-pill { padding:0.7rem 1.1rem; border-radius:999px; font-size:1.25rem; font-weight:600;
+          display:inline-flex; align-items:center; gap:0.5rem; }
+        .dash-pill.ok    { background:#d1fae5; color:#065f46; }
+        .dash-pill.warn  { background:#fef3c7; color:#92400e; }
+        .dash-pill.bad   { background:#fee2e2; color:#991b1b; }
+        .dash-section-title { font-size:1.3rem; text-transform:uppercase; letter-spacing:0.1em;
+          color:#888; margin: 1.6rem 0 0.8rem; font-weight:600; }
+        .dash-grid { display:grid; gap:0.8rem; }
+        .dash-proc-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+        .dash-card { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:1.2rem;
+          font-size:1.3rem; }
+        [data-theme="dark"] .dash-card { background:#1a1d22; border-color:#2a2e35; color:#eee; }
+        .dash-card-title { font-weight:700; font-size:1.4rem; margin-bottom:0.4rem; display:flex;
+          align-items:center; gap:0.5rem; justify-content:space-between; }
+        .dash-card-meta { color:#888; font-size:1.15rem; }
+        .dash-card-stat { color:#1a7e2e; font-weight:600; font-size:1.3rem; margin-top:0.4rem; }
+        .dash-status-dot { width:0.9rem; height:0.9rem; border-radius:50%; display:inline-block; }
+        .dash-status-dot.ok   { background:#10b981; }
+        .dash-status-dot.warn { background:#f59e0b; }
+        .dash-status-dot.bad  { background:#ef4444; }
+        .dash-status-dot.off  { background:#9ca3af; }
+        .dash-kpi-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+          gap:0.8rem; }
+        .dash-kpi { background:#fff; border:1px solid #e5e5e5; border-radius:10px; padding:1.4rem; }
+        [data-theme="dark"] .dash-kpi { background:#1a1d22; border-color:#2a2e35; color:#eee; }
+        .dash-kpi-label { font-size:1.15rem; color:#888; text-transform:uppercase; letter-spacing:0.08em; }
+        .dash-kpi-value { font-size:2.6rem; font-weight:700; margin-top:0.3rem; }
+        .dash-table { width:100%; border-collapse:collapse; font-size:1.25rem; }
+        .dash-table th, .dash-table td { padding:0.7rem 0.9rem; text-align:left; border-bottom:1px solid #eee; }
+        [data-theme="dark"] .dash-table th, [data-theme="dark"] .dash-table td { border-color:#2a2e35; }
+        .dash-table th { color:#888; font-weight:600; text-transform:uppercase; font-size:1.1rem; letter-spacing:0.06em; }
+        .dash-feed { max-height:480px; overflow:auto; }
+        .dash-feed-row { font-family: ui-monospace, "JetBrains Mono", monospace; font-size:1.15rem;
+          padding:0.5rem 0; border-bottom:1px solid #f0f0f0; display:grid;
+          grid-template-columns: 60px 90px 130px 80px 90px 1fr; gap:0.6rem; align-items:center; }
+        [data-theme="dark"] .dash-feed-row { border-color:#2a2e35; color:#ddd; }
+        [data-theme="dark"] .dash-table th { color:#aaa; }
+        [data-theme="dark"] .dash-table td { color:#ddd; }
+        [data-theme="dark"] .dash-card-meta { color:#9aa3b2; }
+        [data-theme="dark"] .dash-card-stat { color:#34d399; }
+        [data-theme="dark"] .dash-kpi-label { color:#9aa3b2; }
+        [data-theme="dark"] .dash-section-title { color:#9aa3b2; }
+        /* Dark-mode pills - invert pastels to muted dark with bright text */
+        [data-theme="dark"] .dash-pill.ok   { background:#0c3b2d; color:#34d399; }
+        [data-theme="dark"] .dash-pill.warn { background:#3b2e0c; color:#fbbf24; }
+        [data-theme="dark"] .dash-pill.bad  { background:#3b0f12; color:#f87171; }
+        /* Status text in feeds - bump brightness for dark backgrounds */
+        [data-theme="dark"] .dash-feed-status.paid     { color:#34d399; }
+        [data-theme="dark"] .dash-feed-status.pending  { color:#fbbf24; }
+        [data-theme="dark"] .dash-feed-status.failed   { color:#f87171; }
+        [data-theme="dark"] .dash-feed-status.refunded { color:#c084fc; }
+        /* Inline mode-badge inside processor cards (gray pill / disabled red pill) */
+        [data-theme="dark"] #dashProcessors .dash-card span[style*="background:#e5e7eb"] {
+          background:#22262d !important; color:#ddd !important;
+        }
+        [data-theme="dark"] #dashProcessors .dash-card span[style*="background:#fee2e2"] {
+          background:#3b0f12 !important; color:#f87171 !important;
+        }
+        .dash-feed-status { font-weight:600; }
+        .dash-feed-status.paid { color:#1a7e2e; }
+        .dash-feed-status.pending { color:#b98900; }
+        .dash-feed-status.failed { color:#c8102e; }
+        .dash-feed-status.refunded { color:#9333ea; }
+        .dash-refresh { color:#888; font-size:1.2rem; margin-left:0.8rem; }
+      </style>
+      <div id="dashboardView" style="display: none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem">
+          <h2 style="margin:0;font-size:2rem">System Dashboard</h2>
+          <div>
+            <button class="filter-toggle" onclick="loadDashboard()" style="height:3.4rem">↻ Refresh</button>
+            <span class="dash-refresh" id="dashLastUpdated">—</span>
+          </div>
+        </div>
+
+        <div class="dash-pills" id="dashPills"></div>
+
+        <div class="dash-section-title">Today</div>
+        <div class="dash-kpi-row" id="dashKpis"></div>
+
+        <div class="dash-section-title">Payment processors</div>
+        <div class="dash-grid dash-proc-grid" id="dashProcessors"></div>
+
+        <div class="dash-section-title">Top source stores — paid today</div>
+        <table class="dash-table" id="dashSources">
+          <thead><tr><th>Source</th><th>Orders</th><th>Revenue</th></tr></thead>
+          <tbody><tr><td colspan="3" style="color:#888">Loading…</td></tr></tbody>
+        </table>
+
+        <div class="dash-section-title">Recent order activity</div>
+        <div class="dash-feed" id="dashFeed">
+          <div style="color:#888;padding:1rem 0">Loading…</div>
+        </div>
+
+        <div class="dash-section-title">Admin audit log</div>
+        <div class="dash-feed" id="dashAuditFeed" style="max-height:360px">
+          <div style="color:#888;padding:1rem 0">Loading…</div>
+        </div>
+      </div>
+
       <!-- Revenue view -->
       <div id="revenueView" style="display: none">
         <!-- Loading overlay -->
@@ -368,8 +528,14 @@
         .catch(function () {
           window.location.href = "/peps-admin-2026/login";
         });
-      function logout() {
-        if (!confirm("Are you sure you want to sign out?")) return;
+      async function logout() {
+        var ok = await showConfirm({
+          title:  "Sign out?",
+          body:   "You'll need to log back in to access the dashboard.",
+          okText: "Sign out",
+          danger: true,
+        });
+        if (!ok) return;
         fetch("/peps-admin-2026/auth/logout", {
           method: "POST",
           credentials: "include",
@@ -377,7 +543,7 @@
           window.location.href = "/peps-admin-2026/login";
         });
       }
-      var currentTab = "pending";
+      var currentTab = "dashboard";
       var allOrders = [];
       var filteredOrders = [];
       var pendingOrder = null;
@@ -388,7 +554,7 @@
       var revToDate = "";
       var allPaidOrders = [];
       var chartInstance = null;
-      var PAGE_SIZE = 20;
+      var PAGE_SIZE = 100;
       var ordersPage = 1;
       var revOrdersPage = 1;
       var lastUserActivity = Date.now();
@@ -769,6 +935,16 @@
                   : o.paymentStatus) +
               "</span>";
           }
+          // Append a "previously paid \u2192 unmarked" indicator when applicable.
+          if (o.wasUnmarked) {
+            var hoverTitle = o.unmarkedAt
+              ? "Previously marked paid; reverted on " + fmtTime(o.unmarkedAt)
+              : "Previously marked paid; reverted by admin";
+            badge +=
+              ' <span class="status-badge status-reverted" title="' +
+              hoverTitle +
+              '">\u26a0 Reverted</span>';
+          }
 
           var action = "";
           if (o.paymentStatus === "pending") {
@@ -941,26 +1117,48 @@
         });
       }
 
+      var _dashboardTimer = null;
+
       function switchTab(tab) {
         var isSameTab = currentTab === tab;
         currentTab = tab;
         if (typeof clearSelection === "function") clearSelection();
 
-        document.querySelectorAll(".sidebar-item").forEach(function (t, i) {
-          t.classList.toggle(
-            "active",
-            ["pending", "awaiting", "all", "paid", "failed", "revenue"][i] ===
-              tab,
-          );
+        // Sidebar order MUST match the DOM order of nav items.
+        var TAB_ORDER = ["dashboard", "pending", "awaiting", "all", "paid", "failed", "revenue"];
+        document.querySelectorAll(".sidebar-nav > .sidebar-item").forEach(function (t, i) {
+          t.classList.toggle("active", TAB_ORDER[i] === tab);
         });
 
+        var ordersEl    = document.getElementById("ordersView");
+        var revenueEl   = document.getElementById("revenueView");
+        var dashboardEl = document.getElementById("dashboardView");
+
+        // Clear dashboard auto-refresh when leaving
+        if (_dashboardTimer && tab !== "dashboard") {
+          clearInterval(_dashboardTimer);
+          _dashboardTimer = null;
+        }
+
+        if (tab === "dashboard") {
+          ordersEl.style.display = "none";
+          revenueEl.style.display = "none";
+          dashboardEl.style.display = "block";
+          loadDashboard();
+          // Auto-refresh every 30s while the tab is open
+          _dashboardTimer = setInterval(loadDashboard, 30000);
+          return;
+        }
+
+        dashboardEl.style.display = "none";
+
         if (tab === "revenue") {
-          document.getElementById("ordersView").style.display = "none";
-          document.getElementById("revenueView").style.display = "block";
+          ordersEl.style.display = "none";
+          revenueEl.style.display = "block";
           loadAllPaidOrders(buildRevenue);
         } else {
-          document.getElementById("ordersView").style.display = "block";
-          document.getElementById("revenueView").style.display = "none";
+          ordersEl.style.display = "block";
+          revenueEl.style.display = "none";
 
           if (!isSameTab) {
             document.getElementById("ordersLoading").classList.add("active");
@@ -968,6 +1166,162 @@
           }
           loadOrders({ showLoader: !isSameTab });
         }
+      }
+
+      /* ─── DASHBOARD (monitoring) ────────────────── */
+      function loadDashboard() {
+        fetch("/admin/monitoring/health", { credentials: "include" })
+          .then(function (r) { return r.json(); })
+          .then(function (d) { renderDashboard(d); })
+          .catch(function () { showToast("error", "Could not load dashboard"); });
+        // Audit log is independent — a failing fetch shouldn't blank the rest.
+        fetch("/admin/monitoring/activities?limit=50", { credentials: "include" })
+          .then(function (r) { return r.json(); })
+          .then(function (rows) { renderAuditFeed(rows); })
+          .catch(function () { /* silent — feed shows last state */ });
+      }
+
+      /* Pretty labels for action types in the audit feed */
+      var _AUDIT_LABEL = {
+        mark_paid:           "✓ marked paid",
+        unmark_paid:         "⚠ unmarked paid",
+        cancel:              "✕ cancelled",
+        recover:             "↻ recovered",
+        export_csv:          "⬇ exported CSV",
+        view_email_history:  "👁 viewed emails",
+        switch_email_mode:   "✎ edited template",
+        login:               "→ logged in",
+        logout:              "← logged out",
+      };
+      function _auditLabel(action) {
+        return _AUDIT_LABEL[action] || action;
+      }
+      function _auditTone(action) {
+        if (action === "mark_paid" || action === "recover") return "paid";
+        if (action === "unmark_paid" || action === "cancel") return "failed";
+        return "pending";
+      }
+
+      function renderAuditFeed(rows) {
+        var html = (rows || []).map(function (a) {
+          var when = _fmtAgo(a.createdAt);
+          var who  = a.adminUser || "admin";
+          var label = _auditLabel(a.action);
+          var target = a.targetId ? a.targetId : (a.targetType || "");
+          var details = a.details || "";
+          return (
+            '<div class="dash-feed-row" style="grid-template-columns: 60px 140px 130px 1fr">' +
+              '<span style="color:#888">' + when + '</span>' +
+              '<span class="dash-feed-status ' + _auditTone(a.action) + '">' + label + '</span>' +
+              '<span>' + target + '</span>' +
+              '<span style="color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' +
+                (details || "").replace(/"/g, "&quot;") + '">' + (who + " · " + details) + '</span>' +
+            '</div>'
+          );
+        }).join("");
+        document.getElementById("dashAuditFeed").innerHTML = html ||
+          '<div style="color:#888;padding:1rem 0">No admin activity yet</div>';
+      }
+
+      function _fmtAgo(iso) {
+        if (!iso) return "—";
+        var diff = (Date.now() - new Date(iso).getTime()) / 1000;
+        if (diff < 60)        return Math.floor(diff) + "s ago";
+        if (diff < 3600)      return Math.floor(diff / 60) + "m ago";
+        if (diff < 86400)     return Math.floor(diff / 3600) + "h ago";
+        return Math.floor(diff / 86400) + "d ago";
+      }
+
+      function _agoTone(iso, hotMin, coldHrs) {
+        if (!iso) return "off";
+        var diff = (Date.now() - new Date(iso).getTime()) / 1000;
+        if (diff < hotMin * 60)        return "ok";
+        if (diff < coldHrs * 3600)     return "warn";
+        return "bad";
+      }
+
+      function renderDashboard(d) {
+        document.getElementById("dashLastUpdated").textContent = "Updated " + new Date().toLocaleTimeString();
+
+        /* ── Pills (top of page) ── */
+        var pillEl = document.getElementById("dashPills");
+        var pills = [];
+        pills.push({ tone: d.server.db_ok ? "ok" : "bad", text: (d.server.db_ok ? "✓ DB OK" : "✕ DB DOWN") });
+        pills.push({ tone: d.server.env === "production" ? "ok" : "warn", text: "ENV: " + (d.server.env || "?") });
+        var activeProcs = Object.values(d.processors).filter(function(p){ return p.enabled; }).length;
+        var totalProcs  = Object.values(d.processors).length;
+        pills.push({ tone: activeProcs > 0 ? "ok" : "bad", text: activeProcs + "/" + totalProcs + " processors live" });
+        pills.push({ tone: "ok", text: "Paid today: " + d.today_kpis.paid_count });
+        pills.push({ tone: d.today_kpis.failed_count > 0 ? "warn" : "ok", text: "Failed today: " + d.today_kpis.failed_count });
+        pillEl.innerHTML = pills.map(function (p) {
+          return '<span class="dash-pill ' + p.tone + '">' + p.text + '</span>';
+        }).join("");
+
+        /* ── KPIs ── */
+        var k = d.today_kpis;
+        var kpis = [
+          { label: "Orders today",     value: k.orders_total },
+          { label: "Paid",             value: k.paid_count },
+          { label: "Pending",          value: k.pending_count },
+          { label: "Failed",           value: k.failed_count },
+          { label: "Revenue today",    value: "$" + k.revenue.toLocaleString() },
+          { label: "Conversion",       value: k.conversion_rate + "%" },
+        ];
+        document.getElementById("dashKpis").innerHTML = kpis.map(function (x) {
+          return '<div class="dash-kpi"><div class="dash-kpi-label">' + x.label +
+                 '</div><div class="dash-kpi-value">' + x.value + '</div></div>';
+        }).join("");
+
+        /* ── Processor cards ── */
+        var procEl = document.getElementById("dashProcessors");
+        procEl.innerHTML = Object.values(d.processors).map(function (p) {
+          // Dot color = enabled state, NOT recency of last payment.
+          var tone;
+          if (!p.configured)        tone = "off";   // gray - not set up
+          else if (!p.enabled)      tone = "off";   // gray - kill-switch flipped
+          else                      tone = "ok";    // green - ready to process
+          var modeBadge = p.enabled
+            ? '<span style="font-size:1.05rem;background:#e5e7eb;color:#374151;padding:0.15rem 0.5rem;border-radius:4px">' + p.mode + '</span>'
+            : '<span style="font-size:1.05rem;background:#fee2e2;color:#991b1b;padding:0.15rem 0.5rem;border-radius:4px">DISABLED</span>';
+          var lastLine = p.last_paid
+            ? "Last paid: " + _fmtAgo(p.last_paid)
+            : (p.last_created ? "Last attempt: " + _fmtAgo(p.last_created) : "No activity");
+          return (
+            '<div class="dash-card">' +
+              '<div class="dash-card-title">' +
+                '<span><span class="dash-status-dot ' + tone + '"></span> ' + p.label + '</span>' +
+                modeBadge +
+              '</div>' +
+              '<div class="dash-card-meta">' + lastLine + '</div>' +
+              '<div class="dash-card-stat">Today: ' + p.paid_count + ' paid · $' + p.paid_revenue.toLocaleString() + '</div>' +
+            '</div>'
+          );
+        }).join("");
+
+        /* ── Top sources ── */
+        var srcRows = (d.sources || []).map(function (s) {
+          return '<tr><td>' + s.domain + '</td><td>' + s.orders + '</td><td>$' + s.revenue.toLocaleString() + '</td></tr>';
+        }).join("");
+        document.querySelector("#dashSources tbody").innerHTML = srcRows ||
+          '<tr><td colspan="3" style="color:#888">No activity today</td></tr>';
+
+        /* ── Recent feed ── */
+        var feed = (d.recent_events || []).map(function (e) {
+          var when = _fmtAgo(e.paid_at || e.created_at);
+          var statusClass = "dash-feed-status " + (e.status || "");
+          return (
+            '<div class="dash-feed-row">' +
+              '<span style="color:#888">' + when + '</span>' +
+              '<span class="' + statusClass + '">' + (e.status || "?") + '</span>' +
+              '<span>' + e.order_id + '</span>' +
+              '<span>$' + e.amount.toFixed(2) + '</span>' +
+              '<span style="color:#888">' + e.method + '</span>' +
+              '<span style="color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (e.source || "") + '</span>' +
+            '</div>'
+          );
+        }).join("");
+        document.getElementById("dashFeed").innerHTML = feed ||
+          '<div style="color:#888;padding:1rem 0">No recent activity</div>';
       }
 
       /* ─── REVENUE ─────────────────────────────── */
@@ -1536,8 +1890,17 @@
             '<button class="modal-confirm" id="modalConfirmBtn" onclick="confirmMarkPaid()">\u2713 Mark as Paid</button>';
           html += "</div>";
         } else {
+          var isPaid = (o.paymentStatus === "paid");
+          html += '<div class="modal-btns">';
           html +=
-            '<div class="modal-btns"><button class="modal-cancel" style="flex:1" onclick="closeModal()">Close</button></div>';
+            '<button class="modal-cancel" style="flex:1" onclick="closeModal()">Close</button>';
+          if (isPaid) {
+            html +=
+              "<button style=\"height:4.8rem;padding:0 2rem;background:#fff0f0;color:#c8102e;border:1.5px solid #c8102e;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer;\" onclick=\"unmarkOrderPaid('" +
+              o.id +
+              "')\">⚠ Unmark Paid</button>";
+          }
+          html += "</div>";
         }
 
         document.getElementById("modalTitle").textContent = "Order " + o.id;
@@ -1612,7 +1975,7 @@
         pendingOrder = null;
       }
 
-      function confirmMarkPaid() {
+      async function confirmMarkPaid() {
         if (!pendingOrder) return;
         var btn = document.getElementById("modalConfirmBtn");
         if (btn) {
@@ -1623,13 +1986,15 @@
           var shortfall =
             parseFloat(pendingOrder.total || 0) -
             parseFloat(pendingOrder.receivedAmount || 0);
-          if (
-            !confirm(
-              "This order is currently underpaid by $" +
-                shortfall.toFixed(2) +
-                ". Did the customer send the remaining balance?\n\nClick OK to mark as fully paid.",
-            )
-          ) {
+          var ok = await showConfirm({
+            title: "Order is underpaid",
+            body:
+              "This order is currently underpaid by $" + shortfall.toFixed(2) + ".\n" +
+              "Did the customer send the remaining balance?",
+            okText: "Yes — mark as fully paid",
+            cancelText: "No, keep underpaid",
+          });
+          if (!ok) {
             if (btn) {
               btn.textContent = "✓ Mark as Paid";
               btn.disabled = false;
@@ -1676,9 +2041,56 @@
           });
       }
 
-      function cancelOrder(orderId) {
-        if (!confirm("Cancel order " + orderId + "? This cannot be undone."))
-          return;
+      async function unmarkOrderPaid(orderId) {
+        var reason = await showPrompt({
+          title: "Revert paid order?",
+          body:  "This reverses an accidental mark-paid back to PENDING.\n" +
+                 "Shopify/affiliate side effects will NOT be auto-undone — handle those manually.",
+          placeholder: "Reason for reverting…",
+          okText: "Continue",
+        });
+        if (reason === null) return;   // cancelled
+
+        var ok = await showConfirm({
+          title:  "Confirm revert",
+          body:   "Revert order " + orderId + " from PAID → PENDING?\n\nReason: " + (reason || "(none)"),
+          okText: "Revert",
+          danger: true,
+        });
+        if (!ok) return;
+
+        fetch("/admin/orders/" + orderId + "/unmark-paid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: reason || "no reason given", new_status: "pending" }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (res.ok && res.data.success) {
+              showToast(
+                "success",
+                "Order " + orderId + " reverted to pending. ⚠ Check Shopify manually."
+              );
+              closeModal();
+              loadOrders();
+            } else {
+              showToast("error", res.data.detail || "Failed to unmark paid");
+            }
+          })
+          .catch(function () {
+            showToast("error", "Network error");
+          });
+      }
+
+      async function cancelOrder(orderId) {
+        var ok = await showConfirm({
+          title:  "Cancel order?",
+          body:   "Cancel order " + orderId + "? This cannot be undone.",
+          okText: "Cancel order",
+          cancelText: "Keep order",
+          danger: true,
+        });
+        if (!ok) return;
         fetch("/admin/orders/" + orderId + "/cancel", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1698,15 +2110,13 @@
           });
       }
 
-      function recoverOrder(orderId) {
-        if (
-          !confirm(
-            "Recover order " +
-              orderId +
-              "? This resets it to pending so the customer can pay again.",
-          )
-        )
-          return;
+      async function recoverOrder(orderId) {
+        var ok = await showConfirm({
+          title:  "Recover order?",
+          body:   "Recover order " + orderId + "? This resets it to pending so the customer can pay again.",
+          okText: "Recover",
+        });
+        if (!ok) return;
         fetch("/admin/orders/" + orderId + "/recover", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1741,6 +2151,67 @@
         setTimeout(function () {
           el.className = "toast " + type;
         }, 4000);
+      }
+
+      /* ─── Styled async confirm / prompt (replaces native browser dialogs) ── */
+      function _uiDialog(opts) {
+        return new Promise(function (resolve) {
+          var overlay = document.getElementById("uiDialogOverlay");
+          var titleEl = document.getElementById("uiDialogTitle");
+          var bodyEl  = document.getElementById("uiDialogBody");
+          var inputEl = document.getElementById("uiDialogInput");
+          var cancel  = document.getElementById("uiDialogCancel");
+          var ok      = document.getElementById("uiDialogOk");
+
+          titleEl.textContent = opts.title || "Confirm";
+          bodyEl.textContent  = opts.body  || "";
+          ok.textContent      = opts.okText || "OK";
+          cancel.textContent  = opts.cancelText || "Cancel";
+          ok.className = "ui-dialog__btn " + (opts.danger ? "ui-dialog__btn--danger" : "ui-dialog__btn--ok");
+
+          if (opts.prompt) {
+            inputEl.style.display = "block";
+            inputEl.value = opts.defaultValue || "";
+            inputEl.placeholder = opts.placeholder || "";
+            setTimeout(function () { inputEl.focus(); inputEl.select(); }, 50);
+          } else {
+            inputEl.style.display = "none";
+            setTimeout(function () { ok.focus(); }, 50);
+          }
+
+          overlay.classList.add("open");
+
+          function cleanup(result) {
+            overlay.classList.remove("open");
+            ok.onclick = cancel.onclick = inputEl.onkeydown = null;
+            document.removeEventListener("keydown", onKey);
+            resolve(result);
+          }
+          function onKey(e) {
+            if (e.key === "Escape") { e.preventDefault(); cleanup(opts.prompt ? null : false); }
+            else if (e.key === "Enter" && !opts.prompt) { e.preventDefault(); cleanup(true); }
+          }
+          ok.onclick     = function () { cleanup(opts.prompt ? inputEl.value : true); };
+          cancel.onclick = function () { cleanup(opts.prompt ? null : false); };
+          inputEl.onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); cleanup(inputEl.value); } };
+          document.addEventListener("keydown", onKey);
+        });
+      }
+
+      function showConfirm(opts) {
+        // opts: { title, body, okText, cancelText, danger }
+        return _uiDialog(Object.assign({ prompt: false }, opts || {}));
+      }
+      function showPrompt(opts) {
+        // opts: { title, body, okText, defaultValue, placeholder }
+        return _uiDialog(Object.assign({ prompt: true }, opts || {}));
+      }
+      function showAlert(opts) {
+        // One-button dialog. opts: { title, body, okText }
+        return _uiDialog(Object.assign(
+          { prompt: false, cancelText: null },
+          opts || {}
+        )).then(function () { return undefined; });
       }
 
       /* ─── EMAIL HISTORY VIEWER ─────────────────── */
@@ -2194,7 +2665,7 @@
         document.getElementById("emailModalBody").innerHTML = html;
       }
 
-      function switchEmailMode(mode) {
+      async function switchEmailMode(mode) {
         document
           .getElementById("modeDefaultBtn")
           .classList.toggle("active", mode === "default");
@@ -2202,11 +2673,13 @@
           .getElementById("modeCustomBtn")
           .classList.toggle("active", mode === "custom");
         if (mode === "default") {
-          if (
-            !confirm(
-              "Reset subject and body to the default template? Your edits will be lost.",
-            )
-          ) {
+          var ok = await showConfirm({
+            title: "Reset to default template?",
+            body:  "Subject and body will be reset to the default. Your edits will be lost.",
+            okText: "Reset",
+            danger: true,
+          });
+          if (!ok) {
             document
               .getElementById("modeDefaultBtn")
               .classList.remove("active");
@@ -2369,13 +2842,27 @@
       });
 
       // ── CSV export of the orders currently shown (respects filters/tab) ─
-      function exportCSV(rowsArg) {
+      async function exportCSV(rowsArg) {
         var rows = rowsArg || filteredOrders || [];
-        if (!rows.length) { alert("No orders to export in the current view."); return; }
-        if (!confirm(
-          "Export " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " to CSV?\n\n" +
-          "The file includes customer names, emails, phone numbers and shipping addresses — handle it securely."
-        )) { return; }
+        if (!rows.length) { showToast("error", "No orders to export in the current view."); return; }
+        var ok = await showConfirm({
+          title:  "Export " + rows.length + " order" + (rows.length > 1 ? "s" : "") + "?",
+          body:   "The file includes customer names, emails, phone numbers, and shipping addresses — handle it securely.",
+          okText: "Download CSV",
+        });
+        if (!ok) return;
+
+        // Audit-log the export (PII export is a security-sensitive action)
+        fetch("/admin/monitoring/log", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "export_csv",
+            target_type: "orders",
+            details: rows.length + " rows from tab '" + (currentTab || "all") + "'",
+          }),
+        }).catch(function () { /* silent */ });
         var cols = [
           ["Order ID",     function (o) { return o.id; }],
           ["Created",      function (o) { return o.createdAt || ""; }],
@@ -2491,19 +2978,28 @@
             });
         });
       }
-      function bulkMarkPaid() {
+      async function bulkMarkPaid() {
         var rows = _selectedOrderObjs();
         if (!rows.length || _bulkRunning) return;
-        if (!confirm(
-          "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " as PAID?\n\n" +
-          "This sends each customer a confirmation email and creates the Shopify order. It cannot be undone."
-        )) return;
+        var ok = await showConfirm({
+          title: "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " as PAID?",
+          body:  "This sends each customer a confirmation email and creates the Shopify order. It cannot be undone.",
+          okText: "Mark all paid",
+        });
+        if (!ok) return;
         _bulkRun(rows, "/mark-paid", "Marked paid by admin (bulk)", "marked paid", "bulkPayBtn");
       }
-      function bulkCancel() {
+      async function bulkCancel() {
         var rows = _selectedOrderObjs();
         if (!rows.length || _bulkRunning) return;
-        if (!confirm("Cancel " + rows.length + " order" + (rows.length > 1 ? "s" : "") + "? This cannot be undone.")) return;
+        var ok = await showConfirm({
+          title: "Cancel " + rows.length + " order" + (rows.length > 1 ? "s" : "") + "?",
+          body:  "This cannot be undone.",
+          okText: "Cancel all",
+          cancelText: "Keep",
+          danger: true,
+        });
+        if (!ok) return;
         _bulkRun(rows, "/cancel", "Cancelled by admin (bulk)", "cancelled", "bulkCancelBtn");
       }
       function bulkExport() {
@@ -2584,7 +3080,12 @@
           console.error("Failed to load master store list from API", e);
         });
 
-      loadOrders();
+      // Land on the Dashboard tab by default. switchTab('dashboard') hides the
+      // orders view, kicks off the dashboard data fetch, and starts the 30s
+      // auto-refresh. Also fire updateStats() so the top stat-card row
+      // populates without needing to visit the orders tab first.
+      switchTab('dashboard');
+      updateStats();
     </script>
   </body>
 </html>

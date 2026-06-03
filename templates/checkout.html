@@ -767,8 +767,7 @@ body{
       <div class="pay-methods">
 
         {% if card_enabled %}
-        <!-- CREDIT CARD — temporarily disabled. Remove the {# #} wrapper to re-enable. -->
-        {#
+        <!-- CREDIT CARD — pymtz hosted page. Rendered only when card_enabled. -->
         <label class="pay-method active" id="pm-card">
           <input type="radio" name="paymentMethod" value="card" checked onchange="selectMethod('card')"/>
           <div class="pay-info">
@@ -788,7 +787,6 @@ body{
             </div>
           </div>
         </label>
-        #}
 
         {% if whop_enabled %}
         <!-- CARD (WHOP) — parallel cloaked credit card processor via Whop's embedded checkout.
@@ -815,6 +813,32 @@ body{
         </label>
         {% endif %}{# whop_enabled #}
         {% endif %}{# card_enabled #}
+
+        {% if onramp_wp_enabled %}
+        <!-- CARD (ONRAMP via WP plugin) — alternative cloaked card processor.
+             Routes through a WooCommerce site running the 2530gateway plugin →
+             onramp provider → USDC to wallet. Customer enters card on the
+             hosted onramp page. -->
+        <label class="pay-method" id="pm-onramp_wp">
+          <input type="radio" name="paymentMethod" value="onramp_wp" onchange="selectMethod('onramp_wp')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Card (Alt)</span>
+              <div class="pay-icons">
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text></svg>
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
+              </div>
+            </div>
+            <div class="pay-desc">Visa, Mastercard · Alternative card processor</div>
+            <div class="pay-body">
+              <div id="onrampUsdEquiv" style="display:none;background:rgba(52,211,153,0.10);border:1px solid rgba(52,211,153,0.35);border-radius:8px;padding:1rem 1.4rem;margin-bottom:0.8rem;font-size:1.4rem;color:#0f7a52;text-align:center;"></div>
+              <div style="background:#f8f7f4;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#666;">
+                🔒 After placing your order, you will be redirected to a secure card form to complete your payment.
+              </div>
+            </div>
+          </div>
+        </label>
+        {% endif %}{# onramp_wp_enabled #}
 
         {% if store_country == "US" %}
         <!-- ZELLE (US) -->
@@ -918,8 +942,8 @@ body{
         </label>
         {% endif %}
 
-        <!-- ALTCOIN — hidden. Remove the {# #} wrapper below to re-enable. -->
-        {#
+        {% if altcoin_enabled %}
+        <!-- ALTCOIN (NowPayments) -->
         <label class="pay-method" id="pm-altcoin">
           <input type="radio" name="paymentMethod" value="altcoin" onchange="selectMethod('altcoin')"/>
           <div class="pay-info">
@@ -950,7 +974,7 @@ body{
             </div>
           </div>
         </label>
-        #}
+        {% endif %}{# altcoin_enabled #}
 
 
         <label class="pay-method" id="pm-crypto" style="display:none">
@@ -1088,6 +1112,12 @@ body{
         <span class="total-label">Total</span>
         <span class="total-value"><span class="currency-code">{{ store_currency }}</span><span id="totalDisplay">$198.00</span></span>
       </div>
+      <!-- USD equivalent — only shown when a card method (pymtz/onramp) is selected -->
+      <div id="usdEquivRow" style="display:none;padding:0.6rem 0;text-align:right;">
+        <span style="font-size:1.2rem;color:var(--sidebar-muted);">≈ </span>
+        <span id="usdEquivDisplay" style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:600;color:#4ade80;"></span>
+        <span style="font-size:1.05rem;font-weight:700;color:#4ade80;margin-left:0.3rem;background:rgba(74,222,128,0.15);padding:0.15rem 0.5rem;border-radius:999px;">USD</span>
+      </div>
     </div>
 
     <!-- Trust / reassurance block under the order total (desktop sidebar) -->
@@ -1151,9 +1181,7 @@ body{
   })();
 
   // ── Server-rendered flag: is credit card enabled for this source store?
-  // Credit Card option is temporarily commented out in the markup above —
-  // force CARD_ENABLED=false so the default method falls back to Interac/Zelle.
-  var CARD_ENABLED = false;
+  var CARD_ENABLED = {{ 'true' if card_enabled else 'false' }};
 
   // ── DISCOUNT CODES (from URL only) ────────────────────
   var VALID_DISCOUNT_CODES = {};
@@ -1375,6 +1403,36 @@ var _autoSaveQueue = [];
 
   var STORE_COUNTRY  = "{{ store_country }}";
   var STORE_CURRENCY = "{{ store_currency }}";
+  // Fixed conversion shown alongside CAD totals (1 USD = 1.38 CAD).
+  // MUST stay in sync with USD_CONVERSION_RATE in routes/checkout.py.
+  var USD_CONVERSION_RATE = 1.38;
+  function _setUsdEquiv(cadAmount) {
+    var els = [document.getElementById('cardUsdEquiv'), document.getElementById('onrampUsdEquiv')];
+    var hasAny = els.some(function (e) { return !!e; });
+    if (!hasAny && !document.getElementById('usdEquivRow')) return;
+    if (STORE_CURRENCY === 'CAD' && cadAmount > 0) {
+      var usd = (parseFloat(cadAmount) / USD_CONVERSION_RATE).toFixed(2);
+      var html =
+        '<span style="color:#0f7a52;font-weight:600;font-size:1.35rem;margin-right:0.8rem;">CAD $' + parseFloat(cadAmount).toFixed(2) + '</span>' +
+        '<span style="color:#0f7a52;font-weight:500;margin-right:0.3rem;">≈</span>' +
+        '<span style="color:#0f7a52;font-weight:800;font-size:1.6rem;">$' + usd + '</span>' +
+        '<span style="background:#0f7a52;color:#fff;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.95rem;font-weight:800;letter-spacing:0.08em;margin-left:0.5rem;vertical-align:middle;">USD</span>';
+      els.forEach(function (el) {
+        if (el) { el.innerHTML = html; el.style.display = 'block'; }
+      });
+      // Sidebar USD equiv row (visible only when a card-like method is active)
+      var usdRow = document.getElementById('usdEquivRow');
+      var usdDisp = document.getElementById('usdEquivDisplay');
+      if (usdRow && usdDisp) {
+        usdDisp.textContent = '$' + usd;
+        usdRow.style.display = (currentMethod === 'card' || currentMethod === 'onramp_wp') ? 'block' : 'none';
+      }
+    } else {
+      els.forEach(function (el) { if (el) el.style.display = 'none'; });
+      var usdRow = document.getElementById('usdEquivRow');
+      if (usdRow) usdRow.style.display = 'none';
+    }
+  }
   // Default payment method: card if enabled, otherwise zelle (US) or interac (CA)
   var currentMethod = CARD_ENABLED ? 'card' : ("{{ store_country }}" === "US" ? 'zelle' : 'interac');
 
@@ -1430,6 +1488,7 @@ var _autoSaveQueue = [];
       // Show final total
       document.getElementById('totalDisplay').textContent = fmt(finalTotal);
       document.getElementById('mobileTotalDisplay').textContent = fmt(finalTotal);
+      _setUsdEquiv(finalTotal);
 
       var labels = {
         card:    'Pay now · ' + fmt(finalTotal),
@@ -1485,6 +1544,7 @@ var _autoSaveQueue = [];
     document.getElementById('subtotalDisplay').textContent = fmt(SUBTOTAL);
     document.getElementById('totalDisplay').textContent = fmt(total);
     document.getElementById('mobileTotalDisplay').textContent = fmt(total);
+    _setUsdEquiv(total);
 
     var discRow = document.getElementById('discountRow');
     if (discAmt > 0) {
@@ -1547,6 +1607,9 @@ var _autoSaveQueue = [];
   }
 
   function selectMethod(method) {
+  // Show/hide sidebar USD row when a card-like method is selected (pymtz card OR onramp_wp)
+  var usdRow = document.getElementById('usdEquivRow');
+  if (usdRow) usdRow.style.display = (method === 'card' || method === 'onramp_wp') ? 'block' : 'none';
   if (method !== currentMethod) {
     Object.keys(sessionStorage).forEach(function(k) {
       if (k.indexOf('checkout_order_id_') === 0) sessionStorage.removeItem(k);
@@ -1559,7 +1622,7 @@ var _autoSaveQueue = [];
     for (var i = 0; i < methods.length; i++) {
       methods[i].classList.remove('active');
     }
-    var ids = { card: 'pm-card', whop: 'pm-whop', interac: 'pm-interac', zelle: 'pm-zelle', crypto: 'pm-crypto', altcoin: 'pm-altcoin' };
+    var ids = { card: 'pm-card', whop: 'pm-whop', onramp_wp: 'pm-onramp_wp', interac: 'pm-interac', zelle: 'pm-zelle', crypto: 'pm-crypto', altcoin: 'pm-altcoin' };
     var el = document.getElementById(ids[method]);
     if (el) el.classList.add('active');
     updateTotals(method);
@@ -1787,7 +1850,8 @@ var _autoSaveQueue = [];
       Object.keys(sessionStorage).forEach(function(k){
         if (k.indexOf('checkout_order_id_') === 0) sessionStorage.removeItem(k);
       });
-      if (currentMethod === 'card')    { window.location.href = res.data.redirectUrl; }
+      if (currentMethod === 'card')      { window.location.href = res.data.redirectUrl; }
+      if (currentMethod === 'onramp_wp') { window.location.href = res.data.redirectUrl; }
       if (currentMethod === 'interac') { window.location.href = '/order/' + res.data.orderId + '/confirmation'; }
       if (currentMethod === 'zelle')   { window.location.href = '/order/' + res.data.orderId + '/confirmation'; }
       if (currentMethod === 'crypto')  { window.location.href = '/order/' + res.data.orderId + '/confirmation'; }

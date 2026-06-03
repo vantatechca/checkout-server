@@ -1,0 +1,715 @@
+domain,card,whop,altcoin,onramp,notes
+# -- onramp-enabled (top performers - show "Card (Alt)" on checkout) --
+floridapeptideslab.com,0,0,0,1,onramp + interac/zelle + crypto
+torontopeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+saskatoonpeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+montrealpeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+calgarypeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+winnipegpeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+vancouverpeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+ottawapeptides.com,0,0,0,1,onramp + interac/zelle + crypto
+
+peptidesdenver.com,0,0,0,1,onramp + interac/zelle + crypto
+ajaxpeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+oakvillepeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+truropeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+philadelphiapeptides.com,0,0,0,1,onramp + interac/zelle + crypto
+peptidesanjose.com,0,0,0,1,onramp + interac/zelle + crypto
+burnabypeptides.ca,0,0,0,1,onramp + interac/zelle + crypto
+peptidesaurora.com,0,0,0,1,onramp + interac/zelle + crypto
+atlantapeps.com,0,0,0,1,onramp + interac/zelle + crypto
+peptidesportland.com,0,0,0,1,onramp + interac/zelle + crypto
+miamipeps.com,0,0,0,1,onramp + interac/zelle + crypto
+columbuspeptides.com,0,0,0,1,onramp + interac/zelle + crypto
+# -- interac/zelle + crypto only (no card, no onramp) --
+lavalpeptides.ca,0,0,0,0,interac/zelle + crypto only
+surreypeptides.com,0,0,0,0,interac/zelle + crypto only
+edmontonpeptides.com,0,0,0,0,interac/zelle + crypto only
+brandonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+steinbachpeptides.com,0,0,0,0,interac/zelle + crypto only
+losangelespeptides.com,0,0,0,0,interac/zelle + crypto only
+peptidesandiego.com,0,0,0,0,interac/zelle + crypto only
+houstonpeps.com,0,0,0,0,interac/zelle + crypto only
+peptidesdallas.com,0,0,0,0,interac/zelle + crypto only
+rochesterpeptides.com,0,0,0,0,interac/zelle + crypto only
+halifaxpeptides.ca,0,0,0,0,interac/zelle + crypto only
+monctonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+frederictonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+summersidepeptides.ca,0,0,0,0,interac/zelle + crypto only
+stratfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stjohnspeptides.ca,0,0,0,0,interac/zelle + crypto only
+mountpearlpeptides.ca,0,0,0,0,interac/zelle + crypto only
+clevelandpeptides.com,0,0,0,0,interac/zelle + crypto only
+charlottepeptides.com,0,0,0,0,interac/zelle + crypto only
+raleighpeptides.com,0,0,0,0,interac/zelle + crypto only
+detroitpeptides.com,0,0,0,0,interac/zelle + crypto only
+jacksonvillepeptide.com,0,0,0,0,interac/zelle + crypto only
+sanantoniopeptides.com,0,0,0,0,interac/zelle + crypto only
+buffalopeptides.com,0,0,0,0,interac/zelle + crypto only
+greensboropeptides.com,0,0,0,0,interac/zelle + crypto only
+princetonpeptides.com,0,0,0,0,interac/zelle + crypto only
+warrenpeptides.com,0,0,0,0,interac/zelle + crypto only
+grandrapidspeptides.com,0,0,0,0,interac/zelle + crypto only
+peptideschicago.com,0,0,0,0,interac/zelle + crypto only
+peptidesphoenix.co,0,0,0,0,interac/zelle + crypto only
+sanfranciscopeptides.com,0,0,0,0,interac/zelle + crypto only
+peptideseattle.com,0,0,0,0,interac/zelle + crypto only
+peptidesboston.com,0,0,0,0,interac/zelle + crypto only
+pittsburghpeptides.com,0,0,0,0,interac/zelle + crypto only
+minneapolispeptides.com,0,0,0,0,interac/zelle + crypto only
+peptidesnashville.com,0,0,0,0,interac/zelle + crypto only
+oaklandpeptides.com,0,0,0,0,interac/zelle + crypto only
+riversidepeptides.com,0,0,0,0,interac/zelle + crypto only
+peptidesacramento.com,0,0,0,0,interac/zelle + crypto only
+norfolkpeptides.com,0,0,0,0,interac/zelle + crypto only
+birminghampeptides.com,0,0,0,0,interac/zelle + crypto only
+richmondpeps.com,0,0,0,0,interac/zelle + crypto only
+neworleanspeps.com,0,0,0,0,interac/zelle + crypto only
+hamiltonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+burlingtonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bramptonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kitchenerpeps.com,0,0,0,0,interac/zelle + crypto only
+windsorpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kingstonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+barriepeptides.ca,0,0,0,0,interac/zelle + crypto only
+oshawapeptides.ca,0,0,0,0,interac/zelle + crypto only
+whitbypeps.com,0,0,0,0,interac/zelle + crypto only
+pickeringpeps.com,0,0,0,0,interac/zelle + crypto only
+richmondhillpeptides.ca,0,0,0,0,interac/zelle + crypto only
+mississaugapeps.ca,0,0,0,0,interac/zelle + crypto only
+victoriapeps.ca,0,0,0,0,interac/zelle + crypto only
+waterloopeps.ca,0,0,0,0,interac/zelle + crypto only
+markhampeps.ca,0,0,0,0,interac/zelle + crypto only
+vaughanpeps.ca,0,0,0,0,interac/zelle + crypto only
+lethbridgepeps.com,0,0,0,0,interac/zelle + crypto only
+guelphpeps.ca,0,0,0,0,interac/zelle + crypto only
+
+
+# -- batch 2: interac/zelle + crypto only --
+scarboroughpeptides.ca,0,0,0,0,interac/zelle + crypto only
+northyorkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+etobicokepeptides.ca,0,0,0,0,interac/zelle + crypto only
+eastyorkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+yorkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+miltonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+claringtonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+newmarketpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kingpeptides.ca,0,0,0,0,interac/zelle + crypto only
+georginapeptides.ca,0,0,0,0,interac/zelle + crypto only
+eastgwillimburypeptides.ca,0,0,0,0,interac/zelle + crypto only
+caledonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+haltonhillspeptides.ca,0,0,0,0,interac/zelle + crypto only
+orangevillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+thebeachespeptides.ca,0,0,0,0,interac/zelle + crypto only
+libertyvillagepeptides.ca,0,0,0,0,interac/zelle + crypto only
+leslievillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+parkdalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+roncesvallespeptides.ca,0,0,0,0,interac/zelle + crypto only
+theannexpeptides.ca,0,0,0,0,interac/zelle + crypto only
+danforthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+highparkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+mimicopeptides.ca,0,0,0,0,interac/zelle + crypto only
+leasidepeptides.ca,0,0,0,0,interac/zelle + crypto only
+donmillspeptides.ca,0,0,0,0,interac/zelle + crypto only
+willowdalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+thornhillpeptides.ca,0,0,0,0,interac/zelle + crypto only
+unionvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+woodbridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+maplepeptides.ca,0,0,0,0,interac/zelle + crypto only
+concordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+portcreditpeptides.ca,0,0,0,0,interac/zelle + crypto only
+streetsvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+meadowvalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+erinmillspeptides.ca,0,0,0,0,interac/zelle + crypto only
+clarksonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+cooksvillepeptides.com,0,0,0,0,interac/zelle + crypto only
+maltonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bramaleapeptides.ca,0,0,0,0,interac/zelle + crypto only
+heartlakepeptides.ca,0,0,0,0,interac/zelle + crypto only
+mountpleasantpeptides.ca,0,0,0,0,interac/zelle + crypto only
+westmountpeptides.ca,0,0,0,0,interac/zelle + crypto only
+montroyaltmrpeptides.ca,0,0,0,0,interac/zelle + crypto only
+outremontpeptides.ca,0,0,0,0,interac/zelle + crypto only
+notre-dame-de-lile-perrotpeptides.ca,0,0,0,0,interac/zelle + crypto only
+cotesaintlucpeptides.ca,0,0,0,0,interac/zelle + crypto only
+pincourtpeptides.ca,0,0,0,0,interac/zelle + crypto only
+dorvalpeptides.ca,0,0,0,0,interac/zelle + crypto only
+pointeclairepeptides.ca,0,0,0,0,interac/zelle + crypto only
+kirklandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+beaconsfieldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-lazarepeptides.ca,0,0,0,0,interac/zelle + crypto only
+varennespeptides.ca,0,0,0,0,interac/zelle + crypto only
+sainte-juliepeptides.ca,0,0,0,0,interac/zelle + crypto only
+dollard-des-ormeauxpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stouffvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+longueuilpeptides.ca,0,0,0,0,interac/zelle + crypto only
+brossardpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-lambertpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bouchervillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-bruno-de-montarvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+sainthubertpeptides.ca,0,0,0,0,interac/zelle + crypto only
+greenfieldparkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+chamblypeptides.ca,0,0,0,0,interac/zelle + crypto only
+chateauguaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+candiacpeptides.ca,0,0,0,0,interac/zelle + crypto only
+laprairiepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintecatherinepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintconstantpeptides.ca,0,0,0,0,interac/zelle + crypto only
+carignanpeptides.ca,0,0,0,0,interac/zelle + crypto only
+terrebonnepeptides.ca,0,0,0,0,interac/zelle + crypto only
+repentignypeptides.ca,0,0,0,0,interac/zelle + crypto only
+mascouchepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lassomptionpeptides.ca,0,0,0,0,interac/zelle + crypto only
+blainvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+boisbriandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+rosemerepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lorrainepeptides.ca,0,0,0,0,interac/zelle + crypto only
+sainte-theresepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-eustachepeptides.ca,0,0,0,0,interac/zelle + crypto only
+deux-montagnespeptides.ca,0,0,0,0,interac/zelle + crypto only
+sainte-marthe-sur-le-lacpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-jeromepeptides.ca,0,0,0,0,interac/zelle + crypto only
+vaudreuil-dorionpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lile-perrotpeptides.ca,0,0,0,0,interac/zelle + crypto only
+mile-endpeptides.ca,0,0,0,0,interac/zelle + crypto only
+griffintownpeptides.ca,0,0,0,0,interac/zelle + crypto only
+ndg-notre-dame-de-gracepeptides.ca,0,0,0,0,interac/zelle + crypto only
+verdunpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lasallepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lachinepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-laurentpeptides.ca,0,0,0,0,interac/zelle + crypto only
+anjoupeptides.ca,0,0,0,0,interac/zelle + crypto only
+ahuntsicpeptides.ca,0,0,0,0,interac/zelle + crypto only
+mercier-hochelaga-maisonneuve.ca,0,0,0,0,interac/zelle + crypto only
+rosemontpeptides.ca,0,0,0,0,interac/zelle + crypto only
+villeraypeptides.ca,0,0,0,0,interac/zelle + crypto only
+rdppeptides.ca,0,0,0,0,interac/zelle + crypto only
+pierrefondspeptides.ca,0,0,0,0,interac/zelle + crypto only
+ilebizardpeptides.ca,0,0,0,0,interac/zelle + crypto only
+cotedesneigespeptides.ca,0,0,0,0,interac/zelle + crypto only
+snowdonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-henripeptides.ca,0,0,0,0,interac/zelle + crypto only
+thepointepeptides.ca,0,0,0,0,interac/zelle + crypto only
+hochelagapeptides.ca,0,0,0,0,interac/zelle + crypto only
+coquitlampeptides.ca,0,0,0,0,interac/zelle + crypto only
+pittmeadowspeptides.ca,0,0,0,0,interac/zelle + crypto only
+cloverdalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+deltapeptides.ca,0,0,0,0,interac/zelle + crypto only
+mapleridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+newwestminsterpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fleetwoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+guildfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+westvancouverpeptides.ca,0,0,0,0,interac/zelle + crypto only
+portmoodypeptides.ca,0,0,0,0,interac/zelle + crypto only
+tsawwassenpeptides.ca,0,0,0,0,interac/zelle + crypto only
+newtonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+whalleypeptides.ca,0,0,0,0,interac/zelle + crypto only
+panoramaridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+stevestonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kitsilanopeptides.ca,0,0,0,0,interac/zelle + crypto only
+kerrisdalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+dunbarpeptides.ca,0,0,0,0,interac/zelle + crypto only
+pointgreypeptides.ca,0,0,0,0,interac/zelle + crypto only
+yaletownpeptides.ca,0,0,0,0,interac/zelle + crypto only
+commercialdrivepeptides.ca,0,0,0,0,interac/zelle + crypto only
+metrotownpeptides.ca,0,0,0,0,interac/zelle + crypto only
+brentwoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lougheedpeptides.ca,0,0,0,0,interac/zelle + crypto only
+edmondspeptides.ca,0,0,0,0,interac/zelle + crypto only
+burkemountainpeptides.ca,0,0,0,0,interac/zelle + crypto only
+willoughbypeptides.ca,0,0,0,0,interac/zelle + crypto only
+walnutgrovepeptides.ca,0,0,0,0,interac/zelle + crypto only
+aldergrovepeptides.ca,0,0,0,0,interac/zelle + crypto only
+missionpeptides.ca,0,0,0,0,interac/zelle + crypto only
+abbotsfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+chilliwackpeptides.ca,0,0,0,0,interac/zelle + crypto only
+squamishpeptides.ca,0,0,0,0,interac/zelle + crypto only
+whistlerpeptides.ca,0,0,0,0,interac/zelle + crypto only
+airdriepeptides.ca,0,0,0,0,interac/zelle + crypto only
+cochranepeptides.ca,0,0,0,0,interac/zelle + crypto only
+chestermerepeptides.ca,0,0,0,0,interac/zelle + crypto only
+okotokspeptides.ca,0,0,0,0,interac/zelle + crypto only
+strathmorepeptides.ca,0,0,0,0,interac/zelle + crypto only
+canmorepeptides.ca,0,0,0,0,interac/zelle + crypto only
+beltlinepeptides.ca,0,0,0,0,interac/zelle + crypto only
+bownesspeptides.ca,0,0,0,0,interac/zelle + crypto only
+rockyridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+dalhousiepeptides.ca,0,0,0,0,interac/zelle + crypto only
+stalbertpeptides.ca,0,0,0,0,interac/zelle + crypto only
+sherwoodparkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+sprucegrovepeptides.ca,0,0,0,0,interac/zelle + crypto only
+leducpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fortsaskatchewanpeptides.ca,0,0,0,0,interac/zelle + crypto only
+beaumontpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stonyplainpeptides.ca,0,0,0,0,interac/zelle + crypto only
+morinvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+oliverpeptides.ca,0,0,0,0,interac/zelle + crypto only
+millwoodspeptides.ca,0,0,0,0,interac/zelle + crypto only
+themeadowspeptides.ca,0,0,0,0,interac/zelle + crypto only
+windermerepeptides.ca,0,0,0,0,interac/zelle + crypto only
+rutherfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+terwillegarpeptides.ca,0,0,0,0,interac/zelle + crypto only
+riverbendpeptides.ca,0,0,0,0,interac/zelle + crypto only
+clareviewpeptides.ca,0,0,0,0,interac/zelle + crypto only
+castledownspeptides.ca,0,0,0,0,interac/zelle + crypto only
+ellersliepeptides.ca,0,0,0,0,interac/zelle + crypto only
+heritagevalleypeptides.ca,0,0,0,0,interac/zelle + crypto only
+gatineaupeptides.ca,0,0,0,0,interac/zelle + crypto only
+kanatapeptides.ca,0,0,0,0,interac/zelle + crypto only
+orleanspeptides.ca,0,0,0,0,interac/zelle + crypto only
+nepeanpeptides.ca,0,0,0,0,interac/zelle + crypto only
+gloucesterpeptides.ca,0,0,0,0,interac/zelle + crypto only
+barrhavenpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stittsvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+riversidesouthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+vanierpeptides.ca,0,0,0,0,interac/zelle + crypto only
+theglebepeptides.ca,0,0,0,0,interac/zelle + crypto only
+centretownpeptides.ca,0,0,0,0,interac/zelle + crypto only
+altavistapeptides.ca,0,0,0,0,interac/zelle + crypto only
+sandyhillpeptides.ca,0,0,0,0,interac/zelle + crypto only
+aylmerpeptides.ca,0,0,0,0,interac/zelle + crypto only
+hullpeptides.ca,0,0,0,0,interac/zelle + crypto only
+carletonplacepeptides.ca,0,0,0,0,interac/zelle + crypto only
+rocklandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+cumberlandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+findlaycreekpeptides.ca,0,0,0,0,interac/zelle + crypto only
+langleypeptides.ca,0,0,0,0,interac/zelle + crypto only
+sennevillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lavaldesrapidespeptides.ca,0,0,0,0,interac/zelle + crypto only
+wellandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+northshorepeptides.ca,0,0,0,0,interac/zelle + crypto only
+northperthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+rockwoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lockestreetpeptides.ca,0,0,0,0,interac/zelle + crypto only
+timberleapeptides.ca,0,0,0,0,interac/zelle + crypto only
+signalhillpeptides.ca,0,0,0,0,interac/zelle + crypto only
+tuscanypeptides.ca,0,0,0,0,interac/zelle + crypto only
+cranstonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+mckenzietownepeptides.ca,0,0,0,0,interac/zelle + crypto only
+auburnbaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+nolanhillpeptides.ca,0,0,0,0,interac/zelle + crypto only
+evanstonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+legacypeptides.ca,0,0,0,0,interac/zelle + crypto only
+juniperridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+eaststpaulpeptides.ca,0,0,0,0,interac/zelle + crypto only
+selkirkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stbonifacepeptides.ca,0,0,0,0,interac/zelle + crypto only
+riverheightspeptides.ca,0,0,0,0,interac/zelle + crypto only
+stjamespeptides.ca,0,0,0,0,interac/zelle + crypto only
+fortgarrypeptides.ca,0,0,0,0,interac/zelle + crypto only
+charleswoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stvitalpeptides.ca,0,0,0,0,interac/zelle + crypto only
+transconapeptides.ca,0,0,0,0,interac/zelle + crypto only
+northkildonanpeptides.ca,0,0,0,0,interac/zelle + crypto only
+waverleyheightspeptides.ca,0,0,0,0,interac/zelle + crypto only
+bridgwaterpeptides.ca,0,0,0,0,interac/zelle + crypto only
+levispeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintefoypeptides.ca,0,0,0,0,interac/zelle + crypto only
+beauportpeptides.ca,0,0,0,0,interac/zelle + crypto only
+charlesbourgpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lesrivierespeptides.ca,0,0,0,0,interac/zelle + crypto only
+valbelairpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lanciennelorettepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintaugustindedesmaurespeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-nicolaspeptides.ca,0,0,0,0,interac/zelle + crypto only
+sillerypeptides.ca,0,0,0,0,interac/zelle + crypto only
+montcalmpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintrochpeptides.ca,0,0,0,0,interac/zelle + crypto only
+limoiloupeptides.ca,0,0,0,0,interac/zelle + crypto only
+caprougepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintraymondpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stoneycreekpeptides.ca,0,0,0,0,interac/zelle + crypto only
+ancasterpeptides.ca,0,0,0,0,interac/zelle + crypto only
+flamboroughpeptides.ca,0,0,0,0,interac/zelle + crypto only
+glanbrookpeptides.ca,0,0,0,0,interac/zelle + crypto only
+waterdownpeptides.ca,0,0,0,0,interac/zelle + crypto only
+grimsbypeptides.ca,0,0,0,0,interac/zelle + crypto only
+caledoniapeptides.ca,0,0,0,0,interac/zelle + crypto only
+westdalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+hamiltonmountainpeptides.ca,0,0,0,0,interac/zelle + crypto only
+elmirapeptides.ca,0,0,0,0,interac/zelle + crypto only
+prestonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+hespelerpeptides.ca,0,0,0,0,interac/zelle + crypto only
+centralsaanichpeptides.ca,0,0,0,0,interac/zelle + crypto only
+northsaanichpeptides.ca,0,0,0,0,interac/zelle + crypto only
+jamesbaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+westkelownapeptides.ca,0,0,0,0,interac/zelle + crypto only
+sidneypeptides.ca,0,0,0,0,interac/zelle + crypto only
+southsurreypeptides.ca,0,0,0,0,interac/zelle + crypto only
+viewroyalpeptides.ca,0,0,0,0,interac/zelle + crypto only
+sullivanpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fraserheightspeptides.ca,0,0,0,0,interac/zelle + crypto only
+bearcreekpeptides.ca,0,0,0,0,interac/zelle + crypto only
+chomedeypeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintedorotheepeptides.ca,0,0,0,0,interac/zelle + crypto only
+fabrevillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+duvernaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+pontviaupeptides.ca,0,0,0,0,interac/zelle + crypto only
+vimontpeptides.ca,0,0,0,0,interac/zelle + crypto only
+auteuilpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintfrancoispeptides.ca,0,0,0,0,interac/zelle + crypto only
+sainterosepeptides.ca,0,0,0,0,interac/zelle + crypto only
+stthomaspeptides.ca,0,0,0,0,interac/zelle + crypto only
+strathroypeptides.ca,0,0,0,0,interac/zelle + crypto only
+woodstockpeptides.ca,0,0,0,0,interac/zelle + crypto only
+ingersollpeptides.ca,0,0,0,0,interac/zelle + crypto only
+byronpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oakbaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+oldeastvillagepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lambethpeptides.ca,0,0,0,0,interac/zelle + crypto only
+whiteoakspeptides.ca,0,0,0,0,interac/zelle + crypto only
+masonvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+hydeparkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+dartmouthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bedfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+easternpassagepeptides.ca,0,0,0,0,interac/zelle + crypto only
+sackvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+coleharbourpeptides.ca,0,0,0,0,interac/zelle + crypto only
+spryfieldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fairviewpeptides.ca,0,0,0,0,interac/zelle + crypto only
+hammondsplainspeptides.ca,0,0,0,0,interac/zelle + crypto only
+northendhalifaxpeptides.ca,0,0,0,0,interac/zelle + crypto only
+southendhalifaxpeptides.ca,0,0,0,0,interac/zelle + crypto only
+warmanpeptides.ca,0,0,0,0,interac/zelle + crypto only
+martensvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+stonebridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+brightonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+harbourlandingpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saanichpeptides.ca,0,0,0,0,interac/zelle + crypto only
+langfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+colwoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+esquimaltpeptides.ca,0,0,0,0,interac/zelle + crypto only
+niagarafallspeptides.ca,0,0,0,0,interac/zelle + crypto only
+thoroldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+forteriepeptides.ca,0,0,0,0,interac/zelle + crypto only
+portcolbornepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lincolnpeptides.ca,0,0,0,0,interac/zelle + crypto only
+pelhampeptides.ca,0,0,0,0,interac/zelle + crypto only
+niagaraonthelakepeptides.ca,0,0,0,0,interac/zelle + crypto only
+beamsvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+innisfilpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oromedontepeptides.ca,0,0,0,0,interac/zelle + crypto only
+springwaterpeptides.ca,0,0,0,0,interac/zelle + crypto only
+essapeptides.ca,0,0,0,0,interac/zelle + crypto only
+newtecumsethpeptides.ca,0,0,0,0,interac/zelle + crypto only
+collingwoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+wasagabeachpeptides.ca,0,0,0,0,interac/zelle + crypto only
+orilliapeptides.ca,0,0,0,0,interac/zelle + crypto only
+midlandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+penetanguishenepeptides.ca,0,0,0,0,interac/zelle + crypto only
+alconapeptides.ca,0,0,0,0,interac/zelle + crypto only
+anguspeptides.ca,0,0,0,0,interac/zelle + crypto only
+allistonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+dieppepeptides.ca,0,0,0,0,interac/zelle + crypto only
+riverviewpeptides.ca,0,0,0,0,interac/zelle + crypto only
+magogpeptides.ca,0,0,0,0,interac/zelle + crypto only
+rockforestpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fleurimontpeptides.ca,0,0,0,0,interac/zelle + crypto only
+jacquescartierpeptides.ca,0,0,0,0,interac/zelle + crypto only
+capdelamadeleinepeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintlouisdefrancepeptides.ca,0,0,0,0,interac/zelle + crypto only
+becancourpeptides.ca,0,0,0,0,interac/zelle + crypto only
+shawiniganpeptides.ca,0,0,0,0,interac/zelle + crypto only
+grandmerepeptides.ca,0,0,0,0,interac/zelle + crypto only
+amherstviewpeptides.ca,0,0,0,0,interac/zelle + crypto only
+ferguspeptides.ca,0,0,0,0,interac/zelle + crypto only
+southendpeptides.ca,0,0,0,0,interac/zelle + crypto only
+portarthurpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fortwilliampeptides.ca,0,0,0,0,interac/zelle + crypto only
+lacombepeptides.ca,0,0,0,0,interac/zelle + crypto only
+blackfaldspeptides.ca,0,0,0,0,interac/zelle + crypto only
+sylvanlakepeptides.ca,0,0,0,0,interac/zelle + crypto only
+westlethbridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+northlethbridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+southlethbridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+brocklehurstpeptides.ca,0,0,0,0,interac/zelle + crypto only
+aberdeenpeptides.ca,0,0,0,0,interac/zelle + crypto only
+parksvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+northnanaimopeptides.ca,0,0,0,0,interac/zelle + crypto only
+harewoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+valleyeastpeptides.ca,0,0,0,0,interac/zelle + crypto only
+raysidebalfourpeptides.ca,0,0,0,0,interac/zelle + crypto only
+nickelcentrepeptides.ca,0,0,0,0,interac/zelle + crypto only
+waldenpeptides.ca,0,0,0,0,interac/zelle + crypto only
+newsudburypeptides.ca,0,0,0,0,interac/zelle + crypto only
+parispeptides.ca,0,0,0,0,interac/zelle + crypto only
+westbrantpeptides.ca,0,0,0,0,interac/zelle + crypto only
+clearbrookpeptides.ca,0,0,0,0,interac/zelle + crypto only
+matsquipeptides.ca,0,0,0,0,interac/zelle + crypto only
+sydneypeptides.ca,0,0,0,0,interac/zelle + crypto only
+glacebaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+springfieldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+charnypeptides.ca,0,0,0,0,interac/zelle + crypto only
+dundaspeptides.ca,0,0,0,0,interac/zelle + crypto only
+cambridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+galtpeptides.ca,0,0,0,0,interac/zelle + crypto only
+panoramahillspeptides.ca,0,0,0,0,interac/zelle + crypto only
+countryhillspeptides.com,0,0,0,0,interac/zelle + crypto only
+paradisepeptides.ca,0,0,0,0,interac/zelle + crypto only
+gardencitypeptides.ca,0,0,0,0,interac/zelle + crypto only
+lahautesaintcharlespeptides.ca,0,0,0,0,interac/zelle + crypto only
+lorettevillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+mirabelpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saint-jean-sur-richelieupeptides.ca,0,0,0,0,interac/zelle + crypto only
+plateau-mont-royalpeptides.ca,0,0,0,0,interac/zelle + crypto only
+portcoquitlampeptides.ca,0,0,0,0,interac/zelle + crypto only
+ladnerpeptides.ca,0,0,0,0,interac/zelle + crypto only
+easthastingsespeptides.ca,0,0,0,0,interac/zelle + crypto only
+mahoganypeptides.ca,0,0,0,0,interac/zelle + crypto only
+setonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+claytonparkpeptides.ca,0,0,0,0,interac/zelle + crypto only
+strathconacountypeptides.ca,0,0,0,0,interac/zelle + crypto only
+chathampeptides.ca,0,0,0,0,interac/zelle + crypto only
+georgetownpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lakeshorepeptides.ca,0,0,0,0,interac/zelle + crypto only
+bradfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+whitehorsepeptides.ca,0,0,0,0,interac/zelle + crypto only
+keswickpeptides.ca,0,0,0,0,interac/zelle + crypto only
+boltonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+princeedwardcountypeptides.ca,0,0,0,0,interac/zelle + crypto only
+quispamsispeptides.ca,0,0,0,0,interac/zelle + crypto only
+hudsonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lindsaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+owensoundpeptides.ca,0,0,0,0,interac/zelle + crypto only
+southfrontenacpeptides.ca,0,0,0,0,interac/zelle + crypto only
+yellowknifepeptides.ca,0,0,0,0,interac/zelle + crypto only
+huntsvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lescoteauxpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saugeenshorespeptides.ca,0,0,0,0,interac/zelle + crypto only
+buckinghampeptides.ca,0,0,0,0,interac/zelle + crypto only
+loyalistpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bracebridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+hanoverpeptides.ca,0,0,0,0,interac/zelle + crypto only
+laurentidespeptides.ca,0,0,0,0,interac/zelle + crypto only
+clearviewpeptides.ca,0,0,0,0,interac/zelle + crypto only
+comoxpeptides.ca,0,0,0,0,interac/zelle + crypto only
+gaspepeptides.ca,0,0,0,0,interac/zelle + crypto only
+dolbeaumistassinipeptides.ca,0,0,0,0,interac/zelle + crypto only
+1rr0sy-vj.myshopify.com,0,0,0,0,interac/zelle + crypto only
+westgreypeptides.ca,0,0,0,0,interac/zelle + crypto only
+newhamburgpeptides.ca,0,0,0,0,interac/zelle + crypto only
+saintemariepeptides.ca,0,0,0,0,interac/zelle + crypto only
+southstormontpeptides.ca,0,0,0,0,interac/zelle + crypto only
+q1r1ar-6m.myshopify.com,0,0,0,0,interac/zelle + crypto only
+brockpeptides.ca,0,0,0,0,interac/zelle + crypto only
+severnpeptides.ca,0,0,0,0,interac/zelle + crypto only
+montlaurierpeptides.ca,0,0,0,0,interac/zelle + crypto only
+15ta7c-0r.myshopify.com,0,0,0,0,interac/zelle + crypto only
+portalfredpeptides.ca,0,0,0,0,interac/zelle + crypto only
+cowansvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lachutepeptides.ca,0,0,0,0,interac/zelle + crypto only
+gravenhurstpeptides.ca,0,0,0,0,interac/zelle + crypto only
+meafordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+rothesaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+georgianbluffspeptides.ca,0,0,0,0,interac/zelle + crypto only
+hawkesburypeptides.ca,0,0,0,0,interac/zelle + crypto only
+ganderpeptides.ca,0,0,0,0,interac/zelle + crypto only
+adjalatosorontiopeptides.ca,0,0,0,0,interac/zelle + crypto only
+greyhighlandspeptides.ca,0,0,0,0,interac/zelle + crypto only
+arnpriorpeptides.ca,0,0,0,0,interac/zelle + crypto only
+taypeptides.ca,0,0,0,0,interac/zelle + crypto only
+ladysmithpeptides.ca,0,0,0,0,interac/zelle + crypto only
+hauterivepeptides.ca,0,0,0,0,interac/zelle + crypto only
+latuquepeptides.ca,0,0,0,0,interac/zelle + crypto only
+binbrookpeptides.ca,0,0,0,0,interac/zelle + crypto only
+ramarapeptides.ca,0,0,0,0,interac/zelle + crypto only
+bridgewaterpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oromoctopeptides.ca,0,0,0,0,interac/zelle + crypto only
+yorkvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+nivervillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+hampsteadpeptides.ca,0,0,0,0,interac/zelle + crypto only
+montrealwestpeptides.ca,0,0,0,0,interac/zelle + crypto only
+sainteannepeptides.ca,0,0,0,0,interac/zelle + crypto only
+lemoynepeptides.ca,0,0,0,0,interac/zelle + crypto only
+delsonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oldmontrealpeptides.ca,0,0,0,0,interac/zelle + crypto only
+littleitalypeptides.ca,0,0,0,0,interac/zelle + crypto only
+northvancouverpeptides.ca,0,0,0,0,interac/zelle + crypto only
+shaughnessypeptides.ca,0,0,0,0,interac/zelle + crypto only
+gastownpeptides.ca,0,0,0,0,interac/zelle + crypto only
+banffpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kensingtonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+corydonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bridgelandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+mardalooppeptides.ca,0,0,0,0,interac/zelle + crypto only
+springbankpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bearspawpeptides.ca,0,0,0,0,interac/zelle + crypto only
+varsitypeptides.ca,0,0,0,0,interac/zelle + crypto only
+devonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+garneaupeptides.ca,0,0,0,0,interac/zelle + crypto only
+bonniedoonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+jasperplacepeptides.ca,0,0,0,0,interac/zelle + crypto only
+griesbachpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lewisestatespeptides.ca,0,0,0,0,interac/zelle + crypto only
+manotickpeptides.ca,0,0,0,0,interac/zelle + crypto only
+westboropeptides.ca,0,0,0,0,interac/zelle + crypto only
+hintonburgpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oldottawasouthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+embrunpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kemptvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+jamesstreetnorthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+chelseapeptides.ca,0,0,0,0,interac/zelle + crypto only
+almontepeptides.ca,0,0,0,0,interac/zelle + crypto only
+weststpaulpeptides.ca,0,0,0,0,interac/zelle + crypto only
+macdonaldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+garsonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bridgeviewpeptides.ca,0,0,0,0,interac/zelle + crypto only
+wolseleypeptides.ca,0,0,0,0,interac/zelle + crypto only
+sagecreekpeptides.ca,0,0,0,0,interac/zelle + crypto only
+stonehamettewkesburypeptides.ca,0,0,0,0,interac/zelle + crypto only
+lacbeauportpeptides.ca,0,0,0,0,interac/zelle + crypto only
+boischatelpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oldquebecpeptides.ca,0,0,0,0,interac/zelle + crypto only
+shannonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+winonapeptides.ca,0,0,0,0,interac/zelle + crypto only
+smithvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+concessionstreetpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lavalouestpeptides.ca,0,0,0,0,interac/zelle + crypto only
+ayrpeptides.ca,0,0,0,0,interac/zelle + crypto only
+breslaupeptides.ca,0,0,0,0,interac/zelle + crypto only
+uptownwaterloopeptides.ca,0,0,0,0,interac/zelle + crypto only
+downtownkitchenerpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oldnorthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+wortleyvillagepeptides.ca,0,0,0,0,interac/zelle + crypto only
+larryuteckpeptides.ca,0,0,0,0,interac/zelle + crypto only
+tantallonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fallriverpeptides.ca,0,0,0,0,interac/zelle + crypto only
+enfieldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+porterslakepeptides.ca,0,0,0,0,interac/zelle + crypto only
+downtowndartmouthpeptides.ca,0,0,0,0,interac/zelle + crypto only
+burnsidepeptides.ca,0,0,0,0,interac/zelle + crypto only
+evergreenpeptides.ca,0,0,0,0,interac/zelle + crypto only
+willowgrovepeptides.ca,0,0,0,0,interac/zelle + crypto only
+nutanapeptides.ca,0,0,0,0,interac/zelle + crypto only
+sutherlandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+lawsonheightspeptides.ca,0,0,0,0,interac/zelle + crypto only
+rosewoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+hanmerpeptides.ca,0,0,0,0,interac/zelle + crypto only
+aspenridgepeptides.ca,0,0,0,0,interac/zelle + crypto only
+silverspringpeptides.ca,0,0,0,0,interac/zelle + crypto only
+thecreekspeptides.ca,0,0,0,0,interac/zelle + crypto only
+cathedralpeptides.ca,0,0,0,0,interac/zelle + crypto only
+hillsdalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+rochdalepeptides.ca,0,0,0,0,interac/zelle + crypto only
+metchosinpeptides.ca,0,0,0,0,interac/zelle + crypto only
+brentwoodbaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+cordovabaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+fernwoodpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fairfieldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+tillicumpeptides.ca,0,0,0,0,interac/zelle + crypto only
+happyvalleypeptides.ca,0,0,0,0,interac/zelle + crypto only
+peachlandpeptides.ca,0,0,0,0,interac/zelle + crypto only
+southpandosypeptides.ca,0,0,0,0,interac/zelle + crypto only
+uppermissionpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kettlevalleypeptides.ca,0,0,0,0,interac/zelle + crypto only
+winfieldpeptides.ca,0,0,0,0,interac/zelle + crypto only
+ellisonpeptides.ca,0,0,0,0,interac/zelle + crypto only
+blackmountainpeptides.ca,0,0,0,0,interac/zelle + crypto only
+torbaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+portugalcovestphilipspeptides.ca,0,0,0,0,interac/zelle + crypto only
+chelmsfordpeptides.ca,0,0,0,0,interac/zelle + crypto only
+kenmountterracepeptides.ca,0,0,0,0,interac/zelle + crypto only
+galwaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+riversidepeptides.ca,0,0,0,0,interac/zelle + crypto only
+southwalkervillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+sandwichpeptides.ca,0,0,0,0,interac/zelle + crypto only
+fonthillpeptides.ca,0,0,0,0,interac/zelle + crypto only
+memramcookpeptides.ca,0,0,0,0,interac/zelle + crypto only
+nicoletpeptides.ca,0,0,0,0,interac/zelle + crypto only
+louisevillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+gananoquepeptides.ca,0,0,0,0,interac/zelle + crypto only
+napaneepeptides.ca,0,0,0,0,interac/zelle + crypto only
+collinsbaypeptides.ca,0,0,0,0,interac/zelle + crypto only
+williamsvillepeptides.ca,0,0,0,0,interac/zelle + crypto only
+elorapeptides.ca,0,0,0,0,interac/zelle + crypto only
+thewardpeptides.ca,0,0,0,0,interac/zelle + crypto only
+universitydistrictpeptides.ca,0,0,0,0,interac/zelle + crypto only
+oliverpaipoongepeptides.ca,0,0,0,0,interac/zelle + crypto only
+intercitypeptides.ca,0,0,0,0,interac/zelle + crypto only
+currentriverpeptides.ca,0,0,0,0,interac/zelle + crypto only
+westfortpeptides.ca,0,0,0,0,interac/zelle + crypto only
+innisfailpeptides.ca,0,0,0,0,interac/zelle + crypto only
+bowerpeptides.ca,0,0,0,0,interac/zelle + crypto only
+timberlandspeptides.ca,0,0,0,0,interac/zelle + crypto only
+taberpeptides.ca,0,0,0,0,interac/zelle + crypto only
+westsydepeptides.ca,0,0,0,0,interac/zelle + crypto only
+highriverpeptides.ca,0,0,0,0,interac/zelle + crypto only
+whiterockpeptides.ca,0,0,0,0,interac/zelle + crypto only
+cataraquipeptides.ca,0,0,0,0,interac/zelle + crypto only
+valleyviewpeptides.ca,0,0,0,0,interac/zelle + crypto only
+
+
+# -- batch 3: onramp + interac/zelle + crypto (Shopify domains) --
+a0hs07-ug.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+1hystu-tw.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+3htjud-w0.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+wzjhnp-yc.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+rvpg36-ma.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+ynzvhu-7i.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+nd1i1k-wx.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+dv9bwq-j0.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+b31mpp-by.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+r8a1bg-da.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+c8grvv-dt.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+8spp1h-8t.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+rpsswg-c1.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+umjt0h-8n.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+i5r2ct-qw.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+vdsrtd-ip.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+q0w1it-zh.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+qeexzh-pv.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+p9xszz-ib.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+mesa-peptides-arl-2.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+02w0zm-49.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+4widwq-rg.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+q4aidf-eg.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+colorado-springs-peptides.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+bejwtt-dq.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+hwcerz-a0.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+tfxay8-r4.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+hww11b-pa.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+dswdst-94.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+tempe-peptides-arl.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+esp2gf-m0.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+tampa-peptides-arl.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+rzhhin-8v.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+arlington-peptides-arl.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+q1zemr-wu.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+qhv7sz-ia.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+huntington-beach-peptides-arl.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+v5mgb0-ej.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+isy0ar-gn.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+y1i1d1-w1.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+wafwan-hu.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+overland-park-peptides-arl-2.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+r7jmx9-xv.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+cxqwkq-ar.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+rgvi1p-2a.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+gezumj-gv.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+17rf33-r5.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+b91zec-y3.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+suwetq-yr.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+dc5801-qm.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+k1shun-0q.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+lincoln-peptides-arl-2.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+chpe1w-vg.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+uwfzfx-nx.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+eutfcc-ck.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+51ewy0-s1.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+h46nhg-1d.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+furkfv-kc.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+tsefwi-qi.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+7vwfem-hb.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+84c1br-7s.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+5beyc0-m0.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+9qj4qs-cy.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+47pisj-2b.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+qpz1xe-i1.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+1jjwwq-7r.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+h8c3ax-gh.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+02rzx0-iv.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+xkcupv-zb.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+sioux-falls-peptides-arl.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+k0q01t-dg.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+5ufkmk-ns.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto
+qcrhxw-bd.myshopify.com,0,0,0,1,onramp + interac/zelle + crypto

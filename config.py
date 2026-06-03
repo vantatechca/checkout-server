@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     NOWPAYMENTS_API_KEY:     str = ""
     NOWPAYMENTS_IPN_SECRET:  str = ""
     NOWPAYMENTS_SUCCESS_URL: str = ""
+    # Master kill-switch for the "Altcoins" payment option (NowPayments). Set
+    # to False to hide it from the checkout without wiping API keys.
+    ALTCOIN_ENABLED:         bool = True
 
     # Polling
     INTERAC_POLL_INTERVAL: int = 300
@@ -127,8 +130,14 @@ class Settings(BaseSettings):
     # Affiliate dashboard
     AFFILIATE_DASHBOARD_URL: str = "https://peps-affiliate.onrender.com"
 
-    # Card-enabled stores (comma-separated source domains)
+    # Card-enabled stores (comma-separated source domains) — legacy fallback
+    # when no per-store row exists in STORE_CONFIG_CSV.
     CARD_ENABLED_STORES: str = ""
+
+    # Per-source-store payment-method config (CSV file). See
+    # services/store_config.py for format details. If the file doesn't
+    # exist, gating falls back to the global env flags below.
+    STORE_CONFIG_CSV: str = "data/source_stores.csv"
 
     # Stripe — for embedded checkout in modal
     STRIPE_PUBLISHABLE_KEY: str = ""    # pk_test_... (test) or pk_live_... (live)
@@ -137,9 +146,32 @@ class Settings(BaseSettings):
     # Helcim — worker URL for thank-you page order lookup
     HELCIM_WORKER_URL:      str = "https://hc-worker.flystarcafe7.workers.dev"
 
-    # pymtz — credit card via hosted payment page (replaces bridge card flow)
-    PYMTZ_API_KEY:        str = ""   # pymtz_live_... (prod) or pymtz_test_... (test)
-    PYMTZ_WEBHOOK_SECRET: str = ""   # whsec_... from POST /api/v1/webhooks
+    # pymtz — credit card via hosted payment page (replaces bridge card flow).
+    # Two merchant accounts: one for Canada (charged in USD via the 1.38
+    # conversion shown on checkout) and one for the US. The country is
+    # selected from order.currency: CAD→CA account, USD→US account. The legacy
+    # single-account keys below are kept as fallbacks so a partially-configured
+    # deploy still works.
+    PYMTZ_API_KEY:        str = ""   # legacy / fallback if per-country unset
+    PYMTZ_WEBHOOK_SECRET: str = ""   # legacy / fallback if per-country unset
+    PYMTZ_API_KEY_CA:        str = ""   # pymtz_live_... for the Canada account
+    PYMTZ_WEBHOOK_SECRET_CA: str = ""   # whsec_... for the Canada account
+    PYMTZ_API_KEY_US:        str = ""   # pymtz_live_... for the US account
+    PYMTZ_WEBHOOK_SECRET_US: str = ""   # whsec_... for the US account
+
+    # Onramp via WordPress + 2530gateway plugin.
+    # See services/onramp_wp.py for the architecture overview.
+    ONRAMP_WP_ENABLED:         bool = False  # master kill-switch — flip to true to show the option
+    ONRAMP_WP_URL:             str = ""   # e.g. http://23.137.251.62:8083 (no trailing /)
+    ONRAMP_WP_CONSUMER_KEY:    str = ""   # ck_... from WC → Settings → Advanced → REST API (HTTPS only)
+    ONRAMP_WP_CONSUMER_SECRET: str = ""   # cs_...
+    # Application Password auth — preferred over WC REST keys when the
+    # site is HTTP. Create at WP admin → Users → admin → Application Passwords.
+    ONRAMP_WP_USERNAME:        str = ""   # WP username (e.g. "admin")
+    ONRAMP_WP_APP_PASSWORD:    str = ""   # 24-char app password "aBcD eFgH ..."
+    ONRAMP_WP_PRODUCT_ID:      str = ""   # leave blank to use fee_lines (no product needed)
+    ONRAMP_WP_GATEWAY_ID:      str = ""   # leave blank for the default hosted gateway
+    ONRAMP_WP_WEBHOOK_SECRET:  str = ""   # signing secret from the WC webhook config
 
     # Lasso — cloaked CC checkout via Whop payment rails
     LASSO_STORE_ID:           str = ""   # data-store-id from your Lasso merchant dashboard
