@@ -54,6 +54,7 @@ class CheckoutBase(BaseModel):
     email:      str
     first_name: str | None = None
     last_name:  str
+    phone:      str | None = None
 
     # Shipping
     address1:    str | None = None
