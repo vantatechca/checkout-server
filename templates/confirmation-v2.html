@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Order Confirmed — {{ store_name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:62.5%}
+
+:root{
+  --paper:#E7EEEA;
+  --card:#FFFFFF;
+  --ink:#16302A;
+  --ink-2:#48584F;
+  --muted:#8A968F;
+  --dim:#AEB8B2;
+  --line:#E3E9E5;
+  --line-2:#D2DDD6;
+  --coral:#E76F51;
+  --coral-s:#FCE7DF;
+  --success:#2E9E6B;
+  --success-bg:#EAF7F0;
+  --shadow-sm:0 1px 2px rgba(22,48,42,.05);
+  --shadow:0 8px 30px rgba(22,48,42,.07);
+  --r:14px;
+  --r-sm:10px;
+  --d:'Bricolage Grotesque',sans-serif;
+  --b:'Inter',sans-serif;
+  --m:'Spline Sans Mono',monospace;
+}
+
+{% if store_country == 'US' %}
+:root{
+  --accent:#0284c7;
+  --accent-dark:#075985;
+  --accent-soft:rgba(2,132,199,0.14);
+  --accent-tint:rgba(2,132,199,0.07);
+  --accent-glow:rgba(2,132,199,0.28);
+  --accent-grad:#0EA5E9;
+}
+{% else %}
+:root{
+  --accent:#0E8C7F;
+  --accent-dark:#0B786C;
+  --accent-soft:rgba(14,140,127,0.14);
+  --accent-tint:rgba(14,140,127,0.07);
+  --accent-glow:rgba(14,140,127,0.30);
+  --accent-grad:#13A493;
+}
+{% endif %}
+
+body{
+  font-family:var(--b);
+  font-size:1.5rem;
+  line-height:1.5;
+  background:var(--paper);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent-soft);color:var(--ink)}
+
+/* ── VIEWPORT-FIT shell on desktop ── */
+@media(min-width:981px){
+  html,body{height:100vh;overflow:hidden}
+  .shell{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+}
+
+/* ── HEADER (matches checkout-v2) ── */
+.header{
+  background:rgba(231,238,234,0.85);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  padding:1rem 2.4rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.header-brand{display:flex;align-items:center;gap:1.2rem;text-decoration:none}
+.header-logo{
+  width:3.2rem;height:3.2rem;
+  background:linear-gradient(150deg,var(--accent),var(--accent-grad));
+  border-radius:9px;
+  box-shadow:0 4px 12px var(--accent-glow);
+  display:grid;place-items:center;
+}
+.header-logo svg{width:1.5rem;height:1.5rem;fill:#fff}
+.header-name{
+  font-family:var(--d);font-weight:600;font-size:1.4rem;
+  color:var(--ink);letter-spacing:-0.01em;
+}
+.header-secure{
+  display:flex;align-items:center;gap:0.7rem;
+  font-family:var(--b);font-size:1.25rem;font-weight:500;
+  color:var(--ink-2);
+}
+.header-secure svg{width:1.4rem;height:1.4rem;stroke:var(--accent);fill:none;stroke-width:2}
+
+/* ── BODY: 2-col grid (sidebar LEFT + main RIGHT) ── */
+.body{
+  display:grid;
+  grid-template-columns:minmax(0,40rem) minmax(0,1fr);
+  grid-template-areas:"sidebar main";
+  gap:3rem;
+  max-width:120rem;
+  margin:0 auto;
+  padding:2.4rem 2.4rem;
+  width:100%;
+  align-items:stretch;
+}
+@media(min-width:981px){
+  .body{flex:1;min-height:0;overflow:hidden;align-items:stretch}
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SIDEBAR — order summary (unified card)
+   ══════════════════════════════════════════════════════════════════════ */
+.sidebar{
+  grid-area:sidebar;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-sm);
+  display:flex;flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+.sidebar-head{
+  padding:1.6rem 2rem;
+  border-bottom:1px solid var(--line);
+  font-family:var(--d);font-weight:600;font-size:1.2rem;
+  letter-spacing:0.05em;text-transform:uppercase;
+  color:var(--ink-2);
+  display:flex;align-items:center;gap:0.8rem;
+  flex-shrink:0;
+}
+.sidebar-head svg{width:1.5rem;height:1.5rem;stroke:var(--accent);fill:none;stroke-width:2}
+.sidebar-head .count{
+  margin-left:auto;
+  background:var(--accent-tint);
+  color:var(--accent);
+  font-family:var(--b);font-weight:600;font-size:1.05rem;
+  padding:0.25rem 0.8rem;border-radius:20px;
+  text-transform:none;letter-spacing:0;
+}
+
+.sb-items{
+  padding:0.6rem 2rem;
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  scrollbar-color:var(--line-2) transparent;
+}
+.sb-items::-webkit-scrollbar{width:5px}
+.sb-items::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
+.sb-item{
+  display:grid;
+  grid-template-columns:5.4rem 1fr auto;
+  gap:1.2rem;
+  padding:0.9rem 0;
+  border-bottom:1px solid var(--line);
+  align-items:center;
+}
+.sb-item:last-child{border-bottom:none}
+.sb-thumb{
+  width:5.4rem;height:5.4rem;
+  background:linear-gradient(155deg,#EAF3EF,#DCEBE4);
+  border:1px solid var(--line);
+  border-radius:11px;
+  display:grid;place-items:center;
+  position:relative;
+}
+.sb-thumb svg{width:2.2rem;height:2.2rem;stroke:var(--accent);fill:none;stroke-width:1.8;opacity:0.85}
+.sb-thumb img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.sb-thumb .qty{
+  position:absolute;top:-6px;right:-6px;
+  width:1.9rem;height:1.9rem;
+  background:var(--coral);color:#fff;
+  border:2px solid #fff;
+  border-radius:50%;
+  font-family:var(--b);font-weight:600;font-size:1rem;
+  display:grid;place-items:center;
+  box-shadow:0 2px 5px rgba(231,111,81,0.35);
+}
+.sb-info{min-width:0}
+.sb-name{
+  font-family:var(--b);font-weight:600;font-size:1.3rem;
+  color:var(--ink);line-height:1.3;
+}
+.sb-meta{
+  font-family:var(--b);font-size:1.15rem;
+  color:var(--muted);margin-top:0.2rem;
+}
+.sb-price{
+  font-family:var(--m);font-weight:600;font-size:1.3rem;
+  color:var(--ink);
+}
+
+.sb-totals{
+  background:#FBFDFC;
+  border-top:1px solid var(--line);
+  padding:1.4rem 2rem;
+  flex-shrink:0;
+}
+.sb-row{
+  display:flex;justify-content:space-between;
+  padding:0.4rem 0;font-size:1.3rem;
+}
+.sb-row .lbl{color:var(--muted);font-family:var(--b)}
+.sb-row .val{color:var(--ink);font-family:var(--m);font-weight:500}
+.sb-row.discount .lbl{color:var(--success);font-weight:500}
+.sb-row.discount .val{color:var(--success);font-weight:600}
+.sb-row.grand{
+  margin-top:0.6rem;padding-top:1rem;
+  border-top:1px dashed var(--line-2);
+  align-items:baseline;
+}
+.sb-row.grand .lbl{
+  font-family:var(--d);font-weight:600;font-size:1.5rem;color:var(--ink);
+}
+.sb-row.grand .val{
+  font-family:var(--m);font-weight:600;font-size:2rem;color:var(--ink);
+  letter-spacing:-0.01em;
+}
+.sb-row.grand .cur{
+  color:var(--muted);font-size:1.1rem;font-weight:600;
+  letter-spacing:0.06em;margin-right:0.5rem;font-family:var(--b);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MAIN COLUMN — status + payment instructions
+   ══════════════════════════════════════════════════════════════════════ */
+.main-col{
+  grid-area:main;
+  display:flex;flex-direction:column;gap:1.4rem;
+  min-height:0;
+  overflow-y:auto;
+  padding-right:0.6rem;
+  scrollbar-width:thin;
+  scrollbar-color:var(--line-2) transparent;
+}
+.main-col::-webkit-scrollbar{width:6px}
+.main-col::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
+
+/* ── HERO STATUS CARD (top of main column) ── */
+.hero{
+  border-radius:var(--r);
+  padding:1.8rem 2.2rem;
+  color:#fff;
+  display:flex;align-items:center;gap:1.6rem;
+  box-shadow:var(--shadow-sm);
+  flex-shrink:0;
+}
+.hero.placed{background:linear-gradient(135deg,var(--accent),var(--accent-grad))}
+.hero.paid{background:linear-gradient(135deg,var(--success),#3DB47C)}
+.hero.crypto{background:linear-gradient(135deg,var(--ink),#2A4D45)}
+.hero.failed{background:linear-gradient(135deg,#dc2626,#ef4444)}
+.hero-icon{
+  width:4.6rem;height:4.6rem;
+  background:rgba(255,255,255,0.18);
+  border:1px solid rgba(255,255,255,0.25);
+  border-radius:12px;
+  display:grid;place-items:center;
+  flex-shrink:0;
+}
+.hero-icon svg{width:2.2rem;height:2.2rem;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.hero-text{flex:1;min-width:0}
+.hero-text h1{
+  font-family:var(--d);font-weight:600;font-size:1.9rem;
+  letter-spacing:-0.015em;color:#fff;margin-bottom:0.2rem;
+}
+.hero-text p{
+  font-family:var(--b);font-size:1.3rem;
+  color:rgba(255,255,255,0.9);
+}
+.hero-pill{
+  flex-shrink:0;
+  background:rgba(255,255,255,0.18);
+  color:#fff;
+  font-family:var(--b);font-weight:600;font-size:1.15rem;
+  padding:0.5rem 1.1rem;border-radius:30px;
+  border:1px solid rgba(255,255,255,0.22);
+  display:flex;align-items:center;gap:0.5rem;
+}
+
+/* ── CARD (generic content box) ── */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-sm);
+  padding:1.8rem 2rem;
+}
+.card-title{
+  font-family:var(--d);font-weight:600;font-size:1.5rem;
+  color:var(--ink);letter-spacing:-0.01em;
+  margin-bottom:1rem;
+  display:flex;align-items:center;gap:0.8rem;
+}
+.card-title svg{width:1.7rem;height:1.7rem;stroke:var(--accent);fill:none;stroke-width:2}
+
+/* ── REF BOX ── */
+.ref-box{
+  background:linear-gradient(135deg,var(--ink),#244A40);
+  border-radius:var(--r);
+  padding:1.6rem 1.8rem;
+  display:flex;align-items:center;gap:1.4rem;
+  flex-wrap:wrap;
+}
+.ref-info{flex:1;min-width:0}
+.ref-label{
+  font-family:var(--m);font-size:1.05rem;font-weight:500;
+  color:rgba(255,255,255,0.55);
+  letter-spacing:0.14em;text-transform:uppercase;
+  margin-bottom:0.4rem;
+}
+.ref-code{
+  font-family:var(--m);font-size:1.9rem;font-weight:600;
+  color:#fff;letter-spacing:0.05em;
+  word-break:break-all;
+}
+.ref-copy{
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.22);
+  color:#fff;
+  font-family:var(--b);font-weight:600;font-size:1.2rem;
+  padding:0.7rem 1.4rem;border-radius:9px;
+  cursor:pointer;
+  transition:background .15s;
+  flex-shrink:0;
+}
+.ref-copy:hover{background:rgba(255,255,255,0.22)}
+.ref-note{
+  width:100%;
+  font-family:var(--b);font-size:1.2rem;
+  color:rgba(255,255,255,0.7);line-height:1.55;
+  margin-top:0.6rem;
+}
+.ref-note strong{color:#fff;font-weight:600}
+
+/* ── STEPS ── */
+.steps{
+  list-style:none;padding:0;
+  display:flex;flex-direction:column;gap:1.1rem;
+}
+.step{
+  display:flex;gap:1.2rem;
+  font-family:var(--b);font-size:1.3rem;
+  color:var(--ink-2);line-height:1.5;
+}
+.step-n{
+  width:2.6rem;height:2.6rem;
+  background:var(--accent);color:#fff;
+  font-family:var(--m);font-weight:600;font-size:1.2rem;
+  border-radius:8px;
+  display:grid;place-items:center;
+  flex-shrink:0;margin-top:0.1rem;
+  box-shadow:0 3px 8px var(--accent-glow);
+}
+.step b,.step strong{color:var(--ink);font-weight:600}
+.step .amt{
+  font-family:var(--m);font-weight:600;color:var(--accent);
+}
+.copyfield{
+  display:inline-flex;align-items:center;gap:0.8rem;
+  margin-top:0.6rem;flex-wrap:wrap;
+}
+.copyfield code{
+  background:#FBFDFC;
+  border:1.5px solid var(--line-2);
+  border-radius:8px;
+  font-family:var(--m);font-size:1.25rem;font-weight:500;
+  color:var(--ink);
+  padding:0.5rem 1rem;
+}
+.copy-small{
+  background:var(--accent-tint);
+  border:none;
+  color:var(--accent);
+  font-family:var(--b);font-weight:600;font-size:1.1rem;
+  padding:0.5rem 1rem;border-radius:7px;
+  cursor:pointer;
+  transition:background .15s;
+}
+.copy-small:hover{background:var(--accent-soft)}
+
+/* ── STATUS PILL ── */
+.status-pill{
+  display:inline-flex;align-items:center;gap:0.5rem;
+  font-family:var(--b);font-weight:600;font-size:1.2rem;
+  padding:0.5rem 1.2rem;border-radius:30px;
+  align-self:flex-start;
+  margin-bottom:1rem;
+}
+.status-pending{background:#FFF6E6;color:#B07A00}
+.status-paid{background:var(--success-bg);color:var(--success)}
+.status-expired{background:#FFEDED;color:#D72C0D}
+
+/* ── POLLING NOTICE ── */
+.polling{
+  text-align:center;
+  font-family:var(--b);font-size:1.25rem;
+  color:var(--muted);
+  padding:1.2rem;
+  background:#FBFDFC;
+  border:1px solid var(--line);
+  border-radius:var(--r-sm);
+}
+.polling.confirmed{
+  background:var(--success-bg);
+  border:1.5px solid var(--success);
+  color:var(--success);
+  font-family:var(--d);font-weight:600;font-size:1.6rem;
+}
+.polling .dot{animation:blink 1.4s infinite}
+.polling .check-big{font-size:2rem;margin-right:0.6rem;vertical-align:-2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── NOTIF TOAST ── */
+.notif{
+  position:fixed;left:50%;bottom:2rem;
+  transform:translateX(-50%) translateY(120%);
+  background:var(--ink);color:#fff;
+  padding:1.1rem 1.8rem;border-radius:12px;
+  font-family:var(--b);font-size:1.3rem;font-weight:500;
+  box-shadow:var(--shadow);
+  z-index:90;
+  opacity:0;
+  pointer-events:none;
+  transition:transform 0.35s cubic-bezier(.34,1.4,.64,1),opacity 0.2s;
+}
+.notif.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+.notif:empty{display:none}
+
+/* ── DECORATIVE SVG (bottom-right) ── */
+.v2-art{
+  position:fixed;
+  right:2rem;bottom:1.6rem;
+  width:22rem;height:auto;
+  opacity:1;
+  pointer-events:none;
+  z-index:5;
+  filter:drop-shadow(0 10px 28px rgba(22,48,42,0.18));
+}
+
+/* ── MOBILE ── */
+@media(max-width:980px){
+  .v2-art{display:none}
+  .body{
+    grid-template-columns:1fr;
+    grid-template-areas:"main" "sidebar";
+    gap:1.6rem;
+    padding:1.8rem 1.6rem 4rem;
+  }
+  .sidebar{order:2}
+  .main-col{order:1;overflow:visible;padding-right:0}
+  .sb-items{overflow:visible;max-height:none}
+  .hero{flex-wrap:wrap}
+  .hero-pill{margin-left:auto}
+}
+@media(max-width:560px){
+  .header{padding:1rem 1.6rem}
+  .header-name{font-size:1.3rem}
+  .hero-text h1{font-size:1.6rem}
+  .ref-code{font-size:1.5rem}
+  .ref-box{flex-direction:column;align-items:stretch;text-align:left}
+  .ref-copy{align-self:flex-start}
+  .sb-row.grand .val{font-size:1.7rem}
+}
+</style>
+</head>
+<body>
+
+<div class="notif" id="notif"></div>
+
+<div class="shell">
+
+  <!-- ── HEADER ── -->
+  <header class="header">
+    <a class="header-brand" href="/">
+      {% if logo_url %}
+      <img src="{{ logo_url }}" alt="{{ store_name }}" style="max-height:3.2rem"/>
+      {% else %}
+      <div class="header-logo">
+        <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.1-1.3 3.9-3.1 4.7L16 19H8l2.1-7.3A5 5 0 0112 2z"/></svg>
+      </div>
+      <span class="header-name">{{ store_name }}</span>
+      {% endif %}
+    </a>
+    <div class="header-secure">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Secure checkout</span>
+    </div>
+  </header>
+
+  <!-- ── BODY ── -->
+  <div class="body">
+
+    <!-- ═══ LEFT SIDEBAR — Order summary ═══ -->
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Your Order
+        {% if items %}<span class="count">{{ items|length }} item{% if items|length != 1 %}s{% endif %}</span>{% endif %}
+      </div>
+      <div class="sb-items">
+        {% if items %}
+          {% for item in items %}
+          <div class="sb-item">
+            <div class="sb-thumb">
+              {% if item.image_url %}
+              <img src="{{ item.image_url }}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+              <svg viewBox="0 0 24 24" style="display:none"><path d="M9 2h6"/><path d="M10 2v5.5L6.5 16a3 3 0 0 0 2.8 4h5.4a3 3 0 0 0 2.8-4L14 7.5V2"/></svg>
+              {% else %}
+              <svg viewBox="0 0 24 24"><path d="M9 2h6"/><path d="M10 2v5.5L6.5 16a3 3 0 0 0 2.8 4h5.4a3 3 0 0 0 2.8-4L14 7.5V2"/></svg>
+              {% endif %}
+              <span class="qty">{{ item.qty }}</span>
+            </div>
+            <div class="sb-info">
+              <div class="sb-name">{{ item.title }}</div>
+              {% if item.variant %}<div class="sb-meta">{{ item.variant }}</div>{% endif %}
+            </div>
+            <div class="sb-price">${{ "%.2f"|format(item.total|float) }}</div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div style="padding:1rem 0;color:var(--muted);font-size:1.25rem;text-align:center">No items recorded</div>
+        {% endif %}
+      </div>
+      <div class="sb-totals">
+        {% if voucher_discount > 0 %}
+        <div class="sb-row"><span class="lbl">Original subtotal</span><span class="val">${{ "%.2f"|format(original_subtotal) }}</span></div>
+        <div class="sb-row discount"><span class="lbl">{{ discount_code }}</span><span class="val">−${{ "%.2f"|format(voucher_discount) }}</span></div>
+        <div class="sb-row"><span class="lbl">Subtotal</span><span class="val">${{ "%.2f"|format(subtotal) }}</span></div>
+        {% else %}
+        <div class="sb-row"><span class="lbl">Subtotal</span><span class="val">${{ "%.2f"|format(subtotal) }}</span></div>
+        {% endif %}
+        {% if payment_method_discount > 0 %}
+        <div class="sb-row discount">
+          <span class="lbl">
+            {% if payment_method == "interac" %}Interac discount ({{ "%g"|format(interac_discount_pct) }}%)
+            {% elif payment_method == "zelle" %}Zelle discount ({{ "%g"|format(zelle_discount_pct) }}%)
+            {% else %}Discount{% endif %}
+          </span>
+          <span class="val">−${{ "%.2f"|format(payment_method_discount) }}</span>
+        </div>
+        {% endif %}
+        <div class="sb-row"><span class="lbl">Shipping</span><span class="val" style="color:var(--success);font-family:var(--b);font-weight:600">FREE</span></div>
+        <div class="sb-row grand">
+          <span class="lbl">Total</span>
+          <span class="val"><span class="cur">{{ currency }}</span>${{ "%.2f"|format(total) }}</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ═══ RIGHT MAIN — Status + Instructions ═══ -->
+    <main class="main-col">
+
+      {% if payment_method == "interac" %}
+      <!-- ── INTERAC ── -->
+      <div class="hero placed">
+        <div class="hero-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="hero-text">
+          <h1>Order Placed!</h1>
+          <p>Send your Interac e-Transfer to confirm your order.</p>
+        </div>
+        <span class="hero-pill" id="statusPill">
+          {% if payment_status == "paid" %}&#10003; Payment received{% else %}&#9203; Awaiting payment{% endif %}
+        </span>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-info">
+          <div class="ref-label">Your reference code</div>
+          <div class="ref-code" id="refCodeDisplay">{{ order_id }}</div>
+        </div>
+        <button class="ref-copy" onclick="copyRef()">Copy</button>
+        <div class="ref-note">
+          <strong>You must include this code</strong> in the comment / message / note field of your Interac e-Transfer so we can match your payment.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          How to send your Interac e-Transfer
+        </div>
+        <ol class="steps">
+          <li class="step"><span class="step-n">1</span><span>Log into your bank app or online banking <b>(any Canadian bank)</b>.</span></li>
+          <li class="step"><span class="step-n">2</span>
+            <span>Send an Interac e-Transfer to:
+              <div class="copyfield"><code>{{ interac_email }}</code><button class="copy-small" onclick="copyEmail()">Copy</button></div>
+            </span>
+          </li>
+          <li class="step"><span class="step-n">3</span><span>Set the amount to exactly: <span class="amt">${{ "%.2f"|format(total) }} {{ currency }}</span>.</span></li>
+          <li class="step"><span class="step-n">4</span>
+            <span>In the <b>message / note / comment</b> field, enter your reference code exactly:
+              <div class="copyfield"><code>{{ order_id }}</code></div>
+            </span>
+          </li>
+          <li class="step"><span class="step-n">5</span><span>When asked for a security question, enter: <br><strong>Question:</strong> checkout · <strong>Answer:</strong> canada</span></li>
+        </ol>
+      </div>
+
+      <div class="polling" id="pollingNotice"><span class="dot">&#9679;</span> Waiting for your transfer…</div>
+
+      {% elif payment_method == "zelle" %}
+      <!-- ── ZELLE ── -->
+      <div class="hero placed">
+        <div class="hero-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="hero-text">
+          <h1>Order Placed!</h1>
+          <p>Send your Zelle transfer to confirm your order.</p>
+        </div>
+        <span class="hero-pill" id="statusPill">
+          {% if payment_status == "paid" %}&#10003; Payment received{% else %}&#9203; Awaiting payment{% endif %}
+        </span>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-info">
+          <div class="ref-label">Your reference code</div>
+          <div class="ref-code" id="refCodeDisplay">{{ order_id }}</div>
+        </div>
+        <button class="ref-copy" onclick="copyRef()">Copy</button>
+        <div class="ref-note">
+          <strong>You must include this code</strong> in the memo / note field of your Zelle transfer so we can match your payment.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          How to send your Zelle transfer
+        </div>
+        <ol class="steps">
+          <li class="step"><span class="step-n">1</span><span>Open your bank app (Chase, Bank of America, Wells Fargo, etc.) and find <b>Zelle</b>.</span></li>
+          <li class="step"><span class="step-n">2</span>
+            <span>Send Zelle to:
+              <div class="copyfield"><code>{{ zelle_email }}</code><button class="copy-small" onclick="copyEmail()">Copy</button></div>
+            </span>
+          </li>
+          <li class="step"><span class="step-n">3</span><span>Set the amount to exactly: <span class="amt">${{ "%.2f"|format(total) }} {{ currency }}</span>.</span></li>
+          <li class="step"><span class="step-n">4</span>
+            <span>In the <b>memo / note</b> field, enter your reference code exactly:
+              <div class="copyfield"><code>{{ order_id }}</code></div>
+            </span>
+          </li>
+        </ol>
+      </div>
+
+      <div class="polling" id="pollingNotice"><span class="dot">&#9679;</span> Waiting for your transfer…</div>
+
+      {% elif payment_method == "card" and is_pymtz %}
+      <!-- ── PYMTZ: verify on return + poll ── -->
+      <div class="hero {% if payment_status == 'paid' %}paid{% else %}placed{% endif %}" id="pymtzBanner">
+        <div class="hero-icon">
+          {% if payment_status == "paid" %}
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          {% else %}
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          {% endif %}
+        </div>
+        <div class="hero-text">
+          <h1 id="pymtzBannerTitle">{% if payment_status == "paid" %}Payment Confirmed!{% else %}Verifying Payment…{% endif %}</h1>
+          <p id="pymtzBannerSub">{% if payment_status == "paid" %}Thank you — your order is being processed.{% else %}Please wait while we confirm your payment.{% endif %}</p>
+        </div>
+        <span class="hero-pill" id="statusPill">
+          {% if payment_status == "paid" %}&#10003; Payment confirmed{% else %}&#9203; Verifying{% endif %}
+        </span>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-info">
+          <div class="ref-label">Order reference</div>
+          <div class="ref-code" id="refCodeDisplay">{{ order_id }}</div>
+        </div>
+        <button class="ref-copy" onclick="copyRef()">Copy</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Payment details
+        </div>
+        <div class="sb-row" style="font-size:1.4rem;padding:0.6rem 0"><span class="lbl">Payment method</span><span class="val">Credit card</span></div>
+        <div class="sb-row" style="font-size:1.4rem;padding:0.6rem 0"><span class="lbl">Order reference</span><span class="val">{{ order_id }}</span></div>
+        <div class="sb-row grand"><span class="lbl">Total charged</span><span class="val"><span class="cur">{{ currency }}</span>${{ "%.2f"|format(total) }}</span></div>
+      </div>
+
+      <div class="polling" id="pollingNotice">
+        {% if payment_status == "paid" %}
+        <span class="check-big">&#10003;</span>Payment confirmed! Your order is being processed.
+        {% else %}
+        <span class="dot">&#9679;</span> Confirming your payment…
+        {% endif %}
+      </div>
+
+      {% elif payment_method == "wpay" or payment_method == "wpay_2d" %}
+      <!-- ── WPay (HPP direct, or 2D via the WordPress plugin site) —
+           asynchronous confirmation. Redirects back BEFORE the webhook/poll
+           confirms payment, unlike Helcim/Stripe. Must render off the
+           real payment_status. -->
+      <div class="hero {% if payment_status == 'paid' %}paid{% else %}placed{% endif %}" id="wpayBanner">
+        <div class="hero-icon">
+          {% if payment_status == "paid" %}
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          {% else %}
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          {% endif %}
+        </div>
+        <div class="hero-text">
+          <h1 id="wpayBannerTitle">{% if payment_status == "paid" %}Payment Confirmed!{% else %}Confirming Your Payment…{% endif %}</h1>
+          <p id="wpayBannerSub">{% if payment_status == "paid" %}Thank you — your order is being processed.{% else %}We're verifying your payment with WPay. This page will update automatically.{% endif %}</p>
+        </div>
+        <span class="hero-pill" id="statusPill">
+          {% if payment_status == "paid" %}&#10003; Payment confirmed{% else %}&#9203; Confirming{% endif %}
+        </span>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-info">
+          <div class="ref-label">Order reference</div>
+          <div class="ref-code" id="refCodeDisplay">{{ order_id }}</div>
+        </div>
+        <button class="ref-copy" onclick="copyRef()">Copy</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Payment details
+        </div>
+        <div class="sb-row" style="font-size:1.4rem;padding:0.6rem 0"><span class="lbl">Payment method</span><span class="val">Credit card (WPay)</span></div>
+        <div class="sb-row" style="font-size:1.4rem;padding:0.6rem 0"><span class="lbl">Order reference</span><span class="val">{{ order_id }}</span></div>
+        <div class="sb-row grand"><span class="lbl">Total charged</span><span class="val"><span class="cur">{{ currency }}</span>${{ "%.2f"|format(total) }}</span></div>
+      </div>
+
+      <div class="polling" id="pollingNotice">
+        {% if payment_status == "paid" %}
+        <span class="check-big">&#10003;</span>Payment confirmed! Your order is being processed.
+        {% else %}
+        <span class="dot">&#9679;</span> Confirming your payment…
+        {% endif %}
+      </div>
+
+      {% else %}
+      <!-- ── PAID (Helcim / Stripe / etc.) — only reachable when
+           payment_status is ALREADY "paid"; these mark paid server-side
+           BEFORE redirecting here. Any new async/redirect-based method
+           needs its own elif-branch checking payment_status, like wpay above. ── -->
+      <div class="hero paid">
+        <div class="hero-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="hero-text">
+          <h1>Payment Confirmed!</h1>
+          <p>Thank you — your order is being processed.</p>
+        </div>
+        <span class="hero-pill">&#10003; Paid</span>
+      </div>
+
+      <div class="ref-box">
+        <div class="ref-info">
+          <div class="ref-label">Order reference</div>
+          <div class="ref-code" id="refCodeDisplay">{{ order_id }}</div>
+        </div>
+        <button class="ref-copy" onclick="copyRef()">Copy</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          Payment details
+        </div>
+        <div class="sb-row" style="font-size:1.4rem;padding:0.6rem 0"><span class="lbl">Payment method</span><span class="val">Credit card</span></div>
+        <div class="sb-row" style="font-size:1.4rem;padding:0.6rem 0"><span class="lbl">Order reference</span><span class="val">{{ order_id }}</span></div>
+        <div class="sb-row grand"><span class="lbl">Total charged</span><span class="val"><span class="cur">{{ currency }}</span>${{ "%.2f"|format(total) }}</span></div>
+      </div>
+      {% endif %}
+
+    </main>
+
+  </div>
+</div>
+
+<!-- Decorative bottom-right -->
+<img class="v2-art" src="/static/svg/Placeholder-rafiki.svg" alt="" aria-hidden="true">
+
+<script>
+var ORDER_ID      = "{{ order_id }}";
+var PAY_METHOD    = "{{ payment_method }}";
+var INTERAC_EMAIL = "{{ interac_email }}";
+var ZELLE_EMAIL   = "{{ zelle_email }}";
+var IS_PYMTZ      = {{ "true" if is_pymtz else "false" }};
+
+function showNotif(msg) {
+  var el = document.getElementById("notif");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(function() { el.classList.remove("show"); }, 2500);
+}
+
+function copyRef() {
+  navigator.clipboard.writeText(ORDER_ID).then(function() {
+    showNotif("Reference code copied");
+    var btn = document.querySelector(".ref-copy");
+    if (btn) { var old = btn.textContent; btn.textContent = "Copied!"; setTimeout(function(){ btn.textContent = old; }, 1600); }
+  });
+}
+
+function copyEmail() {
+  var email = PAY_METHOD === "zelle" ? ZELLE_EMAIL : INTERAC_EMAIL;
+  navigator.clipboard.writeText(email).then(function() { showNotif("Email copied"); });
+}
+
+// ── pymtz: verify-on-return + poll until confirmed ────────────────────────────
+if (IS_PYMTZ) {
+  var pymtzPolls = 0;
+
+  function updatePymtzUI(status) {
+    var pill   = document.getElementById("statusPill");
+    var notice = document.getElementById("pollingNotice");
+    var banner = document.getElementById("pymtzBanner");
+    var title  = document.getElementById("pymtzBannerTitle");
+    var sub    = document.getElementById("pymtzBannerSub");
+
+    var s = String(status || "").toLowerCase();
+    var isPaid    = s === "paid" || s.endsWith(".paid");
+    var isFailed  = s === "failed" || s === "expired" || s.endsWith(".failed") || s.endsWith(".expired");
+
+    if (isPaid) {
+      if (banner) { banner.classList.remove("placed"); banner.classList.add("paid"); }
+      if (title)  title.textContent  = "Payment Confirmed!";
+      if (sub)    sub.textContent    = "Thank you — your order is being processed.";
+      if (pill)   pill.innerHTML = "✓ Payment confirmed";
+      if (notice) { notice.className = "polling confirmed"; notice.innerHTML = '<span class="check-big">✓</span>Payment confirmed! Your order is being processed.'; }
+      return true;
+    }
+    if (isFailed) {
+      if (banner) { banner.classList.remove("placed"); banner.classList.add("failed"); }
+      if (title)  title.textContent  = "Payment Unsuccessful";
+      if (sub)    sub.textContent    = "Your payment could not be processed. Please try again.";
+      if (pill)   pill.innerHTML = "✕ Payment failed";
+      if (notice) notice.textContent = "Your payment was not completed. Please return to checkout and try again.";
+      return true;
+    }
+    return false;
+  }
+
+  function pollPymtz() {
+    if (pymtzPolls++ > 12) {
+      var notice = document.getElementById("pollingNotice");
+      if (notice) notice.textContent = "Payment verification timed out. If you completed payment, your order will be confirmed shortly.";
+      return;
+    }
+    fetch("/api/checkout/pymtz-verify/" + ORDER_ID)
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(data) {
+        // pymtz-verify returns {orderId, paymentStatus}. Don't read .status —
+        // it doesn't exist on this endpoint.
+        if (data && updatePymtzUI(data.paymentStatus)) return;
+        setTimeout(pollPymtz, 10000);
+      })
+      .catch(function() { setTimeout(pollPymtz, 10000); });
+  }
+  // Trigger first verify after a short delay (let DOM render)
+  setTimeout(pollPymtz, 1500);
+}
+
+// ── Polling for interac/zelle (matches v1 behavior, but for v2 DOM) ──────────
+// ── WPay (HPP or 2D via WP plugin): poll the generic order-status endpoint
+// until the webhook (or the 45-min Celery fallback for HPP) marks it paid ──
+if (PAY_METHOD === "wpay" || PAY_METHOD === "wpay_2d") {
+  var wpayPolls = 0;
+
+  function updateWpayUI(status) {
+    var pill   = document.getElementById("statusPill");
+    var notice = document.getElementById("pollingNotice");
+    var banner = document.getElementById("wpayBanner");
+    var title  = document.getElementById("wpayBannerTitle");
+    var sub    = document.getElementById("wpayBannerSub");
+
+    var s = String(status || "").toLowerCase();
+    var isPaid   = s === "paid" || s.endsWith(".paid");
+    var isFailed = s === "failed" || s === "expired" || s.endsWith(".failed") || s.endsWith(".expired");
+
+    if (isPaid) {
+      if (banner) { banner.classList.remove("placed"); banner.classList.add("paid"); }
+      if (title)  title.textContent = "Payment Confirmed!";
+      if (sub)    sub.textContent   = "Thank you — your order is being processed.";
+      if (pill)   pill.innerHTML = "✓ Payment confirmed";
+      if (notice) { notice.className = "polling confirmed"; notice.innerHTML = '<span class="check-big">✓</span>Payment confirmed! Your order is being processed.'; }
+      return true;
+    }
+    if (isFailed) {
+      if (title)  title.textContent = "Payment Unsuccessful";
+      if (sub)    sub.textContent   = "Your payment could not be completed. Please return to checkout and try again.";
+      if (pill)   pill.innerHTML = "✕ Payment failed";
+      if (notice) notice.textContent = "Your payment was not completed. Please return to checkout and try again.";
+      return true;
+    }
+    return false;
+  }
+
+  function pollWpay() {
+    if (wpayPolls++ > 60) {
+      var notice = document.getElementById("pollingNotice");
+      if (notice) notice.textContent = "Still confirming your payment — if you completed it, your order will update shortly.";
+      return;
+    }
+    fetch("/api/checkout/status/" + ORDER_ID)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!updateWpayUI(data.paymentStatus)) setTimeout(pollWpay, 20000);
+      })
+      .catch(function() { setTimeout(pollWpay, 20000); });
+  }
+
+  fetch("/api/checkout/status/" + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!updateWpayUI(data.paymentStatus)) setTimeout(pollWpay, 20000);
+    })
+    .catch(function() { setTimeout(pollWpay, 20000); });
+}
+
+if (PAY_METHOD === "interac" || PAY_METHOD === "zelle") {
+  var polls = 0;
+
+  function updateV2UI(status) {
+    // Normalize — backend may return enum string like "PaymentStatus.paid"
+    var s = String(status || "").toLowerCase();
+    var isPaid    = s === "paid"    || s.endsWith(".paid");
+    var isExpired = s === "expired" || s === "failed" || s.endsWith(".expired") || s.endsWith(".failed");
+
+    var pill   = document.getElementById("statusPill");
+    var notice = document.getElementById("pollingNotice");
+    var hero   = document.querySelector(".hero");
+    var refBox = document.querySelector(".ref-box");
+    var steps  = document.querySelector(".card");
+
+    if (isPaid) {
+      if (hero) {
+        hero.classList.remove("placed", "crypto", "failed");
+        hero.classList.add("paid");
+        var h1 = hero.querySelector("h1");
+        var p  = hero.querySelector("p");
+        if (h1) h1.textContent = "Payment Received!";
+        if (p)  p.textContent  = "Thank you — your order is being processed.";
+        var icon = hero.querySelector(".hero-icon");
+        if (icon) icon.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+      }
+      if (pill)   pill.innerHTML = "✓ Payment received";
+      if (notice) {
+        notice.className = "polling confirmed";
+        notice.innerHTML = '<span class="check-big">✓</span>Payment received! Your order is confirmed.';
+      }
+      // Hide the now-irrelevant "how to send" card + reference box
+      if (steps)  steps.style.display  = "none";
+      if (refBox) refBox.style.display = "none";
+      return true;
+    }
+    if (isExpired) {
+      if (hero) {
+        hero.classList.remove("placed", "paid", "crypto");
+        hero.classList.add("failed");
+        var h1e = hero.querySelector("h1");
+        var pe  = hero.querySelector("p");
+        if (h1e) h1e.textContent = "Order Expired";
+        if (pe)  pe.textContent  = "This order has expired. Please place a new order.";
+      }
+      if (pill)   pill.innerHTML = "✕ Expired";
+      if (notice) notice.textContent = "This order has expired. Please place a new order.";
+      return true;
+    }
+    return false;
+  }
+
+  function poll() {
+    if (polls++ > 60) {  // ~20 min @ 20s
+      var notice = document.getElementById("pollingNotice");
+      if (notice) notice.textContent = "Payment not detected yet. It may take a few minutes.";
+      return;
+    }
+    fetch("/api/checkout/status/" + ORDER_ID)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!updateV2UI(data.paymentStatus)) setTimeout(poll, 20000);
+      })
+      .catch(function() { setTimeout(poll, 20000); });
+  }
+
+  // Check immediately on page load (covers the case where payment was already
+  // marked paid before this page rendered) then start polling.
+  fetch("/api/checkout/status/" + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!updateV2UI(data.paymentStatus)) setTimeout(poll, 8000);
+    })
+    .catch(function() { setTimeout(poll, 8000); });
+}
+</script>
+</body>
+</html>

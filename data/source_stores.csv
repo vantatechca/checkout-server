@@ -1,0 +1,713 @@
+domain,card,altcoin,onramp,notes
+# ── ONRAMP + PYMTZ + ZELLE + BTC (USA) — onramp + pymtz card + zelle + bitcoin ──
+floridapeptideslab.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesdenver.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+philadelphiapeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesanjose.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesaurora.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+atlantapeps.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesportland.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+miamipeps.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+columbuspeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+losangelespeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesandiego.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+houstonpeps.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesdallas.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+rochesterpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+clevelandpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+charlottepeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+raleighpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+detroitpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+jacksonvillepeptide.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+sanantoniopeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+buffalopeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+greensboropeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+princetonpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+warrenpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+grandrapidspeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptideschicago.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesphoenix.co,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+sanfranciscopeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptideseattle.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesboston.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+pittsburghpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+minneapolispeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesnashville.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+oaklandpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+riversidepeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+peptidesacramento.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+norfolkpeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+birminghampeptides.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+neworleanspeps.com,,0,1,ONRAMP + PYMTZ + ZELLE + BTC
+
+# ── E-TRANSFER + BTC — interac/zelle + bitcoin only (no card, no onramp) ──
+torontopeptides.ca,,0,0,E-TRANSFER + BTC
+montrealpeptides.ca,,0,0,E-TRANSFER + BTC
+lavalpeptides.ca,,0,0,E-TRANSFER + BTC
+victoriapeps.ca,,0,0,E-TRANSFER + BTC
+saskatoonpeptides.ca,,0,0,E-TRANSFER + BTC
+calgarypeptides.ca,,0,0,E-TRANSFER + BTC
+winnipegpeptides.ca,,0,0,E-TRANSFER + BTC
+vancouverpeptides.ca,,0,0,E-TRANSFER + BTC
+ottawapeptides.ca,,0,0,E-TRANSFER + BTC
+ottawapeptides.com,,0,0,E-TRANSFER + BTC
+ajaxpeptides.ca,,0,0,E-TRANSFER + BTC
+oakvillepeptides.ca,,0,0,E-TRANSFER + BTC
+truropeptides.ca,,0,0,E-TRANSFER + BTC
+burnabypeptides.ca,,0,0,E-TRANSFER + BTC
+surreypeptides.com,,0,0,E-TRANSFER + BTC
+surreypeptides.ca,,0,0,E-TRANSFER + BTC
+edmontonpeptides.com,,0,0,E-TRANSFER + BTC
+brandonpeptides.ca,,0,0,E-TRANSFER + BTC
+steinbachpeptides.com,,0,0,E-TRANSFER + BTC
+halifaxpeptides.ca,,0,0,E-TRANSFER + BTC
+monctonpeptides.ca,,0,0,E-TRANSFER + BTC
+frederictonpeptides.ca,,0,0,E-TRANSFER + BTC
+summersidepeptides.ca,,0,0,E-TRANSFER + BTC
+stratfordpeptides.ca,,0,0,E-TRANSFER + BTC
+stjohnspeptides.ca,,0,0,E-TRANSFER + BTC
+mountpearlpeptides.ca,,0,0,E-TRANSFER + BTC
+richmondpeps.com,,0,0,E-TRANSFER + BTC
+hamiltonpeptides.ca,,0,0,E-TRANSFER + BTC
+burlingtonpeptides.ca,,0,0,E-TRANSFER + BTC
+bramptonpeptides.ca,,0,0,E-TRANSFER + BTC
+kitchenerpeps.com,,0,0,E-TRANSFER + BTC
+windsorpeptides.ca,,0,0,E-TRANSFER + BTC
+kingstonpeptides.ca,,0,0,E-TRANSFER + BTC
+barriepeptides.ca,,0,0,E-TRANSFER + BTC
+oshawapeptides.ca,,0,0,E-TRANSFER + BTC
+whitbypeps.com,,0,0,E-TRANSFER + BTC
+pickeringpeps.com,,0,0,E-TRANSFER + BTC
+richmondhillpeptides.ca,,0,0,E-TRANSFER + BTC
+mississaugapeps.ca,,0,0,E-TRANSFER + BTC
+waterloopeps.ca,,0,0,E-TRANSFER + BTC
+markhampeps.ca,,0,0,E-TRANSFER + BTC
+vaughanpeps.ca,,0,0,E-TRANSFER + BTC
+lethbridgepeps.com,,0,0,E-TRANSFER + BTC
+guelphpeps.ca,,0,0,E-TRANSFER + BTC
+scarboroughpeptides.ca,,0,0,E-TRANSFER + BTC
+northyorkpeptides.ca,,0,0,E-TRANSFER + BTC
+etobicokepeptides.ca,,0,0,E-TRANSFER + BTC
+eastyorkpeptides.ca,,0,0,E-TRANSFER + BTC
+yorkpeptides.ca,,0,0,E-TRANSFER + BTC
+miltonpeptides.ca,,0,0,E-TRANSFER + BTC
+claringtonpeptides.ca,,0,0,E-TRANSFER + BTC
+newmarketpeptides.ca,,0,0,E-TRANSFER + BTC
+kingpeptides.ca,,0,0,E-TRANSFER + BTC
+georginapeptides.ca,,0,0,E-TRANSFER + BTC
+eastgwillimburypeptides.ca,,0,0,E-TRANSFER + BTC
+caledonpeptides.ca,,0,0,E-TRANSFER + BTC
+haltonhillspeptides.ca,,0,0,E-TRANSFER + BTC
+orangevillepeptides.ca,,0,0,E-TRANSFER + BTC
+thebeachespeptides.ca,,0,0,E-TRANSFER + BTC
+libertyvillagepeptides.ca,,0,0,E-TRANSFER + BTC
+leslievillepeptides.ca,,0,0,E-TRANSFER + BTC
+parkdalepeptides.ca,,0,0,E-TRANSFER + BTC
+roncesvallespeptides.ca,,0,0,E-TRANSFER + BTC
+theannexpeptides.ca,,0,0,E-TRANSFER + BTC
+danforthpeptides.ca,,0,0,E-TRANSFER + BTC
+highparkpeptides.ca,,0,0,E-TRANSFER + BTC
+mimicopeptides.ca,,0,0,E-TRANSFER + BTC
+leasidepeptides.ca,,0,0,E-TRANSFER + BTC
+donmillspeptides.ca,,0,0,E-TRANSFER + BTC
+willowdalepeptides.ca,,0,0,E-TRANSFER + BTC
+thornhillpeptides.ca,,0,0,E-TRANSFER + BTC
+unionvillepeptides.ca,,0,0,E-TRANSFER + BTC
+woodbridgepeptides.ca,,0,0,E-TRANSFER + BTC
+maplepeptides.ca,,0,0,E-TRANSFER + BTC
+concordpeptides.ca,,0,0,E-TRANSFER + BTC
+portcreditpeptides.ca,,0,0,E-TRANSFER + BTC
+streetsvillepeptides.ca,,0,0,E-TRANSFER + BTC
+meadowvalepeptides.ca,,0,0,E-TRANSFER + BTC
+erinmillspeptides.ca,,0,0,E-TRANSFER + BTC
+clarksonpeptides.ca,,0,0,E-TRANSFER + BTC
+cooksvillepeptides.com,,0,0,E-TRANSFER + BTC
+maltonpeptides.ca,,0,0,E-TRANSFER + BTC
+bramaleapeptides.ca,,0,0,E-TRANSFER + BTC
+heartlakepeptides.ca,,0,0,E-TRANSFER + BTC
+mountpleasantpeptides.ca,,0,0,E-TRANSFER + BTC
+westmountpeptides.ca,,0,0,E-TRANSFER + BTC
+montroyaltmrpeptides.ca,,0,0,E-TRANSFER + BTC
+outremontpeptides.ca,,0,0,E-TRANSFER + BTC
+notre-dame-de-lile-perrotpeptides.ca,,0,0,E-TRANSFER + BTC
+cotesaintlucpeptides.ca,,0,0,E-TRANSFER + BTC
+pincourtpeptides.ca,,0,0,E-TRANSFER + BTC
+dorvalpeptides.ca,,0,0,E-TRANSFER + BTC
+pointeclairepeptides.ca,,0,0,E-TRANSFER + BTC
+kirklandpeptides.ca,,0,0,E-TRANSFER + BTC
+beaconsfieldpeptides.ca,,0,0,E-TRANSFER + BTC
+saint-lazarepeptides.ca,,0,0,E-TRANSFER + BTC
+varennespeptides.ca,,0,0,E-TRANSFER + BTC
+sainte-juliepeptides.ca,,0,0,E-TRANSFER + BTC
+dollard-des-ormeauxpeptides.ca,,0,0,E-TRANSFER + BTC
+stouffvillepeptides.ca,,0,0,E-TRANSFER + BTC
+longueuilpeptides.ca,,0,0,E-TRANSFER + BTC
+brossardpeptides.ca,,0,0,E-TRANSFER + BTC
+saint-lambertpeptides.ca,,0,0,E-TRANSFER + BTC
+bouchervillepeptides.ca,,0,0,E-TRANSFER + BTC
+saint-bruno-de-montarvillepeptides.ca,,0,0,E-TRANSFER + BTC
+sainthubertpeptides.ca,,0,0,E-TRANSFER + BTC
+greenfieldparkpeptides.ca,,0,0,E-TRANSFER + BTC
+chamblypeptides.ca,,0,0,E-TRANSFER + BTC
+chateauguaypeptides.ca,,0,0,E-TRANSFER + BTC
+candiacpeptides.ca,,0,0,E-TRANSFER + BTC
+laprairiepeptides.ca,,0,0,E-TRANSFER + BTC
+saintecatherinepeptides.ca,,0,0,E-TRANSFER + BTC
+saintconstantpeptides.ca,,0,0,E-TRANSFER + BTC
+carignanpeptides.ca,,0,0,E-TRANSFER + BTC
+terrebonnepeptides.ca,,0,0,E-TRANSFER + BTC
+repentignypeptides.ca,,0,0,E-TRANSFER + BTC
+mascouchepeptides.ca,,0,0,E-TRANSFER + BTC
+lassomptionpeptides.ca,,0,0,E-TRANSFER + BTC
+blainvillepeptides.ca,,0,0,E-TRANSFER + BTC
+boisbriandpeptides.ca,,0,0,E-TRANSFER + BTC
+rosemerepeptides.ca,,0,0,E-TRANSFER + BTC
+lorrainepeptides.ca,,0,0,E-TRANSFER + BTC
+sainte-theresepeptides.ca,,0,0,E-TRANSFER + BTC
+saint-eustachepeptides.ca,,0,0,E-TRANSFER + BTC
+deux-montagnespeptides.ca,,0,0,E-TRANSFER + BTC
+sainte-marthe-sur-le-lacpeptides.ca,,0,0,E-TRANSFER + BTC
+saint-jeromepeptides.ca,,0,0,E-TRANSFER + BTC
+vaudreuil-dorionpeptides.ca,,0,0,E-TRANSFER + BTC
+lile-perrotpeptides.ca,,0,0,E-TRANSFER + BTC
+mile-endpeptides.ca,,0,0,E-TRANSFER + BTC
+griffintownpeptides.ca,,0,0,E-TRANSFER + BTC
+ndg-notre-dame-de-gracepeptides.ca,,0,0,E-TRANSFER + BTC
+verdunpeptides.ca,,0,0,E-TRANSFER + BTC
+lasallepeptides.ca,,0,0,E-TRANSFER + BTC
+lachinepeptides.ca,,0,0,E-TRANSFER + BTC
+saint-laurentpeptides.ca,,0,0,E-TRANSFER + BTC
+anjoupeptides.ca,,0,0,E-TRANSFER + BTC
+ahuntsicpeptides.ca,,0,0,E-TRANSFER + BTC
+mercier-hochelaga-maisonneuve.ca,,0,0,E-TRANSFER + BTC
+rosemontpeptides.ca,,0,0,E-TRANSFER + BTC
+villeraypeptides.ca,,0,0,E-TRANSFER + BTC
+rdppeptides.ca,,0,0,E-TRANSFER + BTC
+pierrefondspeptides.ca,,0,0,E-TRANSFER + BTC
+ilebizardpeptides.ca,,0,0,E-TRANSFER + BTC
+cotedesneigespeptides.ca,,0,0,E-TRANSFER + BTC
+snowdonpeptides.ca,,0,0,E-TRANSFER + BTC
+saint-henripeptides.ca,,0,0,E-TRANSFER + BTC
+thepointepeptides.ca,,0,0,E-TRANSFER + BTC
+hochelagapeptides.ca,,0,0,E-TRANSFER + BTC
+coquitlampeptides.ca,,0,0,E-TRANSFER + BTC
+pittmeadowspeptides.ca,,0,0,E-TRANSFER + BTC
+cloverdalepeptides.ca,,0,0,E-TRANSFER + BTC
+deltapeptides.ca,,0,0,E-TRANSFER + BTC
+mapleridgepeptides.ca,,0,0,E-TRANSFER + BTC
+newwestminsterpeptides.ca,,0,0,E-TRANSFER + BTC
+fleetwoodpeptides.ca,,0,0,E-TRANSFER + BTC
+guildfordpeptides.ca,,0,0,E-TRANSFER + BTC
+westvancouverpeptides.ca,,0,0,E-TRANSFER + BTC
+portmoodypeptides.ca,,0,0,E-TRANSFER + BTC
+tsawwassenpeptides.ca,,0,0,E-TRANSFER + BTC
+newtonpeptides.ca,,0,0,E-TRANSFER + BTC
+whalleypeptides.ca,,0,0,E-TRANSFER + BTC
+panoramaridgepeptides.ca,,0,0,E-TRANSFER + BTC
+stevestonpeptides.ca,,0,0,E-TRANSFER + BTC
+kitsilanopeptides.ca,,0,0,E-TRANSFER + BTC
+kerrisdalepeptides.ca,,0,0,E-TRANSFER + BTC
+dunbarpeptides.ca,,0,0,E-TRANSFER + BTC
+pointgreypeptides.ca,,0,0,E-TRANSFER + BTC
+yaletownpeptides.ca,,0,0,E-TRANSFER + BTC
+commercialdrivepeptides.ca,,0,0,E-TRANSFER + BTC
+metrotownpeptides.ca,,0,0,E-TRANSFER + BTC
+brentwoodpeptides.ca,,0,0,E-TRANSFER + BTC
+lougheedpeptides.ca,,0,0,E-TRANSFER + BTC
+edmondspeptides.ca,,0,0,E-TRANSFER + BTC
+burkemountainpeptides.ca,,0,0,E-TRANSFER + BTC
+willoughbypeptides.ca,,0,0,E-TRANSFER + BTC
+walnutgrovepeptides.ca,,0,0,E-TRANSFER + BTC
+aldergrovepeptides.ca,,0,0,E-TRANSFER + BTC
+missionpeptides.ca,,0,0,E-TRANSFER + BTC
+abbotsfordpeptides.ca,,0,0,E-TRANSFER + BTC
+chilliwackpeptides.ca,,0,0,E-TRANSFER + BTC
+squamishpeptides.ca,,0,0,E-TRANSFER + BTC
+whistlerpeptides.ca,,0,0,E-TRANSFER + BTC
+airdriepeptides.ca,,0,0,E-TRANSFER + BTC
+cochranepeptides.ca,,0,0,E-TRANSFER + BTC
+chestermerepeptides.ca,,0,0,E-TRANSFER + BTC
+okotokspeptides.ca,,0,0,E-TRANSFER + BTC
+strathmorepeptides.ca,,0,0,E-TRANSFER + BTC
+canmorepeptides.ca,,0,0,E-TRANSFER + BTC
+beltlinepeptides.ca,,0,0,E-TRANSFER + BTC
+bownesspeptides.ca,,0,0,E-TRANSFER + BTC
+rockyridgepeptides.ca,,0,0,E-TRANSFER + BTC
+dalhousiepeptides.ca,,0,0,E-TRANSFER + BTC
+stalbertpeptides.ca,,0,0,E-TRANSFER + BTC
+sherwoodparkpeptides.ca,,0,0,E-TRANSFER + BTC
+sprucegrovepeptides.ca,,0,0,E-TRANSFER + BTC
+leducpeptides.ca,,0,0,E-TRANSFER + BTC
+fortsaskatchewanpeptides.ca,,0,0,E-TRANSFER + BTC
+beaumontpeptides.ca,,0,0,E-TRANSFER + BTC
+stonyplainpeptides.ca,,0,0,E-TRANSFER + BTC
+morinvillepeptides.ca,,0,0,E-TRANSFER + BTC
+oliverpeptides.ca,,0,0,E-TRANSFER + BTC
+millwoodspeptides.ca,,0,0,E-TRANSFER + BTC
+themeadowspeptides.ca,,0,0,E-TRANSFER + BTC
+windermerepeptides.ca,,0,0,E-TRANSFER + BTC
+rutherfordpeptides.ca,,0,0,E-TRANSFER + BTC
+terwillegarpeptides.ca,,0,0,E-TRANSFER + BTC
+riverbendpeptides.ca,,0,0,E-TRANSFER + BTC
+clareviewpeptides.ca,,0,0,E-TRANSFER + BTC
+castledownspeptides.ca,,0,0,E-TRANSFER + BTC
+ellersliepeptides.ca,,0,0,E-TRANSFER + BTC
+heritagevalleypeptides.ca,,0,0,E-TRANSFER + BTC
+gatineaupeptides.ca,,0,0,E-TRANSFER + BTC
+kanatapeptides.ca,,0,0,E-TRANSFER + BTC
+orleanspeptides.ca,,0,0,E-TRANSFER + BTC
+nepeanpeptides.ca,,0,0,E-TRANSFER + BTC
+gloucesterpeptides.ca,,0,0,E-TRANSFER + BTC
+barrhavenpeptides.ca,,0,0,E-TRANSFER + BTC
+stittsvillepeptides.ca,,0,0,E-TRANSFER + BTC
+riversidesouthpeptides.ca,,0,0,E-TRANSFER + BTC
+vanierpeptides.ca,,0,0,E-TRANSFER + BTC
+theglebepeptides.ca,,0,0,E-TRANSFER + BTC
+centretownpeptides.ca,,0,0,E-TRANSFER + BTC
+altavistapeptides.ca,,0,0,E-TRANSFER + BTC
+sandyhillpeptides.ca,,0,0,E-TRANSFER + BTC
+aylmerpeptides.ca,,0,0,E-TRANSFER + BTC
+hullpeptides.ca,,0,0,E-TRANSFER + BTC
+carletonplacepeptides.ca,,0,0,E-TRANSFER + BTC
+rocklandpeptides.ca,,0,0,E-TRANSFER + BTC
+cumberlandpeptides.ca,,0,0,E-TRANSFER + BTC
+findlaycreekpeptides.ca,,0,0,E-TRANSFER + BTC
+langleypeptides.ca,,0,0,E-TRANSFER + BTC
+sennevillepeptides.ca,,0,0,E-TRANSFER + BTC
+lavaldesrapidespeptides.ca,,0,0,E-TRANSFER + BTC
+wellandpeptides.ca,,0,0,E-TRANSFER + BTC
+northshorepeptides.ca,,0,0,E-TRANSFER + BTC
+northperthpeptides.ca,,0,0,E-TRANSFER + BTC
+rockwoodpeptides.ca,,0,0,E-TRANSFER + BTC
+lockestreetpeptides.ca,,0,0,E-TRANSFER + BTC
+timberleapeptides.ca,,0,0,E-TRANSFER + BTC
+signalhillpeptides.ca,,0,0,E-TRANSFER + BTC
+tuscanypeptides.ca,,0,0,E-TRANSFER + BTC
+cranstonpeptides.ca,,0,0,E-TRANSFER + BTC
+mckenzietownepeptides.ca,,0,0,E-TRANSFER + BTC
+auburnbaypeptides.ca,,0,0,E-TRANSFER + BTC
+nolanhillpeptides.ca,,0,0,E-TRANSFER + BTC
+evanstonpeptides.ca,,0,0,E-TRANSFER + BTC
+legacypeptides.ca,,0,0,E-TRANSFER + BTC
+juniperridgepeptides.ca,,0,0,E-TRANSFER + BTC
+eaststpaulpeptides.ca,,0,0,E-TRANSFER + BTC
+selkirkpeptides.ca,,0,0,E-TRANSFER + BTC
+stbonifacepeptides.ca,,0,0,E-TRANSFER + BTC
+riverheightspeptides.ca,,0,0,E-TRANSFER + BTC
+stjamespeptides.ca,,0,0,E-TRANSFER + BTC
+fortgarrypeptides.ca,,0,0,E-TRANSFER + BTC
+charleswoodpeptides.ca,,0,0,E-TRANSFER + BTC
+stvitalpeptides.ca,,0,0,E-TRANSFER + BTC
+transconapeptides.ca,,0,0,E-TRANSFER + BTC
+northkildonanpeptides.ca,,0,0,E-TRANSFER + BTC
+waverleyheightspeptides.ca,,0,0,E-TRANSFER + BTC
+bridgwaterpeptides.ca,,0,0,E-TRANSFER + BTC
+levispeptides.ca,,0,0,E-TRANSFER + BTC
+saintefoypeptides.ca,,0,0,E-TRANSFER + BTC
+beauportpeptides.ca,,0,0,E-TRANSFER + BTC
+charlesbourgpeptides.ca,,0,0,E-TRANSFER + BTC
+lesrivierespeptides.ca,,0,0,E-TRANSFER + BTC
+valbelairpeptides.ca,,0,0,E-TRANSFER + BTC
+lanciennelorettepeptides.ca,,0,0,E-TRANSFER + BTC
+saintaugustindedesmaurespeptides.ca,,0,0,E-TRANSFER + BTC
+saint-nicolaspeptides.ca,,0,0,E-TRANSFER + BTC
+sillerypeptides.ca,,0,0,E-TRANSFER + BTC
+montcalmpeptides.ca,,0,0,E-TRANSFER + BTC
+saintrochpeptides.ca,,0,0,E-TRANSFER + BTC
+limoiloupeptides.ca,,0,0,E-TRANSFER + BTC
+caprougepeptides.ca,,0,0,E-TRANSFER + BTC
+saintraymondpeptides.ca,,0,0,E-TRANSFER + BTC
+stoneycreekpeptides.ca,,0,0,E-TRANSFER + BTC
+ancasterpeptides.ca,,0,0,E-TRANSFER + BTC
+flamboroughpeptides.ca,,0,0,E-TRANSFER + BTC
+glanbrookpeptides.ca,,0,0,E-TRANSFER + BTC
+waterdownpeptides.ca,,0,0,E-TRANSFER + BTC
+grimsbypeptides.ca,,0,0,E-TRANSFER + BTC
+caledoniapeptides.ca,,0,0,E-TRANSFER + BTC
+westdalepeptides.ca,,0,0,E-TRANSFER + BTC
+hamiltonmountainpeptides.ca,,0,0,E-TRANSFER + BTC
+elmirapeptides.ca,,0,0,E-TRANSFER + BTC
+prestonpeptides.ca,,0,0,E-TRANSFER + BTC
+hespelerpeptides.ca,,0,0,E-TRANSFER + BTC
+centralsaanichpeptides.ca,,0,0,E-TRANSFER + BTC
+northsaanichpeptides.ca,,0,0,E-TRANSFER + BTC
+jamesbaypeptides.ca,,0,0,E-TRANSFER + BTC
+westkelownapeptides.ca,,0,0,E-TRANSFER + BTC
+sidneypeptides.ca,,0,0,E-TRANSFER + BTC
+southsurreypeptides.ca,,0,0,E-TRANSFER + BTC
+viewroyalpeptides.ca,,0,0,E-TRANSFER + BTC
+sullivanpeptides.ca,,0,0,E-TRANSFER + BTC
+fraserheightspeptides.ca,,0,0,E-TRANSFER + BTC
+bearcreekpeptides.ca,,0,0,E-TRANSFER + BTC
+chomedeypeptides.ca,,0,0,E-TRANSFER + BTC
+saintedorotheepeptides.ca,,0,0,E-TRANSFER + BTC
+fabrevillepeptides.ca,,0,0,E-TRANSFER + BTC
+duvernaypeptides.ca,,0,0,E-TRANSFER + BTC
+pontviaupeptides.ca,,0,0,E-TRANSFER + BTC
+vimontpeptides.ca,,0,0,E-TRANSFER + BTC
+auteuilpeptides.ca,,0,0,E-TRANSFER + BTC
+saintfrancoispeptides.ca,,0,0,E-TRANSFER + BTC
+sainterosepeptides.ca,,0,0,E-TRANSFER + BTC
+stthomaspeptides.ca,,0,0,E-TRANSFER + BTC
+strathroypeptides.ca,,0,0,E-TRANSFER + BTC
+woodstockpeptides.ca,,0,0,E-TRANSFER + BTC
+ingersollpeptides.ca,,0,0,E-TRANSFER + BTC
+byronpeptides.ca,,0,0,E-TRANSFER + BTC
+oakbaypeptides.ca,,0,0,E-TRANSFER + BTC
+oldeastvillagepeptides.ca,,0,0,E-TRANSFER + BTC
+lambethpeptides.ca,,0,0,E-TRANSFER + BTC
+whiteoakspeptides.ca,,0,0,E-TRANSFER + BTC
+masonvillepeptides.ca,,0,0,E-TRANSFER + BTC
+hydeparkpeptides.ca,,0,0,E-TRANSFER + BTC
+dartmouthpeptides.ca,,0,0,E-TRANSFER + BTC
+bedfordpeptides.ca,,0,0,E-TRANSFER + BTC
+easternpassagepeptides.ca,,0,0,E-TRANSFER + BTC
+sackvillepeptides.ca,,0,0,E-TRANSFER + BTC
+coleharbourpeptides.ca,,0,0,E-TRANSFER + BTC
+spryfieldpeptides.ca,,0,0,E-TRANSFER + BTC
+fairviewpeptides.ca,,0,0,E-TRANSFER + BTC
+hammondsplainspeptides.ca,,0,0,E-TRANSFER + BTC
+northendhalifaxpeptides.ca,,0,0,E-TRANSFER + BTC
+southendhalifaxpeptides.ca,,0,0,E-TRANSFER + BTC
+warmanpeptides.ca,,0,0,E-TRANSFER + BTC
+martensvillepeptides.ca,,0,0,E-TRANSFER + BTC
+stonebridgepeptides.ca,,0,0,E-TRANSFER + BTC
+brightonpeptides.ca,,0,0,E-TRANSFER + BTC
+harbourlandingpeptides.ca,,0,0,E-TRANSFER + BTC
+saanichpeptides.ca,,0,0,E-TRANSFER + BTC
+langfordpeptides.ca,,0,0,E-TRANSFER + BTC
+colwoodpeptides.ca,,0,0,E-TRANSFER + BTC
+esquimaltpeptides.ca,,0,0,E-TRANSFER + BTC
+niagarafallspeptides.ca,,0,0,E-TRANSFER + BTC
+thoroldpeptides.ca,,0,0,E-TRANSFER + BTC
+forteriepeptides.ca,,0,0,E-TRANSFER + BTC
+portcolbornepeptides.ca,,0,0,E-TRANSFER + BTC
+lincolnpeptides.ca,,0,0,E-TRANSFER + BTC
+pelhampeptides.ca,,0,0,E-TRANSFER + BTC
+niagaraonthelakepeptides.ca,,0,0,E-TRANSFER + BTC
+beamsvillepeptides.ca,,0,0,E-TRANSFER + BTC
+innisfilpeptides.ca,,0,0,E-TRANSFER + BTC
+oromedontepeptides.ca,,0,0,E-TRANSFER + BTC
+springwaterpeptides.ca,,0,0,E-TRANSFER + BTC
+essapeptides.ca,,0,0,E-TRANSFER + BTC
+newtecumsethpeptides.ca,,0,0,E-TRANSFER + BTC
+collingwoodpeptides.ca,,0,0,E-TRANSFER + BTC
+wasagabeachpeptides.ca,,0,0,E-TRANSFER + BTC
+orilliapeptides.ca,,0,0,E-TRANSFER + BTC
+midlandpeptides.ca,,0,0,E-TRANSFER + BTC
+penetanguishenepeptides.ca,,0,0,E-TRANSFER + BTC
+alconapeptides.ca,,0,0,E-TRANSFER + BTC
+anguspeptides.ca,,0,0,E-TRANSFER + BTC
+allistonpeptides.ca,,0,0,E-TRANSFER + BTC
+dieppepeptides.ca,,0,0,E-TRANSFER + BTC
+riverviewpeptides.ca,,0,0,E-TRANSFER + BTC
+magogpeptides.ca,,0,0,E-TRANSFER + BTC
+rockforestpeptides.ca,,0,0,E-TRANSFER + BTC
+fleurimontpeptides.ca,,0,0,E-TRANSFER + BTC
+jacquescartierpeptides.ca,,0,0,E-TRANSFER + BTC
+capdelamadeleinepeptides.ca,,0,0,E-TRANSFER + BTC
+saintlouisdefrancepeptides.ca,,0,0,E-TRANSFER + BTC
+becancourpeptides.ca,,0,0,E-TRANSFER + BTC
+shawiniganpeptides.ca,,0,0,E-TRANSFER + BTC
+grandmerepeptides.ca,,0,0,E-TRANSFER + BTC
+amherstviewpeptides.ca,,0,0,E-TRANSFER + BTC
+ferguspeptides.ca,,0,0,E-TRANSFER + BTC
+southendpeptides.ca,,0,0,E-TRANSFER + BTC
+portarthurpeptides.ca,,0,0,E-TRANSFER + BTC
+fortwilliampeptides.ca,,0,0,E-TRANSFER + BTC
+lacombepeptides.ca,,0,0,E-TRANSFER + BTC
+blackfaldspeptides.ca,,0,0,E-TRANSFER + BTC
+sylvanlakepeptides.ca,,0,0,E-TRANSFER + BTC
+westlethbridgepeptides.ca,,0,0,E-TRANSFER + BTC
+northlethbridgepeptides.ca,,0,0,E-TRANSFER + BTC
+southlethbridgepeptides.ca,,0,0,E-TRANSFER + BTC
+brocklehurstpeptides.ca,,0,0,E-TRANSFER + BTC
+aberdeenpeptides.ca,,0,0,E-TRANSFER + BTC
+parksvillepeptides.ca,,0,0,E-TRANSFER + BTC
+northnanaimopeptides.ca,,0,0,E-TRANSFER + BTC
+harewoodpeptides.ca,,0,0,E-TRANSFER + BTC
+valleyeastpeptides.ca,,0,0,E-TRANSFER + BTC
+raysidebalfourpeptides.ca,,0,0,E-TRANSFER + BTC
+nickelcentrepeptides.ca,,0,0,E-TRANSFER + BTC
+waldenpeptides.ca,,0,0,E-TRANSFER + BTC
+newsudburypeptides.ca,,0,0,E-TRANSFER + BTC
+parispeptides.ca,,0,0,E-TRANSFER + BTC
+westbrantpeptides.ca,,0,0,E-TRANSFER + BTC
+clearbrookpeptides.ca,,0,0,E-TRANSFER + BTC
+matsquipeptides.ca,,0,0,E-TRANSFER + BTC
+sydneypeptides.ca,,0,0,E-TRANSFER + BTC
+glacebaypeptides.ca,,0,0,E-TRANSFER + BTC
+springfieldpeptides.ca,,0,0,E-TRANSFER + BTC
+charnypeptides.ca,,0,0,E-TRANSFER + BTC
+dundaspeptides.ca,,0,0,E-TRANSFER + BTC
+cambridgepeptides.ca,,0,0,E-TRANSFER + BTC
+galtpeptides.ca,,0,0,E-TRANSFER + BTC
+panoramahillspeptides.ca,,0,0,E-TRANSFER + BTC
+countryhillspeptides.com,,0,0,E-TRANSFER + BTC
+paradisepeptides.ca,,0,0,E-TRANSFER + BTC
+gardencitypeptides.ca,,0,0,E-TRANSFER + BTC
+lahautesaintcharlespeptides.ca,,0,0,E-TRANSFER + BTC
+lorettevillepeptides.ca,,0,0,E-TRANSFER + BTC
+mirabelpeptides.ca,,0,0,E-TRANSFER + BTC
+saint-jean-sur-richelieupeptides.ca,,0,0,E-TRANSFER + BTC
+plateau-mont-royalpeptides.ca,,0,0,E-TRANSFER + BTC
+portcoquitlampeptides.ca,,0,0,E-TRANSFER + BTC
+ladnerpeptides.ca,,0,0,E-TRANSFER + BTC
+easthastingsespeptides.ca,,0,0,E-TRANSFER + BTC
+mahoganypeptides.ca,,0,0,E-TRANSFER + BTC
+setonpeptides.ca,,0,0,E-TRANSFER + BTC
+claytonparkpeptides.ca,,0,0,E-TRANSFER + BTC
+strathconacountypeptides.ca,,0,0,E-TRANSFER + BTC
+chathampeptides.ca,,0,0,E-TRANSFER + BTC
+georgetownpeptides.ca,,0,0,E-TRANSFER + BTC
+lakeshorepeptides.ca,,0,0,E-TRANSFER + BTC
+bradfordpeptides.ca,,0,0,E-TRANSFER + BTC
+whitehorsepeptides.ca,,0,0,E-TRANSFER + BTC
+keswickpeptides.ca,,0,0,E-TRANSFER + BTC
+boltonpeptides.ca,,0,0,E-TRANSFER + BTC
+princeedwardcountypeptides.ca,,0,0,E-TRANSFER + BTC
+quispamsispeptides.ca,,0,0,E-TRANSFER + BTC
+hudsonpeptides.ca,,0,0,E-TRANSFER + BTC
+lindsaypeptides.ca,,0,0,E-TRANSFER + BTC
+owensoundpeptides.ca,,0,0,E-TRANSFER + BTC
+southfrontenacpeptides.ca,,0,0,E-TRANSFER + BTC
+yellowknifepeptides.ca,,0,0,E-TRANSFER + BTC
+huntsvillepeptides.ca,,0,0,E-TRANSFER + BTC
+lescoteauxpeptides.ca,,0,0,E-TRANSFER + BTC
+saugeenshorespeptides.ca,,0,0,E-TRANSFER + BTC
+buckinghampeptides.ca,,0,0,E-TRANSFER + BTC
+loyalistpeptides.ca,,0,0,E-TRANSFER + BTC
+bracebridgepeptides.ca,,0,0,E-TRANSFER + BTC
+hanoverpeptides.ca,,0,0,E-TRANSFER + BTC
+laurentidespeptides.ca,,0,0,E-TRANSFER + BTC
+clearviewpeptides.ca,,0,0,E-TRANSFER + BTC
+comoxpeptides.ca,,0,0,E-TRANSFER + BTC
+gaspepeptides.ca,,0,0,E-TRANSFER + BTC
+dolbeaumistassinipeptides.ca,,0,0,E-TRANSFER + BTC
+westgreypeptides.ca,,0,0,E-TRANSFER + BTC
+newhamburgpeptides.ca,,0,0,E-TRANSFER + BTC
+saintemariepeptides.ca,,0,0,E-TRANSFER + BTC
+southstormontpeptides.ca,,0,0,E-TRANSFER + BTC
+brockpeptides.ca,,0,0,E-TRANSFER + BTC
+severnpeptides.ca,,0,0,E-TRANSFER + BTC
+montlaurierpeptides.ca,,0,0,E-TRANSFER + BTC
+portalfredpeptides.ca,,0,0,E-TRANSFER + BTC
+cowansvillepeptides.ca,,0,0,E-TRANSFER + BTC
+lachutepeptides.ca,,0,0,E-TRANSFER + BTC
+gravenhurstpeptides.ca,,0,0,E-TRANSFER + BTC
+meafordpeptides.ca,,0,0,E-TRANSFER + BTC
+rothesaypeptides.ca,,0,0,E-TRANSFER + BTC
+georgianbluffspeptides.ca,,0,0,E-TRANSFER + BTC
+hawkesburypeptides.ca,,0,0,E-TRANSFER + BTC
+ganderpeptides.ca,,0,0,E-TRANSFER + BTC
+adjalatosorontiopeptides.ca,,0,0,E-TRANSFER + BTC
+greyhighlandspeptides.ca,,0,0,E-TRANSFER + BTC
+arnpriorpeptides.ca,,0,0,E-TRANSFER + BTC
+taypeptides.ca,,0,0,E-TRANSFER + BTC
+ladysmithpeptides.ca,,0,0,E-TRANSFER + BTC
+hauterivepeptides.ca,,0,0,E-TRANSFER + BTC
+latuquepeptides.ca,,0,0,E-TRANSFER + BTC
+binbrookpeptides.ca,,0,0,E-TRANSFER + BTC
+ramarapeptides.ca,,0,0,E-TRANSFER + BTC
+bridgewaterpeptides.ca,,0,0,E-TRANSFER + BTC
+oromoctopeptides.ca,,0,0,E-TRANSFER + BTC
+yorkvillepeptides.ca,,0,0,E-TRANSFER + BTC
+nivervillepeptides.ca,,0,0,E-TRANSFER + BTC
+hampsteadpeptides.ca,,0,0,E-TRANSFER + BTC
+montrealwestpeptides.ca,,0,0,E-TRANSFER + BTC
+sainteannepeptides.ca,,0,0,E-TRANSFER + BTC
+lemoynepeptides.ca,,0,0,E-TRANSFER + BTC
+delsonpeptides.ca,,0,0,E-TRANSFER + BTC
+oldmontrealpeptides.ca,,0,0,E-TRANSFER + BTC
+littleitalypeptides.ca,,0,0,E-TRANSFER + BTC
+northvancouverpeptides.ca,,0,0,E-TRANSFER + BTC
+shaughnessypeptides.ca,,0,0,E-TRANSFER + BTC
+gastownpeptides.ca,,0,0,E-TRANSFER + BTC
+banffpeptides.ca,,0,0,E-TRANSFER + BTC
+kensingtonpeptides.ca,,0,0,E-TRANSFER + BTC
+corydonpeptides.ca,,0,0,E-TRANSFER + BTC
+bridgelandpeptides.ca,,0,0,E-TRANSFER + BTC
+mardalooppeptides.ca,,0,0,E-TRANSFER + BTC
+springbankpeptides.ca,,0,0,E-TRANSFER + BTC
+bearspawpeptides.ca,,0,0,E-TRANSFER + BTC
+varsitypeptides.ca,,0,0,E-TRANSFER + BTC
+devonpeptides.ca,,0,0,E-TRANSFER + BTC
+garneaupeptides.ca,,0,0,E-TRANSFER + BTC
+bonniedoonpeptides.ca,,0,0,E-TRANSFER + BTC
+jasperplacepeptides.ca,,0,0,E-TRANSFER + BTC
+griesbachpeptides.ca,,0,0,E-TRANSFER + BTC
+lewisestatespeptides.ca,,0,0,E-TRANSFER + BTC
+manotickpeptides.ca,,0,0,E-TRANSFER + BTC
+westboropeptides.ca,,0,0,E-TRANSFER + BTC
+hintonburgpeptides.ca,,0,0,E-TRANSFER + BTC
+oldottawasouthpeptides.ca,,0,0,E-TRANSFER + BTC
+embrunpeptides.ca,,0,0,E-TRANSFER + BTC
+kemptvillepeptides.ca,,0,0,E-TRANSFER + BTC
+jamesstreetnorthpeptides.ca,,0,0,E-TRANSFER + BTC
+chelseapeptides.ca,,0,0,E-TRANSFER + BTC
+almontepeptides.ca,,0,0,E-TRANSFER + BTC
+weststpaulpeptides.ca,,0,0,E-TRANSFER + BTC
+macdonaldpeptides.ca,,0,0,E-TRANSFER + BTC
+garsonpeptides.ca,,0,0,E-TRANSFER + BTC
+bridgeviewpeptides.ca,,0,0,E-TRANSFER + BTC
+wolseleypeptides.ca,,0,0,E-TRANSFER + BTC
+sagecreekpeptides.ca,,0,0,E-TRANSFER + BTC
+stonehamettewkesburypeptides.ca,,0,0,E-TRANSFER + BTC
+lacbeauportpeptides.ca,,0,0,E-TRANSFER + BTC
+boischatelpeptides.ca,,0,0,E-TRANSFER + BTC
+oldquebecpeptides.ca,,0,0,E-TRANSFER + BTC
+shannonpeptides.ca,,0,0,E-TRANSFER + BTC
+winonapeptides.ca,,0,0,E-TRANSFER + BTC
+smithvillepeptides.ca,,0,0,E-TRANSFER + BTC
+concessionstreetpeptides.ca,,0,0,E-TRANSFER + BTC
+lavalouestpeptides.ca,,0,0,E-TRANSFER + BTC
+ayrpeptides.ca,,0,0,E-TRANSFER + BTC
+breslaupeptides.ca,,0,0,E-TRANSFER + BTC
+uptownwaterloopeptides.ca,,0,0,E-TRANSFER + BTC
+downtownkitchenerpeptides.ca,,0,0,E-TRANSFER + BTC
+oldnorthpeptides.ca,,0,0,E-TRANSFER + BTC
+wortleyvillagepeptides.ca,,0,0,E-TRANSFER + BTC
+larryuteckpeptides.ca,,0,0,E-TRANSFER + BTC
+tantallonpeptides.ca,,0,0,E-TRANSFER + BTC
+fallriverpeptides.ca,,0,0,E-TRANSFER + BTC
+enfieldpeptides.ca,,0,0,E-TRANSFER + BTC
+porterslakepeptides.ca,,0,0,E-TRANSFER + BTC
+downtowndartmouthpeptides.ca,,0,0,E-TRANSFER + BTC
+burnsidepeptides.ca,,0,0,E-TRANSFER + BTC
+evergreenpeptides.ca,,0,0,E-TRANSFER + BTC
+willowgrovepeptides.ca,,0,0,E-TRANSFER + BTC
+nutanapeptides.ca,,0,0,E-TRANSFER + BTC
+sutherlandpeptides.ca,,0,0,E-TRANSFER + BTC
+lawsonheightspeptides.ca,,0,0,E-TRANSFER + BTC
+rosewoodpeptides.ca,,0,0,E-TRANSFER + BTC
+hanmerpeptides.ca,,0,0,E-TRANSFER + BTC
+aspenridgepeptides.ca,,0,0,E-TRANSFER + BTC
+silverspringpeptides.ca,,0,0,E-TRANSFER + BTC
+thecreekspeptides.ca,,0,0,E-TRANSFER + BTC
+cathedralpeptides.ca,,0,0,E-TRANSFER + BTC
+hillsdalepeptides.ca,,0,0,E-TRANSFER + BTC
+rochdalepeptides.ca,,0,0,E-TRANSFER + BTC
+metchosinpeptides.ca,,0,0,E-TRANSFER + BTC
+brentwoodbaypeptides.ca,,0,0,E-TRANSFER + BTC
+cordovabaypeptides.ca,,0,0,E-TRANSFER + BTC
+fernwoodpeptides.ca,,0,0,E-TRANSFER + BTC
+fairfieldpeptides.ca,,0,0,E-TRANSFER + BTC
+tillicumpeptides.ca,,0,0,E-TRANSFER + BTC
+happyvalleypeptides.ca,,0,0,E-TRANSFER + BTC
+peachlandpeptides.ca,,0,0,E-TRANSFER + BTC
+southpandosypeptides.ca,,0,0,E-TRANSFER + BTC
+uppermissionpeptides.ca,,0,0,E-TRANSFER + BTC
+kettlevalleypeptides.ca,,0,0,E-TRANSFER + BTC
+winfieldpeptides.ca,,0,0,E-TRANSFER + BTC
+ellisonpeptides.ca,,0,0,E-TRANSFER + BTC
+blackmountainpeptides.ca,,0,0,E-TRANSFER + BTC
+torbaypeptides.ca,,0,0,E-TRANSFER + BTC
+portugalcovestphilipspeptides.ca,,0,0,E-TRANSFER + BTC
+chelmsfordpeptides.ca,,0,0,E-TRANSFER + BTC
+kenmountterracepeptides.ca,,0,0,E-TRANSFER + BTC
+galwaypeptides.ca,,0,0,E-TRANSFER + BTC
+riversidepeptides.ca,,0,0,E-TRANSFER + BTC
+southwalkervillepeptides.ca,,0,0,E-TRANSFER + BTC
+sandwichpeptides.ca,,0,0,E-TRANSFER + BTC
+fonthillpeptides.ca,,0,0,E-TRANSFER + BTC
+memramcookpeptides.ca,,0,0,E-TRANSFER + BTC
+nicoletpeptides.ca,,0,0,E-TRANSFER + BTC
+louisevillepeptides.ca,,0,0,E-TRANSFER + BTC
+gananoquepeptides.ca,,0,0,E-TRANSFER + BTC
+napaneepeptides.ca,,0,0,E-TRANSFER + BTC
+collinsbaypeptides.ca,,0,0,E-TRANSFER + BTC
+williamsvillepeptides.ca,,0,0,E-TRANSFER + BTC
+elorapeptides.ca,,0,0,E-TRANSFER + BTC
+thewardpeptides.ca,,0,0,E-TRANSFER + BTC
+universitydistrictpeptides.ca,,0,0,E-TRANSFER + BTC
+oliverpaipoongepeptides.ca,,0,0,E-TRANSFER + BTC
+intercitypeptides.ca,,0,0,E-TRANSFER + BTC
+currentriverpeptides.ca,,0,0,E-TRANSFER + BTC
+westfortpeptides.ca,,0,0,E-TRANSFER + BTC
+innisfailpeptides.ca,,0,0,E-TRANSFER + BTC
+bowerpeptides.ca,,0,0,E-TRANSFER + BTC
+timberlandspeptides.ca,,0,0,E-TRANSFER + BTC
+taberpeptides.ca,,0,0,E-TRANSFER + BTC
+westsydepeptides.ca,,0,0,E-TRANSFER + BTC
+highriverpeptides.ca,,0,0,E-TRANSFER + BTC
+whiterockpeptides.ca,,0,0,E-TRANSFER + BTC
+cataraquipeptides.ca,,0,0,E-TRANSFER + BTC
+valleyviewpeptides.ca,,0,0,E-TRANSFER + BTC
+
+# ── Shopify backup domains (preserved from original — onramp enabled) ──
+1rr0sy-vj.myshopify.com,,0,1,onramp + interac/zelle + crypto
+q1r1ar-6m.myshopify.com,,0,1,onramp + interac/zelle + crypto
+15ta7c-0r.myshopify.com,,0,1,onramp + interac/zelle + crypto
+a0hs07-ug.myshopify.com,,0,1,onramp + interac/zelle + crypto
+1hystu-tw.myshopify.com,,0,1,onramp + interac/zelle + crypto
+3htjud-w0.myshopify.com,,0,1,onramp + interac/zelle + crypto
+wzjhnp-yc.myshopify.com,,0,1,onramp + interac/zelle + crypto
+rvpg36-ma.myshopify.com,,0,1,onramp + interac/zelle + crypto
+ynzvhu-7i.myshopify.com,,0,1,onramp + interac/zelle + crypto
+nd1i1k-wx.myshopify.com,,0,1,onramp + interac/zelle + crypto
+dv9bwq-j0.myshopify.com,,0,1,onramp + interac/zelle + crypto
+b31mpp-by.myshopify.com,,0,1,onramp + interac/zelle + crypto
+r8a1bg-da.myshopify.com,,0,1,onramp + interac/zelle + crypto
+c8grvv-dt.myshopify.com,,0,1,onramp + interac/zelle + crypto
+8spp1h-8t.myshopify.com,,0,1,onramp + interac/zelle + crypto
+rpsswg-c1.myshopify.com,,0,1,onramp + interac/zelle + crypto
+umjt0h-8n.myshopify.com,,0,1,onramp + interac/zelle + crypto
+i5r2ct-qw.myshopify.com,,0,1,onramp + interac/zelle + crypto
+vdsrtd-ip.myshopify.com,,0,1,onramp + interac/zelle + crypto
+q0w1it-zh.myshopify.com,,0,1,onramp + interac/zelle + crypto
+qeexzh-pv.myshopify.com,,0,1,onramp + interac/zelle + crypto
+p9xszz-ib.myshopify.com,,0,1,onramp + interac/zelle + crypto
+mesa-peptides-arl-2.myshopify.com,,0,1,onramp + interac/zelle + crypto
+02w0zm-49.myshopify.com,,0,1,onramp + interac/zelle + crypto
+4widwq-rg.myshopify.com,,0,1,onramp + interac/zelle + crypto
+q4aidf-eg.myshopify.com,,0,1,onramp + interac/zelle + crypto
+colorado-springs-peptides.myshopify.com,,0,1,onramp + interac/zelle + crypto
+bejwtt-dq.myshopify.com,,0,1,onramp + interac/zelle + crypto
+hwcerz-a0.myshopify.com,,0,1,onramp + interac/zelle + crypto
+tfxay8-r4.myshopify.com,,0,1,onramp + interac/zelle + crypto
+hww11b-pa.myshopify.com,,0,1,onramp + interac/zelle + crypto
+dswdst-94.myshopify.com,,0,1,onramp + interac/zelle + crypto
+tempe-peptides-arl.myshopify.com,,0,1,onramp + interac/zelle + crypto
+esp2gf-m0.myshopify.com,,0,1,onramp + interac/zelle + crypto
+tampa-peptides-arl.myshopify.com,,0,1,onramp + interac/zelle + crypto
+rzhhin-8v.myshopify.com,,0,1,onramp + interac/zelle + crypto
+arlington-peptides-arl.myshopify.com,,0,1,onramp + interac/zelle + crypto
+q1zemr-wu.myshopify.com,,0,1,onramp + interac/zelle + crypto
+qhv7sz-ia.myshopify.com,,0,1,onramp + interac/zelle + crypto
+huntington-beach-peptides-arl.myshopify.com,,0,1,onramp + interac/zelle + crypto
+v5mgb0-ej.myshopify.com,,0,1,onramp + interac/zelle + crypto
+isy0ar-gn.myshopify.com,,0,1,onramp + interac/zelle + crypto
+y1i1d1-w1.myshopify.com,,0,1,onramp + interac/zelle + crypto
+wafwan-hu.myshopify.com,,0,1,onramp + interac/zelle + crypto
+overland-park-peptides-arl-2.myshopify.com,,0,1,onramp + interac/zelle + crypto
+r7jmx9-xv.myshopify.com,,0,1,onramp + interac/zelle + crypto
+cxqwkq-ar.myshopify.com,,0,1,onramp + interac/zelle + crypto
+rgvi1p-2a.myshopify.com,,0,1,onramp + interac/zelle + crypto
+gezumj-gv.myshopify.com,,0,1,onramp + interac/zelle + crypto
+17rf33-r5.myshopify.com,,0,1,onramp + interac/zelle + crypto
+b91zec-y3.myshopify.com,,0,1,onramp + interac/zelle + crypto
+suwetq-yr.myshopify.com,,0,1,onramp + interac/zelle + crypto
+dc5801-qm.myshopify.com,,0,1,onramp + interac/zelle + crypto
+k1shun-0q.myshopify.com,,0,1,onramp + interac/zelle + crypto
+lincoln-peptides-arl-2.myshopify.com,,0,1,onramp + interac/zelle + crypto
+chpe1w-vg.myshopify.com,,0,1,onramp + interac/zelle + crypto
+uwfzfx-nx.myshopify.com,,0,1,onramp + interac/zelle + crypto
+eutfcc-ck.myshopify.com,,0,1,onramp + interac/zelle + crypto
+51ewy0-s1.myshopify.com,,0,1,onramp + interac/zelle + crypto
+h46nhg-1d.myshopify.com,,0,1,onramp + interac/zelle + crypto
+furkfv-kc.myshopify.com,,0,1,onramp + interac/zelle + crypto
+tsefwi-qi.myshopify.com,,0,1,onramp + interac/zelle + crypto
+7vwfem-hb.myshopify.com,,0,1,onramp + interac/zelle + crypto
+84c1br-7s.myshopify.com,,0,1,onramp + interac/zelle + crypto
+5beyc0-m0.myshopify.com,,0,1,onramp + interac/zelle + crypto
+9qj4qs-cy.myshopify.com,,0,1,onramp + interac/zelle + crypto
+47pisj-2b.myshopify.com,,0,1,onramp + interac/zelle + crypto
+qpz1xe-i1.myshopify.com,,0,1,onramp + interac/zelle + crypto
+1jjwwq-7r.myshopify.com,,0,1,onramp + interac/zelle + crypto
+h8c3ax-gh.myshopify.com,,0,1,onramp + interac/zelle + crypto
+02rzx0-iv.myshopify.com,,0,1,onramp + interac/zelle + crypto
+xkcupv-zb.myshopify.com,,0,1,onramp + interac/zelle + crypto
+sioux-falls-peptides-arl.myshopify.com,,0,1,onramp + interac/zelle + crypto
+k0q01t-dg.myshopify.com,,0,1,onramp + interac/zelle + crypto
+5ufkmk-ns.myshopify.com,,0,1,onramp + interac/zelle + crypto
+qcrhxw-bd.myshopify.com,,0,1,onramp + interac/zelle + crypto

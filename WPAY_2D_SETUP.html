@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WPay 2D Setup Documentation</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #1a1d23;
+    --ink-soft: #565c66;
+    --border: #e3e6ea;
+    --accent: #2f6fed;
+    --accent-soft: #eaf1fe;
+    --warn-bg: #fff4e5;
+    --warn-border: #f3d9a8;
+    --warn-ink: #7a4d00;
+    --secret-bg: #fdf1f1;
+    --secret-border: #f3caca;
+    --secret-ink: #7a1f1f;
+    --ok: #1a7f4e;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  header.page {
+    margin-bottom: 40px;
+  }
+  header.page h1 {
+    font-size: 28px;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  header.page .meta {
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+  .banner-secret {
+    background: var(--secret-bg);
+    border: 1px solid var(--secret-border);
+    color: var(--secret-ink);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 14px;
+    margin-top: 20px;
+  }
+  nav.toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 36px;
+  }
+  nav.toc h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin: 0 0 10px; }
+  nav.toc ol { margin: 0; padding-left: 20px; columns: 2; column-gap: 24px; }
+  nav.toc a { color: var(--accent); text-decoration: none; font-size: 14px; }
+  nav.toc a:hover { text-decoration: underline; }
+
+  section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+  }
+  section h2 {
+    font-size: 19px;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  section h3 { font-size: 15px; margin: 20px 0 8px; }
+  p { margin: 0 0 12px; color: var(--ink); }
+  p.soft, li.soft { color: var(--ink-soft); }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--ink-soft); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.03em; }
+  code {
+    font-family: var(--mono);
+    background: #f1f2f5;
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 13px;
+  }
+  pre {
+    background: #14161a;
+    color: #e6e9ef;
+    padding: 16px 18px;
+    border-radius: 10px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; color: inherit; }
+
+  .cred-box {
+    border: 1px solid var(--secret-border);
+    background: var(--secret-bg);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 10px 0 20px;
+  }
+  .cred-box .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--secret-ink);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .cred-row { display: flex; gap: 8px; font-size: 14px; padding: 3px 0; flex-wrap: wrap; }
+  .cred-row .k { color: var(--secret-ink); min-width: 130px; font-weight: 600; }
+  .cred-row .v { font-family: var(--mono); color: var(--ink); word-break: break-all; }
+
+  .note {
+    background: var(--warn-bg);
+    border: 1px solid var(--warn-border);
+    color: var(--warn-ink);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    margin: 10px 0;
+  }
+
+  ul.checklist { list-style: none; margin: 8px 0; padding: 0; }
+  ul.checklist li {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 0; font-size: 14.5px; border-bottom: 1px dashed var(--border);
+  }
+  ul.checklist li:last-child { border-bottom: none; }
+  .box { width: 18px; height: 18px; flex: none; border-radius: 5px; margin-top: 2px; }
+  .box.done { background: var(--ok); position: relative; }
+  .box.done::after { content: "✓"; color: #fff; font-size: 12px; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  .box.open { border: 2px solid #cfd4db; }
+
+  ol.history { padding-left: 22px; }
+  ol.history li { margin-bottom: 10px; font-size: 14.5px; }
+
+  .pill {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .pill.warn { background: var(--warn-bg); color: var(--warn-ink); }
+
+  footer.page { text-align: center; color: var(--ink-soft); font-size: 12.5px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <h1>WPay 2D (Direct Card) — Setup Documentation</h1>
+    <div class="meta">Checkout Server project · Last updated 2026-07-28</div>
+    <div class="banner-secret">
+      ⚠ This document contains live production credentials. Keep this file local — don't upload, email, or paste it anywhere outside your own machine.
+    </div>
+  </header>
+
+  <nav class="toc">
+    <h2>Contents</h2>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#infra">Infrastructure</a></li>
+      <li><a href="#dns">DNS &amp; SSL</a></li>
+      <li><a href="#nginx">nginx &amp; wp-config</a></li>
+      <li><a href="#creds">Credentials</a></li>
+      <li><a href="#env">.env configuration</a></li>
+      <li><a href="#migration">Database migration</a></li>
+      <li><a href="#styling">Frontend styling</a></li>
+      <li><a href="#history">Debugging history</a></li>
+      <li><a href="#open">Still open</a></li>
+    </ol>
+  </nav>
+
+  <section id="overview">
+    <h2><span class="num">1</span>Overview</h2>
+    <p>WPay 2D is a credit/debit card payment option processed through a WordPress + WooCommerce site running the <strong>WPay Channels</strong> plugin. The checkout server creates a WooCommerce order via the WC REST API, redirects the customer to that order's pay-for-order page (WPay Channels' own card form, tokenized via Basis Theory — raw card data never touches the checkout server), and WooCommerce fires a webhook back when the order's status changes.</p>
+    <p class="soft">This is a separate integration from <code>services/wpay.py</code> (the WPay HPP flow, gated by <code>WPAY_ENABLED</code>) — both can be enabled at once.</p>
+  </section>
+
+  <section id="architecture">
+    <h2><span class="num">2</span>Architecture</h2>
+    <pre><code>Customer → checkout-server (pepscheckoutportal.com)
+  → POST /api/checkout/wpay_2d
+  → creates local Order row (payment_method = wpay_2d)
+  → creates WooCommerce order via REST API on wpay.pepscheckoutportal.com
+  → redirects customer to WC's pay-for-order page
+  → customer enters card on WPay Channels' tokenized form
+  → WooCommerce fires webhook → POST /webhooks/wpay_2d
+  → checkout-server marks local order paid/failed, creates Shopify order,
+    fires affiliate webhook</code></pre>
+    <p class="soft">No Celery fallback task exists for wpay_2d yet (unlike the HPP flow's 45-minute poll) — this path currently relies on the webhook firing reliably.</p>
+  </section>
+
+  <section id="infra">
+    <h2><span class="num">3</span>Infrastructure</h2>
+    <table>
+      <tr><th>Component</th><th>Value</th></tr>
+      <tr><td>Checkout server host</td><td><code>dev1@nickcheckout</code> VPS, path <code>/srv/shared/checkout-server</code></td></tr>
+      <tr><td>Checkout server service</td><td><code>checkout.service</code> (single systemd unit — no separate worker/beat units on this box)</td></tr>
+      <tr><td>Checkout server domain</td><td><code>https://pepscheckoutportal.com</code> (Cloudflare-proxied)</td></tr>
+      <tr><td>WordPress site path</td><td><code>/var/www/wordpress-wpay</code> — same VPS</td></tr>
+      <tr><td>WordPress domain</td><td><code>https://wpay.pepscheckoutportal.com</code> — real HTTPS via Let's Encrypt</td></tr>
+      <tr><td>WordPress DB</td><td><code>wordpress_wpay</code> (MariaDB)</td></tr>
+      <tr><td>Active WP theme</td><td>Custom theme "<strong>WPay Checkout</strong>" — built specifically for this payment-only site</td></tr>
+      <tr><td>Server IP</td><td><code>202.181.177.119</code></td></tr>
+    </table>
+  </section>
+
+  <section id="dns">
+    <h2><span class="num">4</span>DNS &amp; SSL</h2>
+    <table>
+      <tr><th>Type</th><th>Name</th><th>Content</th><th>Proxy</th></tr>
+      <tr><td>A</td><td><code>wpay</code></td><td><code>202.181.177.119</code></td><td><strong>DNS only</strong> — must stay unproxied</td></tr>
+    </table>
+    <div class="note">Cloudflare zone: <code>pepscheckoutportal.com</code>. Certificate: Let's Encrypt, auto-renewing, <strong>expires 2026-10-26</strong>. Location on server: <code>/etc/letsencrypt/live/wpay.pepscheckoutportal.com/</code>.</div>
+  </section>
+
+  <section id="nginx">
+    <h2><span class="num">5</span>nginx &amp; wp-config.php</h2>
+    <p>Two nginx server blocks exist for the WordPress site:</p>
+    <ul>
+      <li><strong>Legacy</strong> — <code>/etc/nginx/sites-available/wordpress-wpay</code>, port <code>8080</code>, bare IP access. Still present, not removed.</li>
+      <li><strong>Current</strong> — <code>/etc/nginx/sites-available/wpay-domain</code>, ports 80/443, real domain, HTTPS auto-configured by certbot.</li>
+    </ul>
+    <p>Both include this required line (nginx doesn't forward the Authorization header to PHP-FPM by default — needed for Application Password auth):</p>
+    <pre><code>fastcgi_param HTTP_AUTHORIZATION $http_authorization;</code></pre>
+    <p>Added to <code>wp-config.php</code>:</p>
+    <pre><code>define( 'WP_ENVIRONMENT_TYPE', 'local' );
+define( 'WP_HOME', 'https://wpay.pepscheckoutportal.com' );
+define( 'WP_SITEURL', 'https://wpay.pepscheckoutportal.com' );</code></pre>
+    <p class="soft"><code>WP_ENVIRONMENT_TYPE=local</code> was needed to unlock Application Passwords before real HTTPS existed. No longer strictly required now, but harmless to leave.</p>
+  </section>
+
+  <section id="creds">
+    <h2><span class="num">6</span>Credentials</h2>
+
+    <h3>WordPress admin login</h3>
+    <div class="cred-box">
+      <div class="label">wp-admin</div>
+      <div class="cred-row"><span class="k">URL</span><span class="v">https://wpay.pepscheckoutportal.com/wp-login.php</span></div>
+      <div class="cred-row"><span class="k">Username</span><span class="v">admin</span></div>
+      <div class="cred-row"><span class="k">Password</span><span class="v">McueXTqFsJEgnqen0c2Y</span></div>
+    </div>
+
+    <h3>WordPress Application Password <span class="pill">API only</span></h3>
+    <p class="soft">Not usable on the login form — for REST API auth only. Used by <code>services/wpay_wp.py</code> via <code>ONRAMP_WP_USERNAME</code>/<code>ONRAMP_WP_APP_PASSWORD</code>.</p>
+    <div class="cred-box">
+      <div class="cred-row"><span class="k">User</span><span class="v">admin</span></div>
+      <div class="cred-row"><span class="k">App password</span><span class="v">3wPy Gm9B h9G5 eu2V WVq9 tv9j</span></div>
+    </div>
+
+    <h3>WooCommerce REST API keys <span class="pill warn">legacy / fallback</span></h3>
+    <p class="soft">Not the active auth path (app currently uses the Application Password above whenever both username + app password are set).</p>
+    <div class="cred-box">
+      <div class="cred-row"><span class="k">Key</span><span class="v">ck_7a7191a85b07a9a857ef14c3355a0fea90bcf242</span></div>
+      <div class="cred-row"><span class="k">Secret</span><span class="v">cs_ea1305f7ba67ea7c9aec71514b05745feb468acf</span></div>
+      <div class="cred-row"><span class="k">Spare key</span><span class="v">ck_d793db3a4fbb0c208073e29dd953624af77903f3</span></div>
+      <div class="cred-row"><span class="k">Spare secret</span><span class="v">cs_a453859719eda7a5d81225ed9606ce61a04c7258</span></div>
+    </div>
+    <p class="soft">The "spare" pair was generated during debugging and isn't referenced anywhere — safe to revoke if cleaning up.</p>
+
+    <h3>WooCommerce webhook</h3>
+    <div class="cred-box">
+      <div class="cred-row"><span class="k">Name</span><span class="v">WPay 2D → checkout-server</span></div>
+      <div class="cred-row"><span class="k">Topic</span><span class="v">Order updated</span></div>
+      <div class="cred-row"><span class="k">Delivery URL</span><span class="v">https://pepscheckoutportal.com/webhooks/wpay_2d</span></div>
+      <div class="cred-row"><span class="k">Secret</span><span class="v">PepsCheckoutWooCommerce***</span></div>
+    </div>
+    <p class="soft">Must match <code>WPAY_WP_WEBHOOK_SECRET</code> in <code>.env</code> exactly.</p>
+
+    <h3>WPay Channels merchant account <span class="pill">the actual processor</span></h3>
+    <div class="cred-box">
+      <div class="cred-row"><span class="k">Backoffice</span><span class="v">https://backoffice.wpaychannels.com</span></div>
+      <div class="cred-row"><span class="k">UID</span><span class="v">WpayUID0202</span></div>
+      <div class="cred-row"><span class="k">Password</span><span class="v">WpCrm)(&amp;_$0202&amp;</span></div>
+    </div>
+    <div class="note">Used in WooCommerce → Settings → Payments → WPay 2D gateway as the <strong>UID</strong> field. The <strong>User token</strong> field was set to this same password as a first attempt — if payments ever fail unexpectedly, log into the backoffice and check for a dedicated API token separate from the login password.</div>
+  </section>
+
+  <section id="env">
+    <h2><span class="num">7</span>.env configuration (checkout-server)</h2>
+    <pre><code>ONRAMP_WP_ENABLED=false
+ONRAMP_WP_URL=https://wpay.pepscheckoutportal.com
+ONRAMP_WP_CONSUMER_KEY=ck_7a7191a85b07a9a857ef14c3355a0fea90bcf242
+ONRAMP_WP_CONSUMER_SECRET=cs_ea1305f7ba67ea7c9aec71514b05745feb468acf
+ONRAMP_WP_USERNAME=admin
+ONRAMP_WP_APP_PASSWORD=3wPy Gm9B h9G5 eu2V WVq9 tv9j
+WPAY_WP_ENABLED=true
+WPAY_WP_WEBHOOK_SECRET=PepsCheckoutWooCommerce***
+WPAY_WP_STORES=victoriapeps.ca</code></pre>
+    <ul>
+      <li><code>ONRAMP_WP_ENABLED=false</code> is intentional — the <em>onramp_wp</em> integration itself stays off; only the WPay 2D gateway (which reuses this site's URL/creds) is active.</li>
+      <li><code>WPAY_WP_STORES</code> is a comma-separated allowlist of storefronts that see this option. Currently only <code>victoriapeps.ca</code>.</li>
+      <li>Minimum order: <strong>$5 USD</strong> (<code>services/wpay_wp.py:MIN_AMOUNT</code>), enforced server-side.</li>
+    </ul>
+  </section>
+
+  <section id="migration">
+    <h2><span class="num">8</span>Database migration required</h2>
+    <pre><code>python -m migrations.add_wpay_2d_to_payment_method_enum</code></pre>
+    <p class="soft">Widens the <code>orders.payment_method</code> ENUM to accept <code>'wpay_2d'</code>. Idempotent. Was missing on this VPS initially — caused a 500 on every checkout attempt until run.</p>
+  </section>
+
+  <section id="styling">
+    <h2><span class="num">9</span>Frontend styling</h2>
+    <p>Custom theme "WPay Checkout" is active. Additional CSS applied via <strong>Appearance → Customize → Additional CSS</strong>: centered card layout, styled order table, calmer guest-order notice, wider container (prevents card/expiry/CVC fields from cramping), emphasized Total row, trust signal below the Pay button.</p>
+    <div class="note"><strong>Known open item:</strong> the "Payment method: Credit / Debit Card" summary row still shows — the CSS selector guess to hide it didn't match this theme's actual markup. Needs the real class (inspect-element) to fix precisely.</div>
+  </section>
+
+  <section id="history">
+    <h2><span class="num">10</span>Debugging history <span class="soft" style="font-weight:400;font-size:13px;">(condensed, chronological)</span></h2>
+    <ol class="history">
+      <li>Fixed duplicate/conflicting <code>ONRAMP_WP_URL</code> blocks in <code>.env</code> — one pointed at a dead site.</li>
+      <li>Ran the missing <code>add_wpay_2d_to_payment_method_enum</code> migration.</li>
+      <li>Patched <code>services/wpay_wp.py</code> to raise a proper error instead of crashing on a non-JSON WooCommerce response.</li>
+      <li>Fixed the WooCommerce webhook secret mismatch.</li>
+      <li>Site was briefly in "Coming Soon" mode — switched to Live.</li>
+      <li>Diagnosed that consumer-key/secret query-string auth doesn't work at all on this site.</li>
+      <li>Fixed nginx to forward the Authorization header to PHP-FPM.</li>
+      <li>Unlocked Application Passwords without real HTTPS via <code>WP_ENVIRONMENT_TYPE=local</code>.</li>
+      <li>Generated a real Application Password, confirmed it authenticates.</li>
+      <li>Found the actual root cause of a persistent empty-response bug: <code>ONRAMP_WP_USERNAME</code> had silently vanished from <code>.env</code>.</li>
+      <li>Confirmed real WooCommerce order creation end-to-end.</li>
+      <li>Found and configured the real WPay merchant credentials, got the live card form rendering.</li>
+      <li>Migrated the WordPress site from bare IP:port to real HTTPS (Cloudflare DNS + certbot).</li>
+      <li>Styled the pay-for-order page (custom theme + Additional CSS).</li>
+    </ol>
+  </section>
+
+  <section id="open">
+    <h2><span class="num">11</span>Still open / next steps</h2>
+    <ul class="checklist">
+      <li><span class="box open"></span> Fix the "Payment method" row CSS selector once its real class is known.</li>
+      <li><span class="box open"></span> Confirm the WPay backoffice User token value is actually correct (vs. reused login password) if a live payment fails.</li>
+      <li><span class="box open"></span> Full real end-to-end test on <code>victoriapeps.ca</code> checkout — place order, complete/decline a card payment, confirm webhook + Shopify order + affiliate webhook.</li>
+      <li><span class="box open"></span> Consider cleaning up the legacy <code>:8080</code> nginx block and unused WooCommerce REST keys.</li>
+      <li><span class="box open"></span> <code>ONRAMP_WP_GATEWAY_ID</code> / <code>WPAY_WP_PRODUCT_ID</code> are unset (defaults / fee_lines) — confirm intentional if a real product catalog is ever wanted.</li>
+    </ul>
+  </section>
+
+  <footer class="page">Local reference document — not published, not synced anywhere.</footer>
+</div>
+</body>
+</html>

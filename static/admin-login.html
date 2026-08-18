@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Admin Login</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:62.5%}
+body{font-family:"DM Sans",sans-serif;font-size:1.5rem;background:#f0ede8;min-height:100vh;display:flex;align-items:center;justify-content:center;-webkit-font-smoothing:antialiased}
+.card{background:#fff;border-radius:16px;padding:4rem;width:100%;max-width:40rem;box-shadow:0 4px 40px rgba(0,0,0,0.08)}
+.logo{text-align:center;margin-bottom:3rem}
+.logo-icon{width:5.6rem;height:5.6rem;background:#0f1117;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.2rem}
+.logo-icon svg{width:2.8rem;height:2.8rem;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round}
+.logo h1{font-size:2rem;font-weight:600;letter-spacing:-0.02em;color:#111}
+.logo p{font-size:1.35rem;color:#888;margin-top:0.4rem}
+.field{margin-bottom:1.6rem}
+.field label{display:block;font-size:1.3rem;font-weight:500;color:#555;margin-bottom:0.6rem}
+.field input{width:100%;height:4.8rem;padding:0 1.6rem;border:1.5px solid #e2e0da;border-radius:8px;font-family:"DM Sans",sans-serif;font-size:1.5rem;outline:none;transition:border-color 0.15s}
+.field input:focus{border-color:#0f1117}
+.field input.error{border-color:#c8102e}
+.error-msg{color:#c8102e;font-size:1.25rem;margin-top:1.2rem;text-align:center;display:none;padding:1rem;background:#fff0f0;border-radius:6px}
+.btn{width:100%;height:5rem;background:#0f1117;color:#fff;border:none;border-radius:8px;font-family:"DM Sans",sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer;margin-top:0.8rem;transition:opacity 0.15s}
+.btn:hover{opacity:0.85}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h1>Payments Admin</h1>
+    <p>Sign in to manage orders</p>
+  </div>
+  <div class="field">
+    <label>Username</label>
+    <input type="text" id="username" placeholder="admin" autocomplete="username"/>
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+  </div>
+  <div class="error-msg" id="errorMsg"></div>
+  <button class="btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+</div>
+<script>
+async function doLogin() {
+  var user = document.getElementById("username").value.trim();
+  var pass = document.getElementById("password").value;
+  var btn = document.getElementById("loginBtn");
+  var err = document.getElementById("errorMsg");
+
+  err.style.display = "none";
+
+  if (!user || !pass) {
+    err.textContent = "Please enter username and password";
+    err.style.display = "block";
+    return;
+  }
+
+  btn.textContent = "Signing in...";
+  btn.disabled = true;
+
+  try {
+    var res = await fetch("/peps-admin-2026/auth/login", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username: user, password: pass}),
+      credentials: "include"
+    });
+
+    if (res.ok) {
+      window.location.href = "/peps-admin-2026/dashboard";
+    } else {
+      var data = await res.json();
+      err.textContent = data.detail || "Invalid username or password";
+      err.style.display = "block";
+      document.getElementById("password").value = "";
+      document.getElementById("password").classList.add("error");
+      setTimeout(function() {
+        document.getElementById("password").classList.remove("error");
+      }, 2000);
+    }
+  } catch (e) {
+    err.textContent = "Connection error. Try again.";
+    err.style.display = "block";
+  }
+
+  btn.textContent = "Sign In";
+  btn.disabled = false;
+}
+
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") doLogin();
+});
+</script>
+</body>
+</html>

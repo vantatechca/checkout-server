@@ -1,0 +1,453 @@
+<style id="v2-confirmation-reskin">
+/* ══════════════════════════════════════════════════════════════════════
+   V2 RESKIN  ·  Confirmation + Success pages
+   ──────────────────────────────────────────────────────────────────────
+   Pure CSS override of the v1 dark-header/cream-page chrome.
+   Same sage/mint palette as checkout-v2.html.
+   Per-country accent: CA = emerald, US = sky blue.
+   ══════════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Spline+Sans+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --v2-paper:    #E7EEEA;
+  --v2-card:     #FFFFFF;
+  --v2-ink:      #16302A;
+  --v2-ink-2:    #48584F;
+  --v2-muted:    #8A968F;
+  --v2-line:     #E3E9E5;
+  --v2-line-2:   #D2DDD6;
+  --v2-coral:    #E76F51;
+  --v2-coral-s:  #FCE7DF;
+  --v2-success:  #2E9E6B;
+  --v2-success-bg:#EAF7F0;
+  --v2-shadow-sm:0 1px 2px rgba(22,48,42,.05);
+  --v2-shadow:   0 8px 30px rgba(22,48,42,.07);
+  --v2-r:        14px;
+  --v2-r-sm:     10px;
+  --v2-d: 'Bricolage Grotesque', sans-serif;
+  --v2-b: 'Inter', system-ui, sans-serif;
+  --v2-m: 'Spline Sans Mono', monospace;
+}
+
+{% if store_country == 'US' %}
+:root{
+  --v2-accent: #0284c7;
+  --v2-accent-dark: #075985;
+  --v2-accent-soft: rgba(2,132,199,0.14);
+  --v2-accent-tint: rgba(2,132,199,0.07);
+  --v2-accent-glow: rgba(2,132,199,0.28);
+  --v2-accent-grad-end: #0EA5E9;
+}
+{% else %}
+:root{
+  --v2-accent: #0E8C7F;
+  --v2-accent-dark: #0B786C;
+  --v2-accent-soft: rgba(14,140,127,0.14);
+  --v2-accent-tint: rgba(14,140,127,0.07);
+  --v2-accent-glow: rgba(14,140,127,0.30);
+  --v2-accent-grad-end: #13A493;
+}
+{% endif %}
+
+body{
+  background: var(--v2-paper) !important;
+  font-family: var(--v2-b) !important;
+  color: var(--v2-ink) !important;
+}
+::selection{ background: var(--v2-accent-soft); color: var(--v2-ink); }
+
+/* ── HEADER ── */
+.header{
+  background: rgba(231,238,234,0.85) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--v2-line) !important;
+  padding: 1rem 2.4rem !important;
+}
+.header-logo{
+  background: linear-gradient(150deg, var(--v2-accent), var(--v2-accent-grad-end)) !important;
+  border-radius: 9px !important;
+  box-shadow: 0 4px 12px var(--v2-accent-glow);
+  width: 3.2rem !important; height: 3.2rem !important;
+}
+.header-logo svg{ fill: #fff !important }
+.header-name{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  font-size: 1.4rem !important;
+  color: var(--v2-ink) !important;
+  letter-spacing: -0.01em !important;
+}
+.header-secure{ color: var(--v2-ink-2) !important; font-size: 1.25rem !important }
+.header-secure svg{ stroke: var(--v2-accent) !important }
+
+/* ── MAIN LAYOUT ── */
+.main{ padding: 3rem 2rem !important }
+.card, .outer{ max-width: 96rem !important }
+.container{ max-width: 76rem !important; margin: 3.6rem auto 6rem !important }
+
+/* ══════════════════════════════════════════════════════════════════════
+   BANNER (confirmation pages — top of card)
+   ══════════════════════════════════════════════════════════════════════ */
+.banner{
+  border-radius: var(--v2-r) var(--v2-r) 0 0 !important;
+  padding: 2.2rem 2.6rem !important;
+  color: #fff !important;
+  text-align: center;
+}
+.banner.placed{
+  background: linear-gradient(135deg, var(--v2-accent), var(--v2-accent-grad-end)) !important;
+}
+.banner.paid{
+  background: linear-gradient(135deg, var(--v2-success), #3DB47C) !important;
+}
+.banner.crypto{
+  background: linear-gradient(135deg, var(--v2-ink), #2A4D45) !important;
+}
+.banner.zelle{
+  background: linear-gradient(135deg, var(--v2-accent), var(--v2-accent-dark)) !important;
+}
+.banner-icon{
+  background: rgba(255,255,255,0.18) !important;
+  width: 5.4rem !important; height: 5.4rem !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+}
+.banner-icon svg{ stroke: #fff !important }
+.banner h1, .banner-text h1{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  font-size: 2.1rem !important;
+  letter-spacing: -0.015em !important;
+  color: #fff !important;
+}
+.banner p, .banner-text p{
+  font-family: var(--v2-b) !important;
+  font-size: 1.35rem !important;
+  color: rgba(255,255,255,0.9) !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   BODY CARD (under banner)
+   ══════════════════════════════════════════════════════════════════════ */
+.card-body, .body-grid{
+  background: var(--v2-card) !important;
+  border: 1px solid var(--v2-line) !important;
+  border-top: none !important;
+  border-radius: 0 0 var(--v2-r) var(--v2-r) !important;
+  box-shadow: var(--v2-shadow);
+}
+.left-panel{ border-right: 1px solid var(--v2-line) !important; padding: 2.6rem !important }
+.right-panel{ background: #F4F8F6 !important }
+
+/* ── REF BOX (order id) ── */
+.ref-box{
+  background: linear-gradient(135deg, var(--v2-ink), #244A40) !important;
+  border-radius: var(--v2-r) !important;
+  padding: 1.8rem !important;
+}
+.ref-label{
+  color: rgba(255,255,255,0.55) !important;
+  font-family: var(--v2-m) !important;
+  font-size: 1.1rem !important;
+  letter-spacing: 0.14em !important;
+}
+.ref-code{
+  font-family: var(--v2-m) !important;
+  font-size: 2rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  letter-spacing: 0.05em !important;
+}
+.copy-code-btn{
+  background: rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  color: #fff !important;
+  font-family: var(--v2-b) !important;
+  font-weight: 600 !important;
+  border-radius: 7px !important;
+}
+.copy-code-btn:hover{ background: rgba(255,255,255,0.22) !important }
+.ref-note{ color: rgba(255,255,255,0.6) !important; font-size: 1.2rem !important }
+.ref-note strong{ color: #fff !important }
+
+/* ── INTERAC / CRYPTO / STEPS BOX ── */
+.interac-steps, .crypto-box, .steps-box{
+  background: var(--v2-accent-tint) !important;
+  border: 1px solid var(--v2-accent-soft) !important;
+  color: var(--v2-ink-2) !important;
+  border-radius: var(--v2-r-sm) !important;
+  padding: 1.6rem !important;
+}
+.interac-steps-title, .steps-title{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  color: var(--v2-ink) !important;
+  font-size: 1.35rem !important;
+}
+.steps-title svg{ stroke: var(--v2-accent) !important }
+
+.step-list li{
+  color: var(--v2-ink-2) !important;
+  font-family: var(--v2-b) !important;
+  font-size: 1.3rem !important;
+  border-bottom-color: var(--v2-accent-soft) !important;
+}
+.step-num-badge, .step-badge{
+  background: var(--v2-accent) !important;
+  color: #fff !important;
+  font-family: var(--v2-m) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px var(--v2-accent-glow);
+}
+.amount-highlight, .amount-hl{
+  color: var(--v2-accent) !important;
+  font-family: var(--v2-m) !important;
+  font-weight: 600 !important;
+}
+
+.interac-email-pill{
+  background: #fff !important;
+  border: 1.5px solid var(--v2-line-2) !important;
+  color: var(--v2-ink) !important;
+  font-family: var(--v2-m) !important;
+  border-radius: 8px !important;
+}
+.copy-small{
+  background: var(--v2-accent-tint) !important;
+  border: none !important;
+  color: var(--v2-accent) !important;
+  font-family: var(--v2-b) !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+}
+.copy-small:hover{ background: var(--v2-accent-soft) !important }
+
+/* ══════════════════════════════════════════════════════════════════════
+   SUMMARY / TOTALS
+   ══════════════════════════════════════════════════════════════════════ */
+.summary-row{
+  border-bottom-color: var(--v2-line) !important;
+  font-family: var(--v2-b) !important;
+}
+.summary-label{ color: var(--v2-muted) !important }
+.summary-value{ color: var(--v2-ink) !important; font-family: var(--v2-m) !important; font-weight: 500 !important }
+.summary-row.total, .summary-row.grand{
+  border-top: 1px dashed var(--v2-line-2) !important;
+  margin-top: 0.6rem !important;
+  padding-top: 1.4rem !important;
+}
+.summary-row.total .summary-label,
+.summary-row.grand .summary-label{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  font-size: 1.5rem !important;
+  color: var(--v2-ink) !important;
+}
+.summary-row.total .summary-value,
+.summary-row.grand .summary-value{
+  font-family: var(--v2-m) !important;
+  font-size: 2rem !important;
+  font-weight: 600 !important;
+  color: var(--v2-ink) !important;
+}
+
+/* ── ITEMS LIST ── */
+.items-box{
+  background: #FBFDFC !important;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: var(--v2-r-sm) !important;
+}
+.items-title{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  color: var(--v2-ink) !important;
+  font-size: 1.3rem !important;
+}
+.item-row{
+  border-bottom-color: var(--v2-line) !important;
+  color: var(--v2-ink-2) !important;
+  font-family: var(--v2-b) !important;
+}
+.item-title{ color: var(--v2-ink) !important; font-weight: 600 !important }
+.item-meta{ color: var(--v2-muted) !important }
+.item-price{ color: var(--v2-ink) !important; font-family: var(--v2-m) !important }
+
+/* ── STATUS PILLS ── */
+.status-pill{
+  font-family: var(--v2-b) !important;
+  font-weight: 600 !important;
+  border-radius: 30px !important;
+  padding: 0.5rem 1.2rem !important;
+}
+.status-pending{ background: #FFF6E6 !important; color: #B07A00 !important }
+.status-paid{ background: var(--v2-success-bg) !important; color: var(--v2-success) !important }
+.status-expired{ background: #FFEDED !important; color: #D72C0D !important }
+
+/* ── POLLING (waiting on payment) ── */
+.polling{ color: var(--v2-muted) !important; font-family: var(--v2-b) !important }
+.polling.confirmed{
+  background: var(--v2-success-bg) !important;
+  border: 1.5px solid var(--v2-success) !important;
+  color: var(--v2-success) !important;
+  border-radius: var(--v2-r-sm) !important;
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+}
+
+/* ── FOOTER ── */
+.footer{ color: var(--v2-muted) !important; font-family: var(--v2-b) !important }
+
+/* ══════════════════════════════════════════════════════════════════════
+   order-success.html (Stripe / Helcim success page)
+   ══════════════════════════════════════════════════════════════════════ */
+.loading-state, .success-card{
+  background: var(--v2-card) !important;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: var(--v2-r) !important;
+  box-shadow: var(--v2-shadow) !important;
+}
+.spinner{
+  border-color: var(--v2-line-2) !important;
+  border-top-color: var(--v2-accent) !important;
+}
+.loading-text{ color: var(--v2-muted) !important; font-family: var(--v2-b) !important }
+
+.success-icon{
+  background: var(--v2-success-bg) !important;
+  width: 6.4rem !important; height: 6.4rem !important;
+  box-shadow: 0 4px 14px rgba(46,158,107,0.22);
+}
+.success-icon svg{ stroke: var(--v2-success) !important }
+.success-title{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  color: var(--v2-ink) !important;
+  font-size: 2.3rem !important;
+  letter-spacing: -0.015em !important;
+}
+.success-subtitle{ color: var(--v2-muted) !important; font-family: var(--v2-b) !important }
+.success-subtitle strong{ color: var(--v2-accent) !important; font-weight: 600 !important }
+
+.section-divider{ background: var(--v2-line) !important }
+.section-label{
+  color: var(--v2-muted) !important;
+  font-family: var(--v2-m) !important;
+  font-size: 1.05rem !important;
+  letter-spacing: 0.1em !important;
+}
+
+.items{
+  background: #FBFDFC !important;
+  border: 1px solid var(--v2-line) !important;
+  border-radius: var(--v2-r-sm) !important;
+}
+.item{
+  border-bottom-color: var(--v2-line) !important;
+}
+.item-name{
+  color: var(--v2-ink) !important;
+  font-family: var(--v2-b) !important;
+  font-weight: 600 !important;
+}
+.item-variant, .item-qty{ color: var(--v2-muted) !important }
+.item-price{
+  color: var(--v2-ink) !important;
+  font-family: var(--v2-m) !important;
+  font-weight: 600 !important;
+}
+
+.totals .total-row{
+  color: var(--v2-ink-2) !important;
+  font-family: var(--v2-b) !important;
+}
+.totals .total-row.grand{
+  border-top: 1px dashed var(--v2-line-2) !important;
+}
+.totals .total-row.grand .total-label{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  color: var(--v2-ink) !important;
+}
+.totals .total-row.grand .total-value{
+  font-family: var(--v2-m) !important;
+  font-weight: 600 !important;
+  color: var(--v2-ink) !important;
+}
+
+.info-block-label{
+  color: var(--v2-muted) !important;
+  font-family: var(--v2-m) !important;
+  letter-spacing: 0.08em !important;
+}
+.info-block-value{ color: var(--v2-ink) !important; font-family: var(--v2-b) !important }
+
+.btn{
+  font-family: var(--v2-d) !important;
+  font-weight: 600 !important;
+  border-radius: 11px !important;
+  height: 4.6rem !important;
+  font-size: 1.4rem !important;
+  transition: transform .12s, box-shadow .2s, filter .2s;
+}
+.btn-primary, .btn.primary{
+  background: linear-gradient(135deg, var(--v2-accent), var(--v2-accent-grad-end)) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 6px 18px var(--v2-accent-glow) !important;
+}
+.btn-primary:hover, .btn.primary:hover{
+  filter: brightness(1.05);
+  box-shadow: 0 10px 24px var(--v2-accent-glow) !important;
+}
+.btn-secondary, .btn.secondary{
+  background: #FBFDFC !important;
+  border: 1.5px solid var(--v2-line-2) !important;
+  color: var(--v2-ink) !important;
+}
+.btn-secondary:hover, .btn.secondary:hover{
+  border-color: var(--v2-muted) !important;
+  background: #fff !important;
+}
+
+/* ── Decorative bottom-right artwork (matches checkout-v2) ──────────── */
+.v2-art{
+  position: fixed;
+  right: 2rem;
+  bottom: 1.6rem;
+  width: 24rem;
+  height: auto;
+  opacity: 1;
+  pointer-events: none;
+  z-index: 1;
+  user-select: none;
+  filter: drop-shadow(0 10px 28px rgba(22,48,42,0.18));
+}
+@media(max-width:980px){
+  .v2-art{ display: none !important }
+}
+
+/* Inline order-placed illustration — sits at the top of the right column
+   on Interac/Zelle confirmation pages. Hides the corner-fixed v2-art so
+   we don't end up with the same SVG twice on screen. */
+.v2-placed-art{
+  display: block;
+  width: 100%;
+  max-width: 30rem;
+  height: auto;
+  margin: 0 auto 2rem;
+  filter: drop-shadow(0 8px 22px rgba(22,48,42,0.10));
+}
+body:has(.v2-placed-art) .v2-art{ display: none !important }
+
+/* ── Mobile ── */
+@media(max-width:600px){
+  .header{ padding: 1rem 1.6rem !important }
+  .header-name{ font-size: 1.3rem !important }
+  .banner h1, .banner-text h1{ font-size: 1.7rem !important }
+  .ref-code{ font-size: 1.5rem !important }
+  .success-title{ font-size: 1.9rem !important }
+}
+</style>
+
+<img class="v2-art" src="/static/svg/Placeholder-rafiki.svg" alt="" aria-hidden="true">

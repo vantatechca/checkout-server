@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Order Confirmed — {{ store_name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600;700&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:62.5%}
+
+:root{
+  /* CA palette — warm editorial (cognac on parchment) */
+  --paper:        #F8F2E5;
+  --card:         #FFFCF5;
+  --card-soft:    #FBF6E8;
+  --ink:          #2A1F12;
+  --ink-2:        #594833;
+  --muted:        #9E8A6F;
+  --dim:          #C2B59A;
+  --line:         #E6DBC0;
+  --line-2:       #D2C49E;
+  --coral:        #A85A2A;
+  --coral-s:      #F4E4D3;
+  --success:      #4A6E2F;
+  --success-bg:   #EFF3DD;
+  --shadow-sm:    0 1px 2px rgba(42, 31, 18, 0.04);
+  --shadow:       0 4px 16px rgba(42, 31, 18, 0.06);
+  --r:            6px;
+  --r-sm:         4px;
+  --d:            'DM Sans', system-ui, sans-serif;
+  --b:            'DM Sans', system-ui, sans-serif;
+  --m:            'DM Mono', monospace;
+
+  /* Brand accent — driven by the store's accent_color/accent_hover (URL or
+     brand DB). Same vars the v2 per-country block sets. Transparency
+     variants use color-mix so they re-tint when accent changes. */
+  --accent:       {{ accent_color }};
+  --accent-dark:  {{ accent_hover }};
+  --accent-soft:  color-mix(in srgb, {{ accent_color }} 12%, transparent);
+  --accent-tint:  color-mix(in srgb, {{ accent_color }} 6%,  transparent);
+  --accent-glow:  color-mix(in srgb, {{ accent_color }} 28%, transparent);
+  --accent-grad:  {{ accent_color }};
+}
+
+body{
+  font-family:var(--b);
+  font-size:1.5rem;
+  line-height:1.5;
+  background:var(--paper);
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--accent-soft);color:var(--ink)}
+
+@media(min-width:981px){
+  html,body{height:100vh;overflow:hidden}
+  .shell{height:100vh;display:flex;flex-direction:column;overflow:hidden}
+}
+
+/* ── HEADER ── */
+.header{
+  background:rgba(231,238,234,0.85);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+  padding:1rem 2.4rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.header-brand{display:flex;align-items:center;gap:1.2rem;text-decoration:none}
+.header-logo{
+  width:3.2rem;height:3.2rem;
+  background:linear-gradient(150deg,var(--accent),var(--accent-grad));
+  border-radius:9px;
+  box-shadow:0 4px 12px var(--accent-glow);
+  display:grid;place-items:center;
+}
+.header-logo svg{width:1.5rem;height:1.5rem;fill:#fff}
+.header-name{
+  font-family:var(--d);font-weight:600;font-size:1.4rem;
+  color:var(--ink);letter-spacing:-0.01em;
+}
+.header-secure{
+  display:flex;align-items:center;gap:0.7rem;
+  font-family:var(--b);font-size:1.25rem;font-weight:500;
+  color:var(--ink-2);
+}
+.header-secure svg{width:1.4rem;height:1.4rem;stroke:var(--accent);fill:none;stroke-width:2}
+
+/* ── BODY ── */
+.body{
+  display:grid;
+  grid-template-columns:minmax(0,40rem) minmax(0,1fr);
+  grid-template-areas:"sidebar main";
+  gap:3rem;
+  max-width:120rem;
+  margin:0 auto;
+  padding:2.4rem;
+  width:100%;
+  align-items:stretch;
+}
+@media(min-width:981px){
+  .body{flex:1;min-height:0;overflow:hidden}
+}
+
+/* ── LOADING (full-page centered) ── */
+.loading-state{
+  grid-column:1 / -1;
+  grid-row:1;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-sm);
+  padding:6rem 3rem;
+  text-align:center;
+  margin:auto;
+  max-width:60rem;
+  width:100%;
+}
+.spinner{
+  width:5rem;height:5rem;
+  border:4px solid var(--line-2);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+  margin:0 auto 2rem;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{
+  font-family:var(--d);font-weight:500;font-size:1.5rem;
+  color:var(--muted);
+}
+
+/* ── ERROR ── */
+.error-card{
+  display:none;
+  grid-column:1 / -1;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-sm);
+  padding:5rem 3rem;
+  text-align:center;
+  margin:auto;
+  max-width:60rem;
+  width:100%;
+}
+.error-card.show{display:block}
+.error-icon{font-size:4rem;margin-bottom:1.4rem}
+.error-card h2{
+  font-family:var(--d);font-weight:600;font-size:2rem;
+  color:var(--ink);margin-bottom:1rem;
+}
+.error-card p{font-family:var(--b);font-size:1.4rem;color:var(--muted);margin-bottom:1rem}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SIDEBAR — Order summary (populated by JS)
+   ══════════════════════════════════════════════════════════════════════ */
+.sidebar{
+  display:none;
+  grid-area:sidebar;
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-sm);
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+.sidebar.show{display:flex}
+.sidebar-head{
+  padding:1.6rem 2rem;
+  border-bottom:1px solid var(--line);
+  font-family:var(--d);font-weight:600;font-size:1.2rem;
+  letter-spacing:0.05em;text-transform:uppercase;
+  color:var(--ink-2);
+  display:flex;align-items:center;gap:0.8rem;
+  flex-shrink:0;
+}
+.sidebar-head svg{width:1.5rem;height:1.5rem;stroke:var(--accent);fill:none;stroke-width:2}
+
+.sb-items{
+  padding:0.6rem 2rem;
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  scrollbar-width:thin;
+  scrollbar-color:var(--line-2) transparent;
+}
+.sb-items::-webkit-scrollbar{width:5px}
+.sb-items::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
+
+.sb-item{
+  display:grid;
+  grid-template-columns:5.4rem 1fr auto;
+  gap:1.2rem;
+  padding:0.9rem 0;
+  border-bottom:1px solid var(--line);
+  align-items:center;
+}
+.sb-item:last-child{border-bottom:none}
+.sb-thumb{
+  width:5.4rem;height:5.4rem;
+  background:linear-gradient(155deg,#EAF3EF,#DCEBE4);
+  border:1px solid var(--line);
+  border-radius:11px;
+  display:grid;place-items:center;
+  position:relative;
+}
+.sb-thumb svg{width:2.2rem;height:2.2rem;stroke:var(--accent);fill:none;stroke-width:1.8;opacity:0.85}
+.sb-thumb img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.sb-thumb .qty{
+  position:absolute;top:-6px;right:-6px;
+  width:1.9rem;height:1.9rem;
+  background:var(--coral);color:#fff;
+  border:2px solid #fff;
+  border-radius:50%;
+  font-family:var(--b);font-weight:600;font-size:1rem;
+  display:grid;place-items:center;
+}
+.sb-info{min-width:0}
+.sb-name{font-family:var(--b);font-weight:600;font-size:1.3rem;color:var(--ink);line-height:1.3}
+.sb-meta{font-family:var(--b);font-size:1.15rem;color:var(--muted);margin-top:0.2rem}
+.sb-price{font-family:var(--m);font-weight:600;font-size:1.3rem;color:var(--ink)}
+
+.sb-totals{
+  background:#FBFDFC;
+  border-top:1px solid var(--line);
+  padding:1.4rem 2rem;
+  flex-shrink:0;
+}
+.sb-row{display:flex;justify-content:space-between;padding:0.4rem 0;font-size:1.3rem}
+.sb-row .lbl{color:var(--muted);font-family:var(--b)}
+.sb-row .val{color:var(--ink);font-family:var(--m);font-weight:500}
+.sb-row.discount .lbl,.sb-row.discount .val{color:var(--success);font-weight:600}
+.sb-row.grand{
+  margin-top:0.6rem;padding-top:1rem;
+  border-top:1px dashed var(--line-2);
+  align-items:baseline;
+}
+.sb-row.grand .lbl{font-family:var(--d);font-weight:600;font-size:1.5rem;color:var(--ink)}
+.sb-row.grand .val{font-family:var(--m);font-weight:600;font-size:2rem;color:var(--ink);letter-spacing:-0.01em}
+.sb-row.grand .cur{color:var(--muted);font-size:1.1rem;font-weight:600;letter-spacing:0.06em;margin-right:0.5rem;font-family:var(--b)}
+
+/* ══════════════════════════════════════════════════════════════════════
+   MAIN COLUMN — success state
+   ══════════════════════════════════════════════════════════════════════ */
+.main-col{
+  display:none;
+  grid-area:main;
+  flex-direction:column;
+  gap:1.4rem;
+  min-height:0;
+  overflow-y:auto;
+  padding-right:0.6rem;
+  scrollbar-width:thin;
+  scrollbar-color:var(--line-2) transparent;
+}
+.main-col.show{display:flex}
+.main-col::-webkit-scrollbar{width:6px}
+.main-col::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:3px}
+
+/* Hero success */
+.hero-success{
+  background:linear-gradient(135deg,var(--success) 0%,#3DB47C 100%);
+  color:#fff;
+  border-radius:var(--r);
+  padding:2.4rem 2.4rem;
+  text-align:center;
+  box-shadow:var(--shadow-sm);
+  flex-shrink:0;
+}
+.success-icon{
+  width:6rem;height:6rem;
+  background:rgba(255,255,255,0.2);
+  border:1px solid rgba(255,255,255,0.3);
+  border-radius:50%;
+  display:grid;place-items:center;
+  margin:0 auto 1.2rem;
+}
+.success-icon svg{width:3.2rem;height:3.2rem;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.success-title{
+  font-family:var(--d);font-weight:700;font-size:2.4rem;
+  letter-spacing:-0.02em;margin-bottom:0.4rem;
+}
+.success-sub{
+  font-family:var(--b);font-size:1.35rem;color:rgba(255,255,255,0.92);
+}
+.success-sub strong{
+  display:inline-block;margin-left:0.5rem;
+  background:rgba(255,255,255,0.18);
+  padding:0.2rem 0.8rem;border-radius:6px;
+  font-family:var(--m);font-weight:600;font-size:1.3rem;
+}
+
+/* Cards */
+.card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  box-shadow:var(--shadow-sm);
+  padding:1.8rem 2rem;
+}
+.card-title{
+  font-family:var(--d);font-weight:600;font-size:1.4rem;
+  color:var(--ink);
+  margin-bottom:0.9rem;
+  display:flex;align-items:center;gap:0.7rem;
+}
+.card-title svg{width:1.6rem;height:1.6rem;stroke:var(--accent);fill:none;stroke-width:2}
+
+/* Info grid (Contact / Shipping) */
+.info-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.4rem;
+}
+.info-block{
+  background:#FBFDFC;
+  border:1px solid var(--line);
+  border-radius:var(--r-sm);
+  padding:1.2rem 1.4rem;
+}
+.info-block-label{
+  font-family:var(--m);font-size:1.05rem;font-weight:500;
+  color:var(--muted);
+  letter-spacing:0.1em;text-transform:uppercase;
+  margin-bottom:0.6rem;
+}
+.info-block-value{
+  font-family:var(--b);font-size:1.3rem;
+  color:var(--ink);line-height:1.5;
+}
+@media(max-width:600px){
+  .info-grid{grid-template-columns:1fr}
+}
+
+/* Tip notes */
+.tip{
+  background:var(--accent-tint);
+  border:1px solid var(--accent-soft);
+  border-radius:var(--r-sm);
+  padding:1.2rem 1.4rem;
+  display:flex;gap:1rem;
+  align-items:flex-start;
+}
+.tip-ic{
+  font-size:1.6rem;
+  flex-shrink:0;
+}
+.tip-body{flex:1}
+.tip-title{
+  font-family:var(--d);font-weight:600;font-size:1.3rem;
+  color:var(--ink);margin-bottom:0.3rem;
+}
+.tip-text{
+  font-family:var(--b);font-size:1.2rem;color:var(--ink-2);line-height:1.5;
+}
+.tip-text strong{color:var(--ink);font-weight:600}
+
+/* CTA */
+.cta-btn{
+  display:flex;align-items:center;justify-content:center;gap:0.8rem;
+  width:100%;
+  padding:1.4rem;
+  background:linear-gradient(135deg,var(--accent),var(--accent-grad));
+  color:#fff;
+  border:none;border-radius:11px;
+  text-decoration:none;
+  font-family:var(--d);font-weight:600;font-size:1.4rem;
+  cursor:pointer;
+  box-shadow:0 8px 22px var(--accent-glow);
+  transition:transform .12s,box-shadow .2s,filter .2s;
+}
+.cta-btn:hover{filter:brightness(1.05);box-shadow:0 12px 28px var(--accent-glow)}
+.cta-btn:active{transform:translateY(1px) scale(.995)}
+
+/* Decorative SVG */
+.v2-art{
+  position:fixed;
+  right:2rem;bottom:1.6rem;
+  width:22rem;height:auto;
+  opacity:1;
+  pointer-events:none;
+  z-index:5;
+  filter:drop-shadow(0 10px 28px rgba(22,48,42,0.18));
+}
+body:has(.main-col.show) .v2-art{opacity:0.7}
+
+/* Mobile */
+@media(max-width:980px){
+  .v2-art{display:none}
+  .body{
+    grid-template-columns:1fr;
+    grid-template-areas:"main" "sidebar";
+    gap:1.6rem;
+    padding:1.8rem 1.6rem 4rem;
+  }
+  .sidebar{order:2}
+  .sidebar.show{display:flex}
+  .main-col{order:1;overflow:visible;padding-right:0}
+  .main-col.show{display:flex}
+  .sb-items{overflow:visible;max-height:none}
+}
+@media(max-width:560px){
+  .header{padding:1rem 1.6rem}
+  .header-name{font-size:1.3rem}
+  .success-title{font-size:1.9rem}
+  .hero-success{padding:1.8rem 1.4rem}
+  .sb-row.grand .val{font-size:1.7rem}
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <header class="header">
+    <a class="header-brand" href="#">
+      {% if logo_url %}
+      <img src="{{ logo_url }}" alt="{{ store_name }}" style="max-height:3.2rem"/>
+      {% else %}
+      <div class="header-logo">
+        <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.1-1.3 3.9-3.1 4.7L16 19H8l2.1-7.3A5 5 0 0112 2z"/></svg>
+      </div>
+      <span class="header-name">{{ store_name }}</span>
+      {% endif %}
+    </a>
+    <div class="header-secure">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Secure checkout</span>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- LOADING -->
+    <div class="loading-state" id="loadingState">
+      <div class="spinner"></div>
+      <div class="loading-text">Confirming your order…</div>
+    </div>
+
+    <!-- ERROR -->
+    <div class="error-card" id="errorCard">
+      <div class="error-icon">⚠️</div>
+      <h2>Couldn't load order details</h2>
+      <p id="errorMessage">Your payment was successful but we couldn't display order details right now.</p>
+      <p style="color:var(--muted);font-size:1.3rem">Don't worry — you'll receive a confirmation email shortly with all details.</p>
+    </div>
+
+    <!-- SIDEBAR (left): populated by renderOrder() -->
+    <aside class="sidebar" id="successCard">
+      <div class="sidebar-head">
+        <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        Your Order
+      </div>
+      <div class="sb-items" id="itemsList"></div>
+      <div class="sb-totals" id="totalsSection"></div>
+    </aside>
+
+    <!-- MAIN (right): success state -->
+    <main class="main-col" id="mainCol">
+      <div class="hero-success">
+        <div class="success-icon">
+          <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="success-title">Order confirmed!</div>
+        <div class="success-sub">Reference <strong id="orderName">—</strong></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          Customer details
+        </div>
+        <div class="info-grid">
+          <div class="info-block">
+            <div class="info-block-label">Contact</div>
+            <div class="info-block-value" id="customerInfo">—</div>
+          </div>
+          <div class="info-block">
+            <div class="info-block-label">Shipping address</div>
+            <div class="info-block-value" id="shippingInfo">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tip" id="emailNote">
+        <div class="tip-ic">📧</div>
+        <div class="tip-body">
+          <div class="tip-title">Confirmation email sent</div>
+          <div class="tip-text">A confirmation has been sent to <strong id="emailReminder">your inbox</strong>.</div>
+        </div>
+      </div>
+
+      <div class="tip">
+        <div class="tip-ic">💳</div>
+        <div class="tip-body">
+          <div class="tip-title">On your bank statement</div>
+          <div class="tip-text">You'll see a charge with your order ID <strong id="orderIdInStatement">—</strong> next to your bank's reference. This helps us identify your order quickly if you contact us.</div>
+        </div>
+      </div>
+
+      <div class="tip">
+        <div class="tip-ic">💬</div>
+        <div class="tip-body">
+          <div class="tip-title">Need help?</div>
+          <div class="tip-text">For <strong>refunds</strong>, <strong>cancellations</strong>, or <strong>disputes</strong>, message us through the chat support on our store. Mention order ID <strong id="orderIdInSupport">—</strong> for faster assistance.</div>
+        </div>
+      </div>
+
+      <a class="cta-btn" id="continueShoppingBtn" href="#">
+        Continue shopping
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      </a>
+    </main>
+
+  </div>
+</div>
+
+<!-- Decorative SVG -->
+<img class="v2-art" src="/static/svg/Paid%20idea-rafiki.svg" alt="" aria-hidden="true">
+
+<script>
+var SESSION_ID = "{{ session_id }}";
+var STRIPE_WORKER_URL = "{{ stripe_worker_url }}";
+var HELCIM_WORKER_URL = "{{ helcim_worker_url }}";
+
+var urlParams = new URLSearchParams(window.location.search);
+var PROCESSOR = (urlParams.get('processor') || 'stripe').toLowerCase();
+if (PROCESSOR === 'helcim') {
+  var sidFromUrl = urlParams.get('session_id') || '';
+  if (sidFromUrl) SESSION_ID = sidFromUrl;
+}
+
+function showError(msg) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('successCard').classList.remove('show');
+  document.getElementById('mainCol').classList.remove('show');
+  document.getElementById('errorCard').classList.add('show');
+  if (msg) document.getElementById('errorMessage').textContent = msg;
+}
+
+function fmtMoney(amount, currency) {
+  return (currency || 'CAD') + ' $' + parseFloat(amount).toFixed(2);
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
+function cleanSourceDomain(source) {
+  if (!source) return '';
+  return source.split('|')[0].split(' ')[0].trim()
+    .replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
+function renderOrder(data) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('successCard').classList.add('show');
+  document.getElementById('mainCol').classList.add('show');
+
+  var fallbackPrefix = '#S-';
+  if (PROCESSOR === 'helcim') fallbackPrefix = '#H-';
+  var fallbackId = data.session_id || data.payment_id || data.receipt_id || SESSION_ID || '';
+  var orderName = data.order_id || (fallbackPrefix + String(fallbackId).slice(-6).toUpperCase());
+  document.getElementById('orderName').textContent = orderName;
+
+  // Items → sidebar
+  var items = (data.cart && data.cart.lines) || [];
+  var itemsHtml = '';
+  var subtotal = 0;
+  items.forEach(function(item) {
+    var unitPrice = parseFloat(item.price || 0);
+    var qty = parseInt(item.quantity || 1);
+    var lineTotal = unitPrice * qty;
+    subtotal += lineTotal;
+    var name = escapeHtml(item.title || 'Item');
+    var variant = escapeHtml(item.variant || item.variant_title || '');
+    var image = item.image || item.featured_image || item.image_url || '';
+    itemsHtml += '<div class="sb-item">';
+    itemsHtml += '  <div class="sb-thumb">';
+    if (image) {
+      itemsHtml += '    <img src="' + escapeHtml(image) + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'">';
+      itemsHtml += '    <svg viewBox="0 0 24 24" style="display:none"><path d="M9 2h6"/><path d="M10 2v5.5L6.5 16a3 3 0 0 0 2.8 4h5.4a3 3 0 0 0 2.8-4L14 7.5V2"/></svg>';
+    } else {
+      itemsHtml += '    <svg viewBox="0 0 24 24"><path d="M9 2h6"/><path d="M10 2v5.5L6.5 16a3 3 0 0 0 2.8 4h5.4a3 3 0 0 0 2.8-4L14 7.5V2"/></svg>';
+    }
+    itemsHtml += '    <span class="qty">' + qty + '</span>';
+    itemsHtml += '  </div>';
+    itemsHtml += '  <div class="sb-info">';
+    itemsHtml += '    <div class="sb-name">' + name + '</div>';
+    if (variant) itemsHtml += '    <div class="sb-meta">' + variant + '</div>';
+    itemsHtml += '  </div>';
+    itemsHtml += '  <div class="sb-price">' + fmtMoney(lineTotal, data.currency) + '</div>';
+    itemsHtml += '</div>';
+  });
+  if (!itemsHtml) itemsHtml = '<div style="padding:1rem 0;color:var(--muted);font-size:1.25rem;text-align:center">No items recorded</div>';
+  document.getElementById('itemsList').innerHTML = itemsHtml;
+
+  // Totals → sidebar bottom
+  var totalsHtml = '';
+  var total = parseFloat(data.amount_total || subtotal);
+  var discount = subtotal - total;
+  var cur = data.currency || 'CAD';
+
+  if (subtotal > 0 && discount > 0) {
+    totalsHtml += '<div class="sb-row"><span class="lbl">Subtotal</span><span class="val">$' + subtotal.toFixed(2) + '</span></div>';
+    var discLabel = escapeHtml(data.discount_code ? data.discount_code : 'Discount');
+    totalsHtml += '<div class="sb-row discount"><span class="lbl">' + discLabel + '</span><span class="val">−$' + discount.toFixed(2) + '</span></div>';
+  } else {
+    totalsHtml += '<div class="sb-row"><span class="lbl">Subtotal</span><span class="val">$' + subtotal.toFixed(2) + '</span></div>';
+  }
+  totalsHtml += '<div class="sb-row"><span class="lbl">Shipping</span><span class="val" style="color:var(--success);font-family:var(--b);font-weight:600">FREE</span></div>';
+  totalsHtml += '<div class="sb-row grand"><span class="lbl">Total paid</span><span class="val"><span class="cur">' + cur + '</span>$' + total.toFixed(2) + '</span></div>';
+  document.getElementById('totalsSection').innerHTML = totalsHtml;
+
+  // Customer info
+  var customerName = (data.customer_name || '').trim() || 'Customer';
+  var customerEmail = data.customer_email || '';
+  document.getElementById('customerInfo').innerHTML = escapeHtml(customerName) + '<br>' + escapeHtml(customerEmail);
+
+  // Shipping
+  var shipping = (data.cart && data.cart.shipping_address) || (data.shipping_details && data.shipping_details.address) || {};
+  var shippingName = '';
+  if (data.cart && data.cart.shipping_address) {
+    shippingName = ((shipping.first_name || '') + ' ' + (shipping.last_name || '')).trim();
+  } else if (data.shipping_details && data.shipping_details.name) {
+    shippingName = data.shipping_details.name;
+  }
+  var shippingHtml = '';
+  if (shippingName) shippingHtml += escapeHtml(shippingName) + '<br>';
+  if (shipping.address1 || shipping.line1) shippingHtml += escapeHtml(shipping.address1 || shipping.line1) + '<br>';
+  if (shipping.address2 || shipping.line2) shippingHtml += escapeHtml(shipping.address2 || shipping.line2) + '<br>';
+  var cityLine = [shipping.city, shipping.province || shipping.state, shipping.postal_code || shipping.zip].filter(Boolean).join(', ');
+  if (cityLine) shippingHtml += escapeHtml(cityLine) + '<br>';
+  if (shipping.country) shippingHtml += escapeHtml(shipping.country);
+  document.getElementById('shippingInfo').innerHTML = shippingHtml || '<span style="color:var(--muted)">No shipping info</span>';
+
+  // Email reminder
+  if (customerEmail) {
+    document.getElementById('emailReminder').textContent = customerEmail;
+  } else {
+    document.getElementById('emailNote').style.display = 'none';
+  }
+
+  // Order ID echo
+  var orderRef = data.order_id || orderName;
+  var stEl = document.getElementById('orderIdInStatement');
+  var spEl = document.getElementById('orderIdInSupport');
+  if (stEl) stEl.textContent = orderRef;
+  if (spEl) spEl.textContent = orderRef;
+
+  // Continue shopping link
+  var sourceClean = cleanSourceDomain(data.source_store);
+  var continueUrl = sourceClean ? 'https://' + sourceClean : 'https://montrealpeptides.ca';
+  document.getElementById('continueShoppingBtn').href = continueUrl;
+}
+
+function fetchSession(retriesLeft) {
+  if (retriesLeft === undefined) retriesLeft = 3;
+  if (!SESSION_ID) {
+    showError('Missing session ID. If you completed payment, you should receive an email shortly.');
+    return;
+  }
+  var fetchUrl;
+  if (PROCESSOR === 'helcim') {
+    fetchUrl = HELCIM_WORKER_URL + '/order/' + encodeURIComponent(SESSION_ID);
+  } else {
+    fetchUrl = STRIPE_WORKER_URL + '/intent/' + encodeURIComponent(SESSION_ID);
+  }
+  fetch(fetchUrl)
+    .then(function(r) { if (!r.ok) throw new Error('Status ' + r.status); return r.json(); })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      renderOrder(data);
+    })
+    .catch(function(err) {
+      console.error('Fetch session error:', err);
+      if (retriesLeft > 0) setTimeout(function(){ fetchSession(retriesLeft - 1); }, 1500);
+      else showError('Could not load order details: ' + err.message);
+    });
+}
+
+fetchSession();
+</script>
+</body>
+</html>

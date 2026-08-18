@@ -1,0 +1,3474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="referrer" content="origin"/>
+<title>Checkout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:62.5%;scroll-behavior:smooth}
+body{
+  font-family:'DM Sans',sans-serif;
+  font-size:1.5rem;
+  line-height:1.5;
+  color:#111;
+  background:#f8f7f4;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+:root{
+  --red:{{ accent_color }};
+  --red-dark:{{ accent_hover }};
+  /* Light tint + border auto-derived from the brand accent so EVERY store —
+     not just red/blue — gets a coherent palette. */
+  --red-light: color-mix(in srgb, var(--red) 10%, #ffffff);
+  --red-border: color-mix(in srgb, var(--red) 30%, #ffffff);
+  --accent: var(--red);
+  --accent-hover: var(--red-dark);
+  --dark:#0f1117;
+  --dark2:#1a1d26;
+  --dark3:#252837;
+  --sidebar-text:#e8e6e0;
+  --sidebar-muted:#8b8a85;
+  --sidebar-border:rgba(255,255,255,0.08);
+  --green:#1a7e2e;
+  --green-bg:#edfbee;
+  --border:#e2e0da;
+  --input-border:#d4d2cc;
+  --radius:8px;
+  --radius-lg:12px;
+}
+
+/* ── LAYOUT ─────────────────────────────── */
+.shell{display:flex;min-height:100vh;flex-direction:column}
+.header{
+  background:var(--dark);
+  padding:1.8rem 4rem;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.header-brand{
+  display:flex;align-items:center;gap:1.2rem;
+  text-decoration:none;
+}
+.header-logo{
+  width:3.2rem;height:3.2rem;
+  background:var(--red);
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+}
+.header-logo svg{width:1.8rem;height:1.8rem;fill:#fff}
+.header-name{
+  font-size:1.7rem;font-weight:600;
+  color:#fff;letter-spacing:-0.02em;
+}
+.header-secure{
+  display:flex;align-items:center;gap:0.6rem;
+  font-size:1.25rem;color:rgba(255,255,255,0.45);
+}
+.header-secure svg{width:1.4rem;height:1.4rem;fill:none;stroke:rgba(255,255,255,0.45);stroke-width:1.5}
+
+/* progress bar */
+.progress-bar{
+  height:3px;
+  background:var(--border);
+  position:relative;
+}
+.progress-bar::after{
+  content:'';
+  position:absolute;left:0;top:0;
+  height:100%;
+  width:65%;
+  background:var(--red);
+  transition:width 0.4s ease;
+}
+
+/* mobile cart toggle */
+.mobile-cart{
+  display:none;
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  padding:1.4rem 2rem;
+  cursor:pointer;
+  align-items:center;
+  justify-content:space-between;
+}
+.mobile-cart-label{
+  display:flex;align-items:center;gap:0.8rem;
+  font-size:1.4rem;color:var(--red);font-weight:500;
+}
+.mobile-cart-total{font-size:1.8rem;font-weight:600;color:#111}
+.mobile-cart-detail{font-size:1.2rem;color:#888;text-align:right}
+
+.body{
+  flex:1;
+  display:grid;
+  grid-template-columns:1fr 420px;
+  max-width:1200px;
+  margin:0 auto;
+  width:100%;
+  gap:0;
+}
+
+/* ── LEFT FORM ─────────────────────────── */
+.form-col{
+  background:#fff;
+  padding:4rem 5rem 4rem 4rem;
+  border-right:1px solid var(--border);
+}
+
+.section{margin-bottom:3.2rem}
+.section-heading{
+  font-size:1.75rem;font-weight:600;
+  color:#111;letter-spacing:-0.02em;
+  margin-bottom:0.4rem;
+  display:flex;align-items:center;gap:0.8rem;
+}
+.section-heading .step-num{
+  width:2.4rem;height:2.4rem;
+  border-radius:50%;
+  background:var(--red);
+  color:#fff;
+  font-size:1.2rem;font-weight:600;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.section-sub{
+  font-size:1.3rem;color:#888;
+  margin-bottom:1.8rem;
+}
+
+/* form fields */
+.field-row{display:grid;gap:1.2rem;margin-bottom:1.2rem}
+.field-row.cols-2{grid-template-columns:1fr 1fr}
+.field-row.cols-3{grid-template-columns:1fr 1fr 1fr}
+.field{position:relative}
+.field input,
+.field select{
+  width:100%;
+  height:5rem;
+  padding:1.8rem 1.4rem 0.6rem;
+  border:1.5px solid var(--input-border);
+  border-radius:var(--radius);
+  font-family:'DM Sans',sans-serif;
+  font-size:1.45rem;
+  color:#111;
+  background:#fff;
+  outline:none;
+  transition:border-color 0.15s,box-shadow 0.15s;
+  appearance:none;
+}
+.field input:focus,
+.field select:focus{
+  border-color:var(--red);
+  box-shadow:0 0 0 3px rgba(200,16,46,0.08);
+}
+.field input.error{border-color:#e53935}
+.field label{
+  position:absolute;
+  top:50%;left:1.4rem;
+  transform:translateY(-50%);
+  font-size:1.4rem;color:#999;
+  pointer-events:none;
+  transition:all 0.15s;
+  background:#fff;
+  padding:0 0.3rem;
+  line-height:1;
+}
+.field input:focus+label,
+.field input:not(:placeholder-shown)+label,
+.field select:focus+label,
+.field select:valid+label,
+.field .label-up{
+  top:0.8rem;
+  transform:none;
+  font-size:1.05rem;
+  color:var(--red);
+}
+.field-error{font-size:1.2rem;color:#e53935;margin-top:0.4rem;display:none}
+.field-error.show{display:block}
+.select-wrap{position:relative}
+.select-wrap::after{
+  content:'';
+  position:absolute;right:1.4rem;top:50%;
+  transform:translateY(-50%);
+  border:5px solid transparent;
+  border-top-color:#999;
+  pointer-events:none;
+}
+.select-wrap select{padding-right:3.5rem}
+
+/* ── PAYMENT METHODS ────────────────────── */
+.pay-methods{
+  border:1.5px solid var(--input-border);
+  border-radius:var(--radius-lg);
+  overflow:hidden;
+}
+.pay-method{
+  display:flex;
+  align-items:flex-start;
+  padding:1.6rem 1.8rem;
+  background:#fff;
+  border-bottom:1px solid var(--border);
+  cursor:pointer;
+  transition:background 0.12s;
+  position:relative;
+}
+.pay-method:last-child{border-bottom:none}
+.pay-method:hover{background:#fafaf8}
+.pay-method.active{background:var(--red-light)}
+.pay-method.active::before{
+  content:'';
+  position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--red);
+}
+.pay-method input[type=radio]{
+  width:1.8rem;height:1.8rem;
+  flex-shrink:0;margin-top:0.2rem;
+  margin-right:1.4rem;
+  accent-color:var(--red);
+  cursor:pointer;
+}
+.pay-info{flex:1;min-width:0}
+.pay-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.pay-name{font-size:1.5rem;font-weight:600;color:#111}
+.pay-icons{display:flex;gap:0.5rem;align-items:center}
+.pay-icons img,.pay-icons svg{height:2.2rem;border-radius:3px;border:1px solid #eee}
+.anet-label{display:block;font-size:1.15rem;font-weight:600;color:#3d3210;margin-bottom:0.3rem;}
+.anet-input{width:100%;padding:0.9rem 1rem;font-size:1.4rem;border:1.5px solid #d6d3c8;border-radius:6px;background:#fff;font-family:"DM Mono",monospace;outline:none;transition:border-color 0.15s;}
+.anet-input:focus{border-color:var(--accent,#dc2626);}
+.anet-input.error{border-color:#b91c1c;background:#fef2f2;}
+.save-badge{
+  display:inline-flex;align-items:center;gap:0.4rem;
+  background:var(--green-bg);color:var(--green);
+  font-size:1.15rem;font-weight:600;
+  padding:0.3rem 0.9rem;border-radius:3rem;
+  white-space:nowrap;
+}
+.pay-desc{font-size:1.25rem;color:#888;margin-top:0.3rem}
+.pay-body{
+  display:none;
+  margin-top:1.4rem;
+  padding-top:1.4rem;
+  border-top:1px solid var(--border);
+}
+.pay-method.active .pay-body{display:block}
+
+/* cc fields */
+.cc-grid{display:grid;gap:1.2rem}
+.cc-row{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.cc-field{display:flex;flex-direction:column;gap:0.5rem}
+.cc-field label{font-size:1.2rem;color:#666;font-weight:500}
+.cc-field input{
+  height:4.6rem;
+  padding:0 1.2rem;
+  border:1.5px solid var(--input-border);
+  border-radius:var(--radius);
+  font-family:'DM Mono',monospace;
+  font-size:1.4rem;
+  color:#111;background:#fff;outline:none;
+  transition:border-color 0.15s,box-shadow 0.15s;
+}
+.cc-field input:focus{
+  border-color:var(--red);
+  box-shadow:0 0 0 3px rgba(200,16,46,0.08);
+}
+.cc-brands{display:flex;gap:0.5rem;margin-bottom:1rem}
+.cc-brands svg{height:2.4rem;border-radius:4px;border:1px solid #eee}
+
+/* interac */
+.interac-box{
+  background:#fffbf0;
+  border:1.5px solid #f0e4b8;
+  border-radius:var(--radius);
+  padding:1.6rem;
+  font-size:1.3rem;
+  color:#5c4b1f;
+  line-height:1.7;
+}
+.interac-box strong{color:#3d3210}
+.interac-email-pill{
+  display:inline-flex;align-items:center;gap:0.6rem;
+  background:#fff;border:1.5px solid #e5d8b8;
+  border-radius:6px;padding:0.4rem 1rem;
+  font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:500;
+  color:#3d3210;margin:0.4rem 0;
+}
+.copy-btn{
+  background:none;border:1px solid #ccc;
+  border-radius:4px;padding:0.2rem 0.8rem;
+  font-size:1.1rem;cursor:pointer;color:#555;
+  font-family:'DM Sans',sans-serif;
+  transition:background 0.1s;
+}
+.copy-btn:hover{background:#f0e4b8}
+.interac-steps{margin:0.8rem 0 0 1.8rem}
+.interac-steps li{margin-bottom:0.5rem}
+.interac-highlight{
+  font-family:'DM Mono',monospace;
+  font-weight:500;color:var(--red);
+}
+
+/* crypto */
+.crypto-box{
+  background:#f0f5ff;border:1.5px solid #c5d7f5;
+  border-radius:var(--radius);padding:1.6rem;
+  font-size:1.3rem;color:#1a3a5c;line-height:1.7;
+}
+.crypto-box strong{color:#0d2240}
+.coin-chips{display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:0.8rem}
+.coin-chip{
+  background:#fff;border:1.5px solid #c5d7f5;
+  border-radius:3rem;padding:0.3rem 1rem;
+  font-size:1.2rem;font-weight:500;color:#1a3a5c;
+}
+
+/* billing toggle */
+.checkbox-row{
+  display:flex;align-items:center;gap:0.8rem;
+  font-size:1.4rem;color:#444;
+  cursor:pointer;
+  margin-bottom:1.2rem;
+}
+.checkbox-row input[type=checkbox]{
+  width:1.8rem;height:1.8rem;accent-color:var(--red);cursor:pointer;
+}
+
+/* submit */
+.submit-btn{
+  width:100%;height:5.4rem;
+  background:var(--red);color:#fff;
+  border:none;border-radius:var(--radius);
+  font-family:'DM Sans',sans-serif;
+  font-size:1.6rem;font-weight:600;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:1rem;
+  letter-spacing:-0.01em;
+  transition:background 0.15s,transform 0.1s;
+  position:relative;overflow:hidden;
+}
+.submit-btn:hover{background:var(--red-dark)}
+.submit-btn:active{transform:scale(0.99)}
+.submit-btn:disabled{opacity:0.6;cursor:not-allowed}
+.submit-btn .btn-icon{width:1.8rem;height:1.8rem;fill:none;stroke:#fff;stroke-width:2}
+.spinner{
+  width:2rem;height:2rem;
+  border:2.5px solid rgba(255,255,255,0.3);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+  display:none;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.submit-btn.loading .btn-label{display:none}
+.submit-btn.loading .spinner{display:block}
+
+.trust-row{
+  display:flex;align-items:center;justify-content:center;gap:2rem;
+  margin-top:1.4rem;
+}
+.trust-item{
+  display:flex;align-items:center;gap:0.5rem;
+  font-size:1.2rem;color:#999;
+}
+.trust-item svg{width:1.4rem;height:1.4rem;fill:none;stroke:#ccc;stroke-width:1.5}
+
+/* ── SIDEBAR ────────────────────────────── */
+.sidebar{
+  background:var(--dark);
+  padding:3.6rem 3.2rem;
+  position:sticky;top:0;
+  height:fit-content;
+  min-height:100vh;
+}
+
+.sidebar-title{
+  display:flex;align-items:center;gap:0.9rem;
+  font-size:1.5rem;font-weight:800;
+  color:#fff;
+  text-transform:uppercase;letter-spacing:0.14em;
+  margin-bottom:2.4rem;
+  padding:0 0 1.4rem;
+  position:relative;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.sidebar-title::after{
+  content:'';
+  position:absolute;left:0;bottom:-1px;
+  width:5rem;height:2px;
+  background:linear-gradient(90deg,#34d399,transparent);
+}
+.sidebar-title svg{
+  width:1.7rem;height:1.7rem;
+  stroke:#34d399;stroke-width:2;
+  fill:none;stroke-linecap:round;stroke-linejoin:round;
+  flex-shrink:0;
+}
+
+/* line items */
+.items{margin-bottom:2.4rem}
+.item{
+  display:grid;
+  grid-template-columns:5.6rem 1fr auto;
+  gap:1.4rem;
+  align-items:center;
+  padding:1.4rem 0;
+  border-bottom:1px solid var(--sidebar-border);
+}
+.item:first-child{border-top:1px solid var(--sidebar-border)}
+.item-img{
+  width:5.6rem;height:5.6rem;
+  border-radius:var(--radius);
+  background:var(--dark3);
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--sidebar-border);
+  position:relative;flex-shrink:0;
+  overflow:hidden;
+}
+.item-img svg{width:2.4rem;height:2.4rem;fill:none;stroke:var(--sidebar-muted);stroke-width:1.2}
+.item-img img{width:100%;height:100%;object-fit:cover;display:block}
+.item-img-wrap{position:relative;width:5.6rem;height:5.6rem;flex-shrink:0}
+.item-qty{
+  position:absolute;top:-0.7rem;right:-0.7rem;
+  min-width:2rem;height:2rem;
+  background:var(--red);
+  color:#fff;
+  font-size:1.1rem;font-weight:700;
+  border-radius:10rem;
+  display:flex;align-items:center;justify-content:center;
+  padding:0 0.4rem;
+  z-index:2;
+}
+.item-name{
+  font-size:1.4rem;font-weight:600;
+  color:#fff;line-height:1.3;
+  text-transform:uppercase;letter-spacing:0.04em;
+}
+.item-variant{font-size:1.2rem;color:var(--sidebar-text);font-weight:600;margin-top:0.2rem}
+.item-price{
+  font-family:'DM Mono',monospace;
+  font-size:1.4rem;font-weight:600;
+  color:#fff;
+  white-space:nowrap;
+}
+.item-price.free{color:#4ade80;font-size:1.4rem;font-weight:700;text-transform:uppercase}
+
+/* totals */
+.totals{}
+.total-row{
+  display:flex;justify-content:space-between;
+  align-items:center;
+  padding:0.7rem 0;
+  font-size:1.4rem;
+  border-bottom:1px solid var(--sidebar-border);
+}
+.total-row:last-child{border-bottom:none}
+.total-label{color:var(--sidebar-text);font-weight:600}
+.total-value{
+  font-family:'DM Mono',monospace;
+  font-weight:500;color:var(--sidebar-text);
+}
+.total-row.discount .total-label,
+.total-row.discount .total-value{color:#4ade80}
+.total-row.grand{
+  margin-top:0.8rem;
+  padding-top:1.4rem;
+  border-top:1px solid var(--sidebar-border);
+  border-bottom:none;
+}
+.total-row.grand .total-label{
+  font-size:1.5rem;font-weight:600;
+  color:#fff;
+}
+.total-row.grand .total-value{
+  font-size:2rem;font-weight:600;
+  color:#fff;
+}
+.currency-code{
+  font-size:1.2rem;font-weight:600;
+  color:var(--sidebar-text);
+  margin-right:0.3rem;
+}
+.shipping-free{color:#4ade80;font-size:1.4rem;font-weight:700;text-transform:uppercase}
+
+/* discount code (in sidebar) */
+.discount-code{margin:1.4rem 0 1.6rem;padding:1.4rem 0;border-top:1px solid var(--sidebar-border);border-bottom:1px solid var(--sidebar-border)}
+.discount-code-row{display:flex;gap:0.6rem}
+.discount-code-row input{
+  flex:1;
+  height:4rem;
+  padding:0 1.2rem;
+  border:1.5px solid rgba(255,255,255,0.15);
+  border-radius:6px;
+  background:rgba(255,255,255,0.05);
+  color:#fff;
+  font-family:'DM Sans',sans-serif;
+  font-size:1.3rem;
+  outline:none;
+  transition:border-color 0.15s, background 0.15s;
+}
+.discount-code-row input::placeholder{color:rgba(255,255,255,0.4)}
+.discount-code-row input:focus{
+  border-color:var(--red);
+  background:rgba(255,255,255,0.08);
+}
+.discount-code-row input:disabled{opacity:0.7;cursor:not-allowed}
+.discount-code-row button{
+  background:var(--red);
+  color:#fff;
+  border:none;
+  border-radius:6px;
+  padding:0 1.6rem;
+  font-family:'DM Sans',sans-serif;
+  font-size:1.25rem;
+  font-weight:600;
+  letter-spacing:0.04em;
+  cursor:pointer;
+  transition:background 0.15s,opacity 0.15s;
+  white-space:nowrap;
+}
+.discount-code-row button:hover{background:var(--red-dark)}
+.discount-code-row button.applied{
+  background:var(--green);
+  cursor:pointer;
+}
+.discount-code-row button.applied:hover{background:#156a26}
+.discount-code-msg{
+  margin-top:0.5rem;
+  font-size:1.15rem;
+  min-height:1.4rem;
+  font-weight:500;
+}
+.discount-code-msg.error{color:#ff6b6b}
+.discount-code-msg.success{color:#4ade80}
+
+/* notification */
+.notif{
+  position:fixed;top:2rem;right:2rem;z-index:9999;
+  padding:1.4rem 2rem;
+  border-radius:var(--radius);
+  font-size:1.4rem;font-weight:500;
+  max-width:36rem;
+  transform:translateX(120%);
+  transition:transform 0.3s ease;
+  box-shadow:0 4px 24px rgba(0,0,0,0.15);
+}
+.notif.show{transform:translateX(0)}
+.notif.success{background:#1a7e2e;color:#fff}
+.notif.error{background:#c8102e;color:#fff}
+.notif.info{background:var(--dark);color:#fff}
+
+/* "Why choose us?" — desktop shows the sidebar copy; mobile shows the
+   light-background copy at the bottom (see media query below). */
+.why-mobile{display:none}
+
+/* responsive */@media(max-width:900px){
+  .body{
+    grid-template-columns:1fr;
+    display:flex;
+    flex-direction:column;
+  }
+  .why-desktop{display:none}
+  .why-mobile{display:block;order:2}
+  .sidebar{
+    display:none;
+    min-height:auto;
+    position:static;
+    order:0;
+  }
+  .sidebar.open{
+    display:block;
+    order:-1;
+  }
+  .form-col{order:1}
+  .mobile-cart{display:flex}
+  .form-col{padding:2.4rem 2rem}
+  .field-row.cols-2{grid-template-columns:1fr}
+  /* keep first/last name side-by-side on mobile */
+  .field-row.cols-2.keep-cols{grid-template-columns:1fr 1fr;gap:1rem}
+  /* address: City full-width, Country + Province side by side */
+  .field-row.cols-3{grid-template-columns:1fr 1fr;gap:1rem}
+  .field-row.cols-3 > .field:first-child{grid-column:1 / -1}
+  .cc-row{grid-template-columns:1fr}
+  /* shorter, tighter fields on mobile to save vertical space */
+  .field input,.field select{height:4.5rem;padding:1.5rem 1.2rem 0.4rem}
+  .field-row{margin-bottom:0.9rem;gap:1rem}
+}
+@media(max-width:600px){
+  .header{padding:1.4rem 1.6rem;gap:1.2rem}
+  .header-brand{min-width:0}
+  .header-name{font-size:1.45rem;line-height:1.25}
+  .header-secure{font-size:1.1rem;white-space:nowrap;flex-shrink:0}
+  .header-secure svg{width:1.2rem;height:1.2rem}
+  .form-col{padding:2rem 1.6rem}
+  .trust-row{flex-wrap:wrap;gap:1rem 1.6rem}
+}
+@media(max-width:430px){
+  .header-secure .secure-text{display:none}
+}
+</style>
+
+<!-- Stripe.js for embedded checkout -->
+<script src="https://js.stripe.com/v3/"></script>
+<!-- HelcimPay.js for embedded card checkout — exposes appendHelcimPayIframe() -->
+<script type="text/javascript" src="https://secure.helcim.app/helcim-pay/services/start.js"></script>
+</head>
+<body>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<div class="shell">
+
+<!-- HEADER -->
+<header class="header">
+  <a class="header-brand" href="#">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ store_name }}" style="max-height:3.6rem;"/>
+    {% else %}
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.1-1.3 3.9-3.1 4.7L16 19H8l2.1-7.3A5 5 0 0112 2z"/></svg>
+    </div>
+    <span class="header-name">{{ store_name }}</span>
+    {% endif %}
+  </a>
+  <div class="header-secure">
+    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    <span class="secure-text">Secure checkout</span>
+  </div>
+</header>
+
+<div class="progress-bar"></div>
+
+<!-- MOBILE CART TOGGLE -->
+<div class="mobile-cart" onclick="toggleMobileCart()">
+  <div class="mobile-cart-label">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg>
+    Show order summary
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+<div>
+      <div class="mobile-cart-total" id="mobileTotalDisplay">$198.00</div>
+      <div class="mobile-cart-detail" id="mobileCartDetail">{{ store_currency }}</div>
+    </div>
+</div>
+
+<div class="body">
+
+  <!-- LEFT: FORM -->
+  <main class="form-col">
+<input type="hidden" id="source_domain" name="source_domain" value="{{ source_domain }}"/>
+    <!-- CONTACT -->
+    <section class="section">
+      <h2 class="section-heading">
+        <span class="step-num">1</span>
+        Contact
+      </h2>
+      <p class="section-sub">We'll send your order confirmation here.</p>
+
+      {% if source_domain and 'princetonpeptides.com' in source_domain|lower %}
+      <!-- Returning-customer prefill (princetonpeptides.com ONLY — pilot rollout).
+           Clicking opens the inline mini-form below; signing in fetches the
+           saved profile from /api/customer/lookup and fills every field on
+           this page. To enable on more stores, add them to the check above. -->
+      <div id="returningRow" style="font-size:0.875rem;color:#555;margin-bottom:0.75rem;">
+        Returning customer?
+        <a href="#" id="returningToggle" style="color:var(--accent);text-decoration:underline;font-weight:600;">Sign in to autofill</a>
+      </div>
+      <div id="returningPanel" style="display:none;background:#f7f7f9;border:1px solid #e5e5ec;border-radius:8px;padding:0.875rem;margin-bottom:1rem;">
+        <div class="field-row cols-2 keep-cols" style="margin-bottom:0.5rem;">
+          <div class="field">
+            <input type="email" id="returningEmail" placeholder=" " autocomplete="off"/>
+            <label for="returningEmail">Email</label>
+          </div>
+          <div class="field">
+            <input type="password" id="returningPassword" placeholder=" " autocomplete="off"/>
+            <label for="returningPassword">Password</label>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <button type="button" id="returningSubmit" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:0.55rem 1rem;font-weight:600;cursor:pointer;">Sign in</button>
+          <button type="button" id="returningCancel" style="background:transparent;color:#666;border:none;padding:0.55rem 0.5rem;cursor:pointer;">Cancel</button>
+          <span id="returningStatus" style="font-size:0.825rem;color:#b00020;"></span>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="field-row">
+        <div class="field">
+          <input type="email" id="email" name="email" placeholder=" " autocomplete="email"/>
+          <label for="email">Email address</label>
+          <div class="field-error" id="email-error">Please enter a valid email</div>
+        </div>
+      </div>
+      <div class="field-row cols-2 keep-cols">
+        <div class="field">
+          <input type="text" id="firstName" name="firstName" placeholder=" " autocomplete="given-name" required/>
+          <label for="firstName">First name</label>
+          <div class="field-error" id="firstName-error">First name is required</div>
+        </div>
+        <div class="field">
+          <input type="text" id="lastName" name="lastName" placeholder=" " autocomplete="family-name" required/>
+          <label for="lastName">Last name</label>
+          <div class="field-error" id="lastName-error">Last name is required</div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <input type="tel" id="phone" name="phone" placeholder=" " autocomplete="tel" required/>
+          <label for="phone">Phone</label>
+          <div class="field-error" id="phone-error">Phone number is required</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHIPPING -->
+    <section class="section">
+      <h2 class="section-heading">
+        <span class="step-num">2</span>
+        Shipping address
+      </h2>
+      <p class="section-sub">Where should we deliver your order?</p>
+
+      {% if store_country != "US" %}
+      <div style="display:flex;align-items:center;gap:1.2rem;background:var(--green-bg);border:1.5px solid var(--green);border-radius:var(--radius);padding:1.2rem 1.6rem;margin-bottom:1.6rem;">
+        <img src="/static/svg/Flag_of_Canada.svg?v=4" alt="Canada" style="width:3.2rem;height:auto;flex-shrink:0;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,0.08);"/>
+        <div style="font-size:1.3rem;color:#1a4d2e;line-height:1.5;">
+          <strong style="display:block;color:var(--green);font-weight:700;margin-bottom:0.2rem;">Ships from Canada</strong>
+          No duties, no customs fees, ever.
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="field-row">
+        <div class="field">
+          <input type="text" id="address1" name="address1" placeholder=" " required autocomplete="address-line1"/>
+          <label for="address1">Address</label>
+          <div class="field-error" id="address1-error">Address is required</div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <input type="text" id="address2" name="address2" placeholder=" " autocomplete="address-line2"/>
+          <label for="address2">Apartment, suite, etc. (optional)</label>
+        </div>
+      </div>
+      <div class="field-row cols-3">
+        <div class="field">
+          <input type="text" id="city" name="city" placeholder=" " required autocomplete="address-level2"/>
+          <label for="city">City</label>
+          <div class="field-error" id="city-error">City is required</div>
+        </div>
+        <div class="field select-wrap">
+          <select id="country" name="country" autocomplete="country" onchange="updateZoneLabel()">
+            {% if store_country == 'US' %}
+              <option value="US" selected>United States</option>
+            {% else %}
+              <option value="CA" selected>Canada</option>
+            {% endif %}
+          </select>
+          <label class="label-up" for="country">Country</label>
+        </div>
+        <div class="field select-wrap">
+          <select id="zone" name="zone" autocomplete="address-level1">
+            <!-- Canadian Provinces (default) -->
+            <option value="AB">Alberta</option>
+            <option value="BC">British Columbia</option>
+            <option value="MB">Manitoba</option>
+            <option value="NB">New Brunswick</option>
+            <option value="NL">Newfoundland</option>
+            <option value="NS">Nova Scotia</option>
+            <option value="NT">NW Territories</option>
+            <option value="NU">Nunavut</option>
+            <option value="ON">Ontario</option>
+            <option value="PE">PEI</option>
+            <option value="QC">Quebec</option>
+            <option value="SK">Saskatchewan</option>
+            <option value="YT">Yukon</option>
+            <!-- US States (hidden by default, shown when US selected) -->
+            <option value="AL" style="display:none">Alabama</option>
+            <option value="AK" style="display:none">Alaska</option>
+            <option value="AZ" style="display:none">Arizona</option>
+            <option value="AR" style="display:none">Arkansas</option>
+            <option value="CA" style="display:none">California</option>
+            <option value="CO" style="display:none">Colorado</option>
+            <option value="CT" style="display:none">Connecticut</option>
+            <option value="DE" style="display:none">Delaware</option>
+            <option value="FL" style="display:none">Florida</option>
+            <option value="GA" style="display:none">Georgia</option>
+            <option value="HI" style="display:none">Hawaii</option>
+            <option value="ID" style="display:none">Idaho</option>
+            <option value="IL" style="display:none">Illinois</option>
+            <option value="IN" style="display:none">Indiana</option>
+            <option value="IA" style="display:none">Iowa</option>
+            <option value="KS" style="display:none">Kansas</option>
+            <option value="KY" style="display:none">Kentucky</option>
+            <option value="LA" style="display:none">Louisiana</option>
+            <option value="ME" style="display:none">Maine</option>
+            <option value="MD" style="display:none">Maryland</option>
+            <option value="MA" style="display:none">Massachusetts</option>
+            <option value="MI" style="display:none">Michigan</option>
+            <option value="MN" style="display:none">Minnesota</option>
+            <option value="MS" style="display:none">Mississippi</option>
+            <option value="MO" style="display:none">Missouri</option>
+            <option value="MT" style="display:none">Montana</option>
+            <option value="NE" style="display:none">Nebraska</option>
+            <option value="NV" style="display:none">Nevada</option>
+            <option value="NH" style="display:none">New Hampshire</option>
+            <option value="NJ" style="display:none">New Jersey</option>
+            <option value="NM" style="display:none">New Mexico</option>
+            <option value="NY" style="display:none">New York</option>
+            <option value="NC" style="display:none">North Carolina</option>
+            <option value="ND" style="display:none">North Dakota</option>
+            <option value="OH" style="display:none">Ohio</option>
+            <option value="OK" style="display:none">Oklahoma</option>
+            <option value="OR" style="display:none">Oregon</option>
+            <option value="PA" style="display:none">Pennsylvania</option>
+            <option value="RI" style="display:none">Rhode Island</option>
+            <option value="SC" style="display:none">South Carolina</option>
+            <option value="SD" style="display:none">South Dakota</option>
+            <option value="TN" style="display:none">Tennessee</option>
+            <option value="TX" style="display:none">Texas</option>
+            <option value="UT" style="display:none">Utah</option>
+            <option value="VT" style="display:none">Vermont</option>
+            <option value="VA" style="display:none">Virginia</option>
+            <option value="WA" style="display:none">Washington</option>
+            <option value="WV" style="display:none">West Virginia</option>
+            <option value="WI" style="display:none">Wisconsin</option>
+            <option value="WY" style="display:none">Wyoming</option>
+          </select>
+          <label class="label-up" for="zone">Province</label>
+        </div>
+      </div>
+      <div class="field-row cols-2">
+        <div class="field">
+          <input type="text" id="postalCode" name="postalCode" placeholder=" " required autocomplete="postal-code" autocapitalize="characters"/>
+          <label for="postalCode">Postal code</label>
+          <div class="field-error" id="postal-error">Postal code is required</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.6rem;padding:1rem 0;font-size:1.3rem;color:#4ade80;font-weight:500">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Free shipping on this order
+        </div>
+      </div>
+    </section>
+
+    <!-- PAYMENT -->
+    <section class="section">
+      <h2 class="section-heading">
+        <span class="step-num">3</span>
+        Payment
+      </h2>
+      <p class="section-sub">All transactions are secure and encrypted.{% if not card_enabled %} Save with Interac or Crypto.{% endif %}</p>
+
+      <div class="pay-methods">
+
+        {% if card_enabled %}
+        <!-- CREDIT CARD — temporarily disabled. Remove the {# #} wrapper to re-enable. -->
+        
+        <label class="pay-method active" id="pm-card">
+          <input type="radio" name="paymentMethod" value="card" checked onchange="selectMethod('card')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Credit Card</span>
+              <div class="pay-icons">
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text></svg>
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
+              </div>
+            </div>
+            <div class="pay-desc">Visa, Mastercard · Pay with your Credit Card</div>
+            <div class="pay-body">
+              <div id="cardUsdEquiv" style="display:none;background:rgba(52,211,153,0.10);border:1px solid rgba(52,211,153,0.35);border-radius:8px;padding:1rem 1.4rem;margin-bottom:0.8rem;font-size:1.4rem;color:#0f7a52;text-align:center;"></div>
+              <div style="background:#f8f7f4;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#666;">
+                🔒 After placing your order, you will be redirected to Pymtz to complete your payment
+              </div>
+            </div>
+          </div>
+        </label>
+        
+
+        {% endif %}{# card_enabled #}
+
+        {% if onramp_wp_enabled %}
+        <!-- CARD (ONRAMP via WP plugin) — alternative cloaked card processor.
+             Routes through a WooCommerce site running the 2530gateway plugin →
+             onramp provider → USDC to wallet. Customer enters card on the
+             hosted onramp page. -->
+        <label class="pay-method" id="pm-onramp_wp">
+          <input type="radio" name="paymentMethod" value="onramp_wp" onchange="selectMethod('onramp_wp')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Card (On-Ramp)</span>
+              <div class="pay-icons">
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text></svg>
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
+              </div>
+            </div>
+            <div class="pay-desc">Visa, Mastercard · Alternative card processor</div>
+            <div class="pay-body">
+              <div id="onrampUsdEquiv" style="display:none;background:rgba(52,211,153,0.10);border:1px solid rgba(52,211,153,0.35);border-radius:8px;padding:1rem 1.4rem;margin-bottom:0.8rem;font-size:1.4rem;color:#0f7a52;text-align:center;"></div>
+              <div style="background:#f8f7f4;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#666;">
+                🔒 After placing your order, you will be redirected to a secure card form to complete your payment.
+              </div>
+            </div>
+          </div>
+        </label>
+        {% endif %}{# onramp_wp_enabled #}
+
+        {% if stripe_direct_enabled %}
+        <!-- CARD (STRIPE DIRECT) — parallel card processor.
+             Customer card is tokenized client-side via Stripe Elements and
+             charged server-side via a PaymentIntent. Modal popup pattern. -->
+        <label class="pay-method" id="pm-stripe_direct">
+          <input type="radio" name="paymentMethod" value="stripe_direct" onchange="selectMethod('stripe_direct')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Credit Card (Stripe)</span>
+              <div class="pay-icons">
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text></svg>
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
+              </div>
+            </div>
+            <div class="pay-desc">Visa, Mastercard, Amex · Powered by Stripe — trusted payments processor</div>
+            <div class="pay-body">
+              <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#0c4a6e;line-height:1.55;">
+                💳 <strong>Pay with Stripe.</strong> Click <strong>Pay now</strong> below — a secure card form will pop up. Card details are encrypted in your browser and never touch our servers.
+              </div>
+            </div>
+          </div>
+        </label>
+        {% endif %}{# stripe_direct_enabled #}
+
+        {% if wpay_enabled %}
+        <!-- CARD (WPAY) — hosted-redirect card processor. Customer enters
+             card details on WPay's own hosted page; no card data touches
+             our servers. USD-only, $20 minimum enforced server-side. -->
+        <label class="pay-method" id="pm-wpay">
+          <input type="radio" name="paymentMethod" value="wpay" onchange="selectMethod('wpay')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Credit Card (WPay)</span>
+              <div class="pay-icons">
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text></svg>
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
+              </div>
+            </div>
+            <div class="pay-desc">Visa, Mastercard · Powered by WPay Channels</div>
+            <div class="pay-body">
+              <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#0c4a6e;line-height:1.55;">
+                💳 <strong>Pay with Credit Card.</strong> After placing your order, you'll be redirected to a secure page to enter your card details.
+              </div>
+            </div>
+          </div>
+        </label>
+        {% endif %}{# wpay_enabled #}
+
+        {% if wpay_2d_enabled %}
+        <!-- CARD (WPAY 2D) — separate option from wpay_enabled above, routed
+             through the same WordPress/WooCommerce plugin site used for
+             onramp_wp. Card entry happens on that site's own form
+             (Basis Theory tokenized), not here. -->
+        <label class="pay-method{% if not card_enabled %} active{% endif %}" id="pm-wpay_2d">
+          <input type="radio" name="paymentMethod" value="wpay_2d"{% if not card_enabled %} checked{% endif %} onchange="selectMethod('wpay_2d')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Card</span>
+              <div class="pay-icons">
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text></svg>
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="14" cy="12" r="7" fill="#EB001B"/><circle cx="24" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/></svg>
+              </div>
+            </div>
+            <div class="pay-desc">Visa, Mastercard</div>
+            <div class="pay-body">
+              <div id="wpay2dUsdEquiv" style="display:none;background:rgba(52,211,153,0.10);border:1px solid rgba(52,211,153,0.35);border-radius:8px;padding:1rem 1.4rem;margin-bottom:0.8rem;font-size:1.4rem;color:#0f7a52;text-align:center;"></div>
+              <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#0c4a6e;line-height:1.55;">
+                💳 <strong>Pay with Credit Card.</strong> After placing your order, you'll be redirected to a secure page to enter your card details. 
+              </div>
+            </div>
+          </div>
+        </label>
+        {% endif %}{# wpay_2d_enabled #}
+
+        {% if store_country == "US" %}
+        <!-- ZELLE (US) -->
+        <label class="pay-method{% if not card_enabled and not wpay_2d_enabled %} active{% endif %}" id="pm-zelle">
+          <input type="radio" name="paymentMethod" value="zelle"{% if not card_enabled and not wpay_2d_enabled %} checked{% endif %} onchange="selectMethod('zelle')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Zelle</span>
+              <span class="save-badge">Save 10%</span>
+            </div>
+            <div class="pay-desc">US only · Instant bank transfer · All major US banks</div>
+            <div class="pay-body">
+              <div class="interac-box">
+                <strong>You save <span id="zelleSavings">$9.90</span> by paying with Zelle!</strong>
+                <div style="margin-top:1.2rem;font-size:1.3rem;font-weight:600;color:#3d3210;margin-bottom:0.8rem;">How to send your Zelle payment:</div>
+                <ol style="list-style:none;margin:0;padding:0">
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">1</span>
+                    <span>Open your bank app or Zelle app (any major US bank)</span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">2</span>
+                    <span>Send a Zelle payment to:
+                      <div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+                        <span class="interac-email-pill" id="zelleEmailDisplay">{{ zelle_email }}</span>
+                        <button class="copy-btn" type="button" onclick="copyEmail()">Copy</button>
+                      </div>
+                    </span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">3</span>
+                    <span>Set the amount to: <strong id="zelleAmtLine" class="interac-highlight">-</strong></span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">4</span>
+                    <span>In the <strong>memo / note field</strong>, enter your order ID exactly:
+                      <div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+                        <span class="interac-email-pill" id="zelleOrderIdDisplay" style="font-size:1.4rem;letter-spacing:0.05em">Reserving...</span>
+                        <button class="copy-btn" type="button" onclick="copyOrderId()">Copy</button>
+                      </div>
+                    </span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">5</span>
+                    <span>Payment is instant — your order will be confirmed shortly after</span>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </label>
+        {% else %}
+        <!-- INTERAC (CA) -->
+        <label class="pay-method{% if not card_enabled and not wpay_2d_enabled %} active{% endif %}" id="pm-interac">
+          <input type="radio" name="paymentMethod" value="interac"{% if not card_enabled and not wpay_2d_enabled %} checked{% endif %} onchange="selectMethod('interac')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Interac E-Transfer</span>
+              <span class="save-badge">Save 10%</span>
+            </div>
+            <div class="pay-desc">Canada only · Instant bank transfer · All banks</div>
+            <div class="pay-body">
+              <div class="interac-box">
+                <strong>You save <span id="interacSavings">$9.90</span> by paying with E-Transfer!</strong>
+                <div style="margin-top:1.2rem;font-size:1.3rem;font-weight:600;color:#3d3210;margin-bottom:0.8rem;">How to send your Interac e-Transfer:</div>
+                <ol style="list-style:none;margin:0;padding:0">
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">1</span>
+                    <span>Log into your bank app or online banking (any Canadian bank)</span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">2</span>
+                    <span>Send an Interac e-Transfer to:
+                      <div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+                        <span class="interac-email-pill" id="interacEmailDisplay">{{ interac_email }}</span>
+                        <button class="copy-btn" type="button" onclick="copyEmail()">Copy</button>
+                      </div>
+                    </span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">3</span>
+                    <span>Set the amount to: <strong id="interacAmtLine" class="interac-highlight">-</strong></span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;margin-bottom:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">4</span>
+                    <span>In the <strong>message / note / comment field</strong>, enter your order ID exactly:
+                      <div style="margin-top:0.6rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+                        <span class="interac-email-pill" id="interacOrderIdDisplay" style="font-size:1.4rem;letter-spacing:0.05em">Reserving...</span>
+                        <button class="copy-btn" type="button" onclick="copyOrderId()">Copy</button>
+                      </div>
+                    </span>
+                  </li>
+                  <li style="display:flex;gap:0.8rem;align-items:flex-start">
+                    <span style="background:var(--red);color:#fff;border-radius:50%;width:2rem;height:2rem;display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;flex-shrink:0">5</span>
+                    <span>Security answer: <strong class="interac-highlight">canada</strong></span>
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </label>
+        {% endif %}
+
+        {% if altcoin_enabled %}
+        <!-- ALTCOIN (NowPayments) -->
+        <label class="pay-method" id="pm-altcoin">
+          <input type="radio" name="paymentMethod" value="altcoin" onchange="selectMethod('altcoin')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Altcoins · Cryptocurrencies</span>
+              <span class="save-badge">Save 7%</span>
+            </div>
+            <div class="pay-desc">ETH · USDT · LTC · XMR · SOL · DOGE · BNB · and 300+ more</div>
+            <div class="pay-body">
+              <div class="crypto-box">
+                <strong>You save <span id="altcoinSavings">$0.00</span> by paying with altcoins!</strong>
+                <p style="margin-top:0.8rem">Your discounted total: <strong id="altcoinAmt">-</strong> {{ store_currency }}</p>
+                <p style="margin-top:0.6rem">After placing your order you'll be redirected to NowPayments where you can choose your coin.</p>
+                <div class="coin-chips">
+                  <span class="coin-chip">ETH</span>
+                  <span class="coin-chip">USDT (ERC20)</span>
+                  <span class="coin-chip">USDT (TRC20)</span>
+                  <span class="coin-chip">LTC</span>
+                  <span class="coin-chip">XMR</span>
+                  <span class="coin-chip">SOL</span>
+                  <span class="coin-chip">DOGE</span>
+                  <span class="coin-chip">BNB</span>
+                  <span class="coin-chip">TRX</span>
+                  <span class="coin-chip">MATIC</span>
+                  <span class="coin-chip" style="color:var(--sidebar-muted)">+300 more</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </label>
+        {% endif %}{# altcoin_enabled #}
+
+
+        <label class="pay-method" id="pm-crypto">
+          <input type="radio" name="paymentMethod" value="crypto" onchange="selectMethod('crypto')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Bitcoin</span>
+              <span class="save-badge">Save 10%</span>
+            </div>
+            <div class="pay-desc">Bitcoin (BTC) · Fast &amp; secure</div>
+            <div class="pay-body">
+              <div class="crypto-box">
+                <strong>You save <span id="cryptoSavings">$19.80</span> by paying with Bitcoin!</strong>
+                <p style="margin-top:0.8rem">Your discounted total: <strong id="cryptoAmt">-</strong> {{ store_currency }}</p>
+                <p style="margin-top:0.6rem">After placing your order, you will be redirected to our secure BTC Pay</p>
+                <div class="coin-chips">
+                  <span class="coin-chip">Bitcoin (BTC)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </label>
+
+      </div>
+    </section>
+
+    <!-- BILLING -->
+    <section class="section" style="margin-bottom:2rem">
+      <h2 class="section-heading">
+        <span class="step-num">4</span>
+        Billing address
+      </h2>
+      <label class="checkbox-row">
+        <input type="checkbox" id="sameBilling" checked onchange="toggleBilling()"/>
+        Same as shipping address
+      </label>
+      <div id="billingFields" style="display:none">
+        <div class="field-row">
+          <div class="field">
+            <input type="text" placeholder=" " id="billAddress1" autocomplete="billing address-line1"/>
+            <label for="billAddress1">Billing address</label>
+          </div>
+        </div>
+        <div class="field-row cols-3">
+          <div class="field">
+            <input type="text" placeholder=" " id="billCity" autocomplete="billing address-level2"/>
+            <label for="billCity">City</label>
+          </div>
+          <div class="field select-wrap">
+            <select id="billCountry" autocomplete="billing country" onchange="swapBillZone()">
+              {% if store_country == 'US' %}
+                <option value="US" selected>United States</option>
+              {% else %}
+                <option value="CA" selected>Canada</option>
+              {% endif %}
+            </select>
+            <label class="label-up" for="billCountry">Country</label>
+          </div>
+          <div class="field select-wrap">
+            <select id="billZone" autocomplete="billing address-level1">
+              <option value="AB">Alberta</option>
+              <option value="BC">British Columbia</option>
+              <option value="MB">Manitoba</option>
+              <option value="NB">New Brunswick</option>
+              <option value="NL">Newfoundland</option>
+              <option value="NS">Nova Scotia</option>
+              <option value="NT">NW Territories</option>
+              <option value="NU">Nunavut</option>
+              <option value="ON" selected>Ontario</option>
+              <option value="PE">PEI</option>
+              <option value="QC">Quebec</option>
+              <option value="SK">Saskatchewan</option>
+              <option value="YT">Yukon</option>
+            </select>
+            <label class="label-up" for="billZone">Province</label>
+          </div>
+        </div>
+        <div class="field-row cols-2">
+          <div class="field">
+            <input type="text" placeholder=" " id="billPostal" autocomplete="billing postal-code"/>
+            <label for="billPostal">Postal code</label>
+          </div>
+        </div>
+      </div>
+
+    {% if source_domain and 'princetonpeptides.com' in source_domain|lower %}
+    <!-- RESEARCH INFO (princetonpeptides.com ONLY). Required company +
+         research field for compliance / research-grade shipments. -->
+    <section class="section" style="margin-bottom:2rem">
+      <h2 class="section-heading">
+        <span class="step-num">5</span>
+        Research information
+      </h2>
+      <p class="section-sub">Required — used for research-grade product compliance.</p>
+      <div class="field-row">
+        <div class="field">
+          <input type="text" id="company" name="company" placeholder=" " maxlength="255"/>
+          <label for="company">Company / Institution</label>
+          <div class="field-error" id="company-error">Please enter your company or institution</div>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field select-wrap">
+          <select id="research_field" name="research_field">
+            <option value="" disabled selected>Select research field</option>
+            <option value="Pharmacology">Pharmacology</option>
+            <option value="Molecular Biology">Molecular Biology</option>
+            <option value="Biochemistry">Biochemistry</option>
+            <option value="Peptide Chemistry">Peptide Chemistry</option>
+            <option value="Chemical Biology">Chemical Biology</option>
+            <option value="Medicinal Chemistry">Medicinal Chemistry</option>
+            <option value="Biomedical Research">Biomedical Research</option>
+            <option value="Biotechnology Research">Biotechnology Research</option>
+            <option value="Drug Discovery Research">Drug Discovery Research</option>
+            <option value="Academic Research">Academic Research</option>
+          </select>
+          <label class="label-up" for="research_field">Research field</label>
+          <div class="field-error" id="research_field-error">Please select your research field</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACCOUNT (princetonpeptides.com ONLY — pilot rollout). Optional password
+         lets the customer sign in on a return visit and prefill their details.
+         Saved server-side in customer_accounts (email + pbkdf2 hash + saved
+         profile). NOT a Shopify account, NOT used for order viewing.
+         To enable on more stores, add them to the check above. -->
+    <section class="section" style="margin-bottom:2rem">
+      <h2 class="section-heading">
+        <span class="step-num">6</span>
+        Save for next time
+      </h2>
+      <p class="section-sub">Optional. Set a password and next time you check out, we'll fill in your details for you.</p>
+      <div class="field-row">
+        <div class="field">
+          <input
+            type="password"
+            id="account_password"
+            name="account_password"
+            placeholder=" "
+            autocomplete="new-password"
+            minlength="5"
+            maxlength="64"
+          />
+          <label for="account_password">Password (5+ characters, optional)</label>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- SUBMIT -->
+    <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">
+      <span class="btn-label" id="btnLabel">Pay now · $198.00</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+
+    <div class="trust-row">
+      <div class="trust-item">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        256-bit SSL
+      </div>
+      <div class="trust-item">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Secure payment
+      </div>
+      <div class="trust-item">
+        <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        Money-back guarantee
+      </div>
+    </div>
+
+  </main>
+
+  <!-- RIGHT: SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-title">
+      <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      Your order
+    </div>
+
+    <!-- ITEMS (rendered by JS from URL params) -->
+    <div class="items" id="itemList"></div>
+
+    <!-- DISCOUNT CODE — customer enters code + Apply.
+         Lives between items and totals (same spot the theme uses). -->
+    <div class="discount-code" id="discountCodeBlock">
+      <div class="discount-code-row">
+        <input type="text" id="discountCodeInput" placeholder="Discount code" autocomplete="off" spellcheck="false"/>
+        <button type="button" id="discountCodeBtn" onclick="applyCustomerDiscount()">Apply</button>
+      </div>
+      <div class="discount-code-msg" id="discountCodeMsg"></div>
+    </div>
+
+    <!-- TOTALS -->
+    <div class="totals" id="totalsBlock">
+      <div class="total-row">
+        <span class="total-label" id="subtotalLabel">Subtotal</span>
+        <span class="total-value" id="subtotalDisplay">$198.00</span>
+      </div>
+      <div class="total-row discount" id="discountRow" style="display:none">
+        <span class="total-label" id="discountLabel">Discount</span>
+        <span class="total-value" id="discountDisplay">−$9.90</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label">Tracked Express Shipping 1-3 Business Days</span>
+        <span class="total-value shipping-free">Free</span>
+      </div>
+      <div class="total-row grand">
+        <span class="total-label">Total</span>
+        <span class="total-value"><span class="currency-code">{{ store_currency }}</span><span id="totalDisplay">$198.00</span></span>
+      </div>
+      <!-- USD equivalent — only shown when Credit Card (pymtz) is selected -->
+      <div id="usdEquivRow" style="display:none;padding:0.6rem 0;text-align:right;">
+        <span style="font-size:1.2rem;color:var(--sidebar-muted);">≈ </span>
+        <span id="usdEquivDisplay" style="font-family:'DM Mono',monospace;font-size:1.3rem;font-weight:600;color:#4ade80;"></span>
+        <span style="font-size:1.05rem;font-weight:700;color:#4ade80;margin-left:0.3rem;background:rgba(74,222,128,0.15);padding:0.15rem 0.5rem;border-radius:999px;">USD</span>
+      </div>
+    </div>
+
+    <!-- Trust / reassurance block under the order total (desktop sidebar) -->
+    <div class="why-choose-us why-desktop" style="margin-top:4rem;">
+      <div style="font-size:1.7rem;font-weight:700;color:#fff;margin-bottom:2.4rem;letter-spacing:-0.01em;text-align:center;">Why choose us?</div>
+      <ul style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3.4rem;">
+        <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#e8eaed;">
+          <svg width="40" height="40" viewBox="0 0 20 20" style="flex-shrink:0;margin-top:0.15rem;color:#ffffff;"><path fill="currentColor" d="m17.421 4.992l-3.046 1.219l-7.5-3L8.7 2.48a3.5 3.5 0 0 1 2.6 0l5.757 2.303a1.5 1.5 0 0 1 .364.208m-7.42 2.969l3.028-1.212l-7.5-3l-2.586 1.035a1.5 1.5 0 0 0-.364.208zM2 6.176q0-.166.035-.324L9.5 8.838v3.367a5.5 5.5 0 0 0-.5 2.294c0 .82.18 1.597.5 2.295v.938q-.409-.058-.8-.214l-5.757-2.303A1.5 1.5 0 0 1 2 13.822zm16 0v4.08A5.48 5.48 0 0 0 14.5 9a5.5 5.5 0 0 0-4 1.724V8.838l7.465-2.986q.035.158.035.324M14.5 19a4.5 4.5 0 1 0 0-9a4.5 4.5 0 0 0 0 9m-1-3.708l2.646-2.646a.5.5 0 0 1 .708.707l-3 3a.5.5 0 0 1-.708 0l-1-1a.5.5 0 0 1 .708-.707z"/></svg>
+          <span>We stand behind our products. Your satisfaction is our top priority.</span>
+        </li>
+        <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#e8eaed;">
+          <svg width="40" height="40" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:0.15rem;color:#ffffff;"><path fill="currentColor" d="M21 8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1.062A8 8 0 0 1 12 23v-2a6 6 0 0 0 6-6V9A6 6 0 0 0 6 9v7H3a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.062a8.001 8.001 0 0 1 15.876 0zM7.76 15.785l1.06-1.696A5.97 5.97 0 0 0 12 15a5.97 5.97 0 0 0 3.18-.911l1.06 1.696A7.96 7.96 0 0 1 12 17a7.96 7.96 0 0 1-4.24-1.215"/></svg>
+          <span>Amazing customer service. We answer every request the same day, within minutes when possible.</span>
+        </li>
+        <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#e8eaed;">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="#ffffff" style="flex-shrink:0;margin-top:0.15rem;"><path d="M12 1.4 12.59 3.19 14.47 3.2 12.95 4.31 13.53 6.1 12 5 10.47 6.1 11.05 4.31 9.53 3.2 11.41 3.19Z"/><path d="M5.3 3 5.75 4.39 7.2 4.38 6.02 5.23 6.48 6.62 5.3 5.76 4.12 6.62 4.58 5.23 3.4 4.38 4.85 4.39Z"/><path d="M18.7 3 19.15 4.39 20.6 4.38 19.42 5.23 19.88 6.62 18.7 5.76 17.52 6.62 17.98 5.23 16.8 4.38 18.25 4.39Z"/><circle cx="12" cy="13" r="2.9"/><path d="M12 16.4c-2.6 0-4.7 1.7-4.7 3.8V21a1 1 0 0 0 1 1h7.4a1 1 0 0 0 1-1v-.8c0-2.1-2.1-3.8-4.7-3.8z"/><circle cx="4.6" cy="14.4" r="2"/><path d="M6 17.2c-.43-.1-.89-.16-1.4-.16-2 0-3.6 1.25-3.6 2.9V21a1 1 0 0 0 1 1h3v-1.9c0-1.16.43-2.2 1.18-2.9z"/><circle cx="19.4" cy="14.4" r="2"/><path d="M18 17.2c.43-.1.89-.16 1.4-.16 2 0 3.6 1.25 3.6 2.9V21a1 1 0 0 1-1 1h-3v-1.9c0-1.16-.43-2.2-1.18-2.9z"/></svg>
+          <span>Over <strong style="color:#fff;">137,000 happy customers</strong>. We'll always make it right, no matter what!</span>
+        </li>
+      </ul>
+    </div>
+
+  </aside>
+
+  <!-- Trust / reassurance block — mobile only, sits below everything on a
+       light background (dark text). Hidden on desktop where the sidebar copy
+       shows instead. -->
+  <div class="why-choose-us why-mobile" style="padding:2.8rem 2rem 3.6rem;">
+    <div style="font-size:1.7rem;font-weight:700;color:#111;margin-bottom:2.4rem;letter-spacing:-0.01em;text-align:center;">Why choose us?</div>
+    <ul style="list-style:none;margin:0 auto;padding:0;max-width:42rem;display:flex;flex-direction:column;gap:3.4rem;">
+      <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#444;">
+        <svg width="40" height="40" viewBox="0 0 20 20" style="flex-shrink:0;margin-top:0.15rem;color:#111111;"><path fill="currentColor" d="m17.421 4.992l-3.046 1.219l-7.5-3L8.7 2.48a3.5 3.5 0 0 1 2.6 0l5.757 2.303a1.5 1.5 0 0 1 .364.208m-7.42 2.969l3.028-1.212l-7.5-3l-2.586 1.035a1.5 1.5 0 0 0-.364.208zM2 6.176q0-.166.035-.324L9.5 8.838v3.367a5.5 5.5 0 0 0-.5 2.294c0 .82.18 1.597.5 2.295v.938q-.409-.058-.8-.214l-5.757-2.303A1.5 1.5 0 0 1 2 13.822zm16 0v4.08A5.48 5.48 0 0 0 14.5 9a5.5 5.5 0 0 0-4 1.724V8.838l7.465-2.986q.035.158.035.324M14.5 19a4.5 4.5 0 1 0 0-9a4.5 4.5 0 0 0 0 9m-1-3.708l2.646-2.646a.5.5 0 0 1 .708.707l-3 3a.5.5 0 0 1-.708 0l-1-1a.5.5 0 0 1 .708-.707z"/></svg>
+        <span>We stand behind our products. Your satisfaction is our top priority.</span>
+      </li>
+      <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#444;">
+        <svg width="40" height="40" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:0.15rem;color:#111111;"><path fill="currentColor" d="M21 8a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1.062A8 8 0 0 1 12 23v-2a6 6 0 0 0 6-6V9A6 6 0 0 0 6 9v7H3a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h1.062a8.001 8.001 0 0 1 15.876 0zM7.76 15.785l1.06-1.696A5.97 5.97 0 0 0 12 15a5.97 5.97 0 0 0 3.18-.911l1.06 1.696A7.96 7.96 0 0 1 12 17a7.96 7.96 0 0 1-4.24-1.215"/></svg>
+        <span>Amazing customer service. We answer every request the same day, within minutes when possible.</span>
+      </li>
+      <li style="display:flex;gap:3.2rem;align-items:flex-start;font-size:1.45rem;line-height:1.65;color:#444;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="#111111" style="flex-shrink:0;margin-top:0.15rem;"><path d="M12 1.4 12.59 3.19 14.47 3.2 12.95 4.31 13.53 6.1 12 5 10.47 6.1 11.05 4.31 9.53 3.2 11.41 3.19Z"/><path d="M5.3 3 5.75 4.39 7.2 4.38 6.02 5.23 6.48 6.62 5.3 5.76 4.12 6.62 4.58 5.23 3.4 4.38 4.85 4.39Z"/><path d="M18.7 3 19.15 4.39 20.6 4.38 19.42 5.23 19.88 6.62 18.7 5.76 17.52 6.62 17.98 5.23 16.8 4.38 18.25 4.39Z"/><circle cx="12" cy="13" r="2.9"/><path d="M12 16.4c-2.6 0-4.7 1.7-4.7 3.8V21a1 1 0 0 0 1 1h7.4a1 1 0 0 0 1-1v-.8c0-2.1-2.1-3.8-4.7-3.8z"/><circle cx="4.6" cy="14.4" r="2"/><path d="M6 17.2c-.43-.1-.89-.16-1.4-.16-2 0-3.6 1.25-3.6 2.9V21a1 1 0 0 0 1 1h3v-1.9c0-1.16.43-2.2 1.18-2.9z"/><circle cx="19.4" cy="14.4" r="2"/><path d="M18 17.2c.43-.1.89-.16 1.4-.16 2 0 3.6 1.25 3.6 2.9V21a1 1 0 0 1-1 1h-3v-1.9c0-1.16-.43-2.2-1.18-2.9z"/></svg>
+        <span>Over <strong style="color:#111;">137,000 happy customers</strong>. We'll always make it right, no matter what!</span>
+      </li>
+    </ul>
+  </div>
+
+</div>
+</div>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+  var SUBTOTAL = 0;
+  // Forward the store-supplied ?accent / ?accent_hover params onto any
+  // post-payment redirect so confirmation + success pages match the store color.
+  function withBrandAccent(url) {
+    try {
+      var qp = new URLSearchParams(window.location.search);
+      var a = qp.get('accent');
+      var h = qp.get('accent_hover');
+      if (!a) return url;
+      var sep = url.indexOf('?') === -1 ? '?' : '&';
+      var extra = 'accent=' + encodeURIComponent(a);
+      if (h) extra += '&accent_hover=' + encodeURIComponent(h);
+      return url + sep + extra;
+    } catch (e) { return url; }
+  }
+  var CART_ITEMS = (function() {
+    try {
+      var raw = new URLSearchParams(window.location.search).get('items');
+      if (raw) {
+        var items = JSON.parse(atob(raw));
+        SUBTOTAL = items.reduce(function(sum, i) { return sum + (i.unitPrice * i.quantity); }, 0);
+        SUBTOTAL = +SUBTOTAL.toFixed(2);
+        return items;
+      }
+    } catch(e) {}
+    return [];
+  })();
+
+  // ── Server-rendered flag: is credit card enabled for this source store?
+  // Credit Card option is temporarily commented out in the markup above —
+  // force CARD_ENABLED=false so the default method falls back to Interac/Zelle.
+  var CARD_ENABLED = {{ 'true' if card_enabled else 'false' }};
+  // "Card" (WPay 2D) — when enabled for a store, it becomes the default
+  // selected method (ahead of Interac/Zelle) since it's a real card option.
+  var WPAY_2D_ENABLED = {{ 'true' if wpay_2d_enabled else 'false' }};
+
+  // ── DISCOUNT CODES (from URL only) ────────────────────
+  var VALID_DISCOUNT_CODES = {};
+  var APPLIED_DISCOUNT = null;
+
+  (function loadDiscountCodes() {
+    // Fetch from the SAME endpoint the theme uses
+    fetch('https://rosicteam.com/api/webhooks/valid-codes')
+      .then(function(r) { return r.json(); })
+      .then(function(codes) {
+        VALID_DISCOUNT_CODES = codes;
+        console.log('[Checkout] Loaded', Object.keys(codes).length, 'discount codes');
+        
+        // Check if discount was passed from theme
+        var discountQS = new URLSearchParams(window.location.search).get('discount');
+        if (discountQS) {
+          applyDiscountFromUrl(discountQS);
+        }
+      })
+      .catch(function(err) {
+        console.warn('[Checkout] Could not load discount codes:', err);
+      });
+  })();
+
+  function applyDiscountFromUrl(code) {
+    if (!VALID_DISCOUNT_CODES[code]) {
+      console.warn('[Checkout] Code not found in valid codes:', code);
+      return;
+    }
+    
+    var disc = VALID_DISCOUNT_CODES[code];
+    
+    // Items arrived PRE-DISCOUNTED from theme
+    // Back-calculate original price to show proper breakdown
+    var currentSubtotal = SUBTOTAL; // This is the discounted amount from theme
+    var originalSubtotal = currentSubtotal;
+    var voucherSavings = 0;
+    
+    if (disc.type === 'percentage') {
+      // original * (1 - value/100) = current
+      // original = current / (1 - value/100)
+      var discountFactor = 1 - (parseFloat(disc.value) / 100);
+      originalSubtotal = currentSubtotal / discountFactor;
+      voucherSavings = originalSubtotal - currentSubtotal;
+    } else if (disc.type === 'fixed') {
+      // original - value = current
+      // original = current + value
+      originalSubtotal = currentSubtotal + parseFloat(disc.value);
+      voucherSavings = parseFloat(disc.value);
+    }
+    
+    originalSubtotal = +originalSubtotal.toFixed(2);
+    voucherSavings = +voucherSavings.toFixed(2);
+    
+    APPLIED_DISCOUNT = {
+      code: code,
+      type: disc.type,
+      value: disc.value,
+      discount_amount: voucherSavings,
+      original_subtotal: originalSubtotal,
+      title: disc.title || code
+    };
+    
+    console.log('[Checkout] Code auto-applied:', code, '| Original:', originalSubtotal, 'After discount:', currentSubtotal, 'Savings:', voucherSavings);
+
+    // Sync the sidebar discount input so the customer SEES the code and has
+    // a way to remove it. Same UI state as customer-typed codes.
+    // DOM may not be ready when this runs (loadCodes is fired from <head>),
+    // so retry inside DOMContentLoaded if elements aren't there yet.
+    function _syncUrlAppliedUI() {
+      var input = document.getElementById('discountCodeInput');
+      var btn   = document.getElementById('discountCodeBtn');
+      if (!input || !btn) return false;
+      input.value    = code;
+      input.readOnly = true;
+      btn.textContent = '✓ Applied — Remove';
+      btn.classList.add('applied');
+      _setDiscountMsg('Saved $' + voucherSavings.toFixed(2) + ' with ' + code, 'success');
+      return true;
+    }
+    if (!_syncUrlAppliedUI()) {
+      document.addEventListener('DOMContentLoaded', _syncUrlAppliedUI);
+    }
+
+    // RE-RENDER items to show original price
+    renderItems();
+    updateTotals(currentMethod);
+  }
+
+  // ─── CUSTOMER-APPLIED DISCOUNT CODE ────────────────────────────────────
+  // Customer types a code in the sidebar input + clicks Apply. Validated
+  // against VALID_DISCOUNT_CODES (already fetched from the codes endpoint).
+  // Unlike applyDiscountFromUrl (theme pre-discounts the items), here the
+  // items arrive at full price, so we mutate SUBTOTAL down by the discount
+  // amount and remember the original so removeCustomerDiscount can restore it.
+  function _setDiscountMsg(text, kind) {
+    var el = document.getElementById('discountCodeMsg');
+    if (!el) return;
+    el.textContent = text || '';
+    el.className   = 'discount-code-msg' + (kind ? ' ' + kind : '');
+  }
+
+  function applyCustomerDiscount() {
+    var input = document.getElementById('discountCodeInput');
+    var btn   = document.getElementById('discountCodeBtn');
+    if (!input || !btn) return;
+
+    // If already applied → button acts as Remove
+    if (APPLIED_DISCOUNT && btn.classList.contains('applied')) {
+      removeCustomerDiscount();
+      return;
+    }
+
+    var code = (input.value || '').trim().toUpperCase();
+    if (!code) { _setDiscountMsg('Please enter a discount code', 'error'); input.focus(); return; }
+
+    // Codes may still be loading from the endpoint at page-load time.
+    if (!VALID_DISCOUNT_CODES || !Object.keys(VALID_DISCOUNT_CODES).length) {
+      _setDiscountMsg('Loading codes — try again in a second', 'error');
+      return;
+    }
+
+    var disc = VALID_DISCOUNT_CODES[code];
+    if (!disc) {
+      _setDiscountMsg('Invalid discount code', 'error');
+      input.select();
+      return;
+    }
+
+    var originalSubtotal = SUBTOTAL;
+    var voucherSavings = 0;
+    if (disc.type === 'percentage') {
+      voucherSavings = originalSubtotal * (parseFloat(disc.value) / 100);
+    } else if (disc.type === 'fixed') {
+      voucherSavings = Math.min(parseFloat(disc.value), originalSubtotal);
+    }
+    voucherSavings = +voucherSavings.toFixed(2);
+    if (voucherSavings <= 0) {
+      _setDiscountMsg('This code can\'t be applied to your order', 'error');
+      return;
+    }
+
+    // Mutate SUBTOTAL down — updateTotals + payment-method discounts cascade off this.
+    // IMPORTANT: do NOT scale CART_ITEMS prices. The server's _validate_cart
+    // expects items at original unit price + subtotal lowered by discount_amount,
+    // so it can verify computed - discount == claimed_subtotal. Scaling items
+    // would cause the server to subtract the discount twice and fail validation.
+    SUBTOTAL = +(originalSubtotal - voucherSavings).toFixed(2);
+
+    APPLIED_DISCOUNT = {
+      code:               code,
+      type:               disc.type,
+      value:              disc.value,
+      discount_amount:    voucherSavings,
+      original_subtotal:  originalSubtotal,
+      title:              disc.title || code
+    };
+
+    // Lock the input + flip the button to "Remove"
+    input.value    = code;
+    input.readOnly = true;
+    btn.textContent = '✓ Applied — Remove';
+    btn.classList.add('applied');
+
+    _setDiscountMsg('Saved $' + voucherSavings.toFixed(2) + ' with ' + code, 'success');
+
+    renderItems();
+    updateTotals(currentMethod);
+  }
+
+  function removeCustomerDiscount() {
+    if (!APPLIED_DISCOUNT) return;
+    var itemsSum = +CART_ITEMS.reduce(function(s, i) {
+      return s + i.unitPrice * i.quantity;
+    }, 0).toFixed(2);
+    if (Math.abs(itemsSum - APPLIED_DISCOUNT.original_subtotal) <= 0.01) {
+      // Customer-typed flow: items already at full price, just restore SUBTOTAL
+      SUBTOTAL = APPLIED_DISCOUNT.original_subtotal;
+    } else if (itemsSum > 0) {
+      // URL-applied flow: theme pre-discounted items. Scale them UP proportionally
+      // so the customer pays the full original price — matches the intent of
+      // "Remove discount" and keeps items.sum == SUBTOTAL for the server validator.
+      var scaleUp = APPLIED_DISCOUNT.original_subtotal / itemsSum;
+      CART_ITEMS.forEach(function(item) {
+        if (item.unitPrice > 0) {
+          item.unitPrice = +(item.unitPrice * scaleUp).toFixed(2);
+        }
+      });
+      SUBTOTAL = +CART_ITEMS.reduce(function(s, i) {
+        return s + i.unitPrice * i.quantity;
+      }, 0).toFixed(2);
+    }
+    APPLIED_DISCOUNT = null;
+
+    var input = document.getElementById('discountCodeInput');
+    var btn   = document.getElementById('discountCodeBtn');
+    if (input) { input.value = ''; input.readOnly = false; }
+    if (btn)   { btn.textContent = 'Apply'; btn.classList.remove('applied'); }
+    _setDiscountMsg('', '');
+
+    renderItems();
+    updateTotals(currentMethod);
+  }
+
+  // Submit on Enter inside the discount input
+  document.addEventListener('DOMContentLoaded', function () {
+    var input = document.getElementById('discountCodeInput');
+    if (input) {
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); applyCustomerDiscount(); }
+      });
+    }
+  });
+
+  // Stable order ID — reserve server-side on first page view, reuse on refresh
+  var CHECKOUT_ORDER_ID = null;
+  function reserveOrderId() {
+    var itemsRaw = new URLSearchParams(window.location.search).get('items') || '';
+    var cacheKey = 'checkout_order_id_' + itemsRaw.substring(0, 50);
+    var existing = sessionStorage.getItem(cacheKey);
+    if (existing) {
+      CHECKOUT_ORDER_ID = existing;
+      updateOrderIdDisplay();
+      flushAutoSaveQueue();
+      console.log('[Checkout] Reusing order ID:', CHECKOUT_ORDER_ID);
+      return;
+    }
+    if (!CART_ITEMS.length) return;
+    fetch('/api/checkout/reserve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: CART_ITEMS.map(function(i){
+          return { product_id: i.id, title: i.name, variant: i.variant||null, qty: i.quantity, price: i.unitPrice };
+        }),
+        subtotal: SUBTOTAL,
+        currency: STORE_CURRENCY,
+        source_domain: new URLSearchParams(window.location.search).get('source') || ''
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if (data && data.order_id) {
+        CHECKOUT_ORDER_ID = data.order_id;
+        sessionStorage.setItem(cacheKey, CHECKOUT_ORDER_ID);
+        updateOrderIdDisplay();
+        flushAutoSaveQueue();
+        console.log('[Checkout] Reserved order ID:', CHECKOUT_ORDER_ID);
+      }
+    })
+    .catch(function(err){ console.error('[Checkout] Reserve failed:', err); });
+  }
+
+  var DISCOUNTS = {
+    card:    0,
+    interac: {{ interac_discount / 100 }},
+    zelle:   {{ zelle_discount / 100 }},
+    crypto:  {{ crypto_discount / 100 }},
+    altcoin: 0.07
+  };
+
+  // ─── AUTO-SAVE FORM FIELDS ──────────────────────────────────────────────
+  // As customer fills the form, save each field to the server attached to
+  // their reserved order. This protects against customers who pay (e.g.
+  // send Interac) but forget to click Place Order — we still have their
+  // contact info to match the payment to a customer.
+  //
+  // Strategy:
+  //   • Email: save on every keystroke (debounced 800ms) + on blur
+  //   • Other text fields: save on blur (when user tabs away)
+  //   • Selects (country, zone): save on change
+  //   • Payment method radios: save on change
+  //   • Empty values are NOT saved (we never overwrite with empty)
+  //   • Each save is fire-and-forget (silent fail — never block customer)
+
+var _autoSaveQueue = [];
+
+  function autoSaveField(field, value) {
+    if (value === null || value === undefined) return;
+    var v = String(value).trim();
+    if (!v) return;
+    if (!CHECKOUT_ORDER_ID) {
+      _autoSaveQueue.push({ field: field, value: v });
+      return;
+    }
+    fetch('/api/checkout/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ order_id: CHECKOUT_ORDER_ID, field: field, value: v })
+    }).catch(function() {});
+  }
+
+  function flushAutoSaveQueue() {
+    if (!CHECKOUT_ORDER_ID || !_autoSaveQueue.length) return;
+    var queue = _autoSaveQueue.splice(0);
+    queue.forEach(function(item) {
+      fetch('/api/checkout/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: CHECKOUT_ORDER_ID, field: item.field, value: item.value })
+      }).catch(function() {});
+    });
+  }
+
+  function setupAutoSave() {
+    // Text/email/tel fields — save on blur (when user leaves the field)
+    var BLUR_FIELDS = [
+      'firstName', 'lastName', 'phone',
+      'address1', 'address2', 'city', 'postalCode',
+      'billAddress1', 'billCity', 'billPostal',
+    ];
+    BLUR_FIELDS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('blur', function() {
+        autoSaveField(id, el.value);
+      });
+    });
+
+    // Email — aggressive: every keystroke (debounced) + on blur
+    var emailEl = document.getElementById('email');
+    if (emailEl) {
+      var emailDebounce = null;
+      emailEl.addEventListener('input', function() {
+        clearTimeout(emailDebounce);
+        var val = emailEl.value;
+        emailDebounce = setTimeout(function() {
+          // Only save if it looks like a valid email shape
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim())) {
+            autoSaveField('email', val);
+          }
+        }, 800);
+      });
+      emailEl.addEventListener('blur', function() {
+        if (emailEl.value && emailEl.value.trim()) {
+          autoSaveField('email', emailEl.value);
+        }
+      });
+    }
+
+
+    // Selects — save on change
+    var SELECT_FIELDS = ['country', 'zone', 'billCountry', 'billZone'];
+    SELECT_FIELDS.forEach(function(id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('change', function() {
+        autoSaveField(id, el.value);
+      });
+    });
+
+    // Payment method radios — save on change
+    var pmRadios = document.querySelectorAll('input[name="paymentMethod"]');
+    pmRadios.forEach(function(r) {
+      r.addEventListener('change', function() {
+        if (r.checked) autoSaveField('payment_method', r.value);
+      });
+    });
+  }
+
+  var STORE_COUNTRY  = "{{ store_country }}";
+  var STORE_CURRENCY = "{{ store_currency }}";
+  // Fixed conversion shown alongside CAD totals (1 USD = 1.4 CAD).
+  var USD_CONVERSION_RATE = 1.4;
+  // WPay HPP minimum order (USD) — must stay in sync with MIN_AMOUNT in
+  // services/wpay.py. Documented in the vendor's MERCHANT_SETUP.txt: "WPay
+  // HPP (hosted) is included but disabled by default (min $20)."
+  var WPAY_MIN_USD = 20;
+  // WPay 2D minimum order (USD) — must stay in sync with MIN_AMOUNT in
+  // services/wpay_wp.py. Lower than HPP's — per MERCHANT_SETUP.txt: "$5 USD
+  // in plugin (your WPay account may require $10+)."
+  var WPAY_2D_MIN_USD = 5;
+  function _setUsdEquiv(cadAmount) {
+    var els = [document.getElementById('cardUsdEquiv'), document.getElementById('onrampUsdEquiv'), document.getElementById('wpay2dUsdEquiv')];
+    var hasAny = els.some(function (e) { return !!e; });
+    if (!hasAny) return;
+    if (STORE_CURRENCY === 'CAD' && cadAmount > 0) {
+      var usd = (parseFloat(cadAmount) / USD_CONVERSION_RATE).toFixed(2);
+      var html =
+        '<span style="color:#0f7a52;font-weight:600;font-size:1.35rem;margin-right:0.8rem;">CAD $' + parseFloat(cadAmount).toFixed(2) + '</span>' +
+        '<span style="color:#0f7a52;font-weight:500;margin-right:0.3rem;">≈</span>' +
+        '<span style="color:#0f7a52;font-weight:800;font-size:1.6rem;">$' + usd + '</span>' +
+        '<span style="background:#0f7a52;color:#fff;padding:0.2rem 0.6rem;border-radius:999px;font-size:0.95rem;font-weight:800;letter-spacing:0.08em;margin-left:0.5rem;vertical-align:middle;">USD</span>';
+      els.forEach(function (el) {
+        if (el) { el.innerHTML = html; el.style.display = 'block'; }
+      });
+      // Also update sidebar USD equiv row (visible only when card selected)
+      var usdRow = document.getElementById('usdEquivRow');
+      var usdDisp = document.getElementById('usdEquivDisplay');
+      if (usdRow && usdDisp) {
+        usdDisp.textContent = '$' + usd;
+        usdRow.style.display = (currentMethod === 'card' || currentMethod === 'onramp_wp' || currentMethod === 'wpay_2d') ? 'block' : 'none';
+      }
+    } else {
+      els.forEach(function (el) { if (el) el.style.display = 'none'; });
+      var usdRow = document.getElementById('usdEquivRow');
+      if (usdRow) usdRow.style.display = 'none';
+    }
+  }
+  // Default payment method: card (pymtz) if enabled, else Card (WPay 2D) if
+  // enabled, otherwise zelle (US) or interac (CA)
+  var currentMethod = CARD_ENABLED ? 'card' : (WPAY_2D_ENABLED ? 'wpay_2d' : ("{{ store_country }}" === "US" ? 'zelle' : 'interac'));
+
+  function fmt(n) { return '$' + n.toFixed(2); }
+
+  function updateTotals(method) {
+    _applyWpayMinimum();
+    _applyWpay2dMinimum();
+    // If a discount code was applied from URL
+    if (APPLIED_DISCOUNT) {
+      var originalSubtotal = APPLIED_DISCOUNT.original_subtotal;
+      var codeDiscAmt = APPLIED_DISCOUNT.discount_amount;
+      var afterCodeSubtotal = SUBTOTAL; // After code discount
+      
+      // Calculate payment method discount on the code-discounted amount
+      var methodDisc = DISCOUNTS[method] || 0;
+      var methodDiscAmt = +(afterCodeSubtotal * methodDisc).toFixed(2);
+      var finalTotal = +(afterCodeSubtotal - methodDiscAmt).toFixed(2);
+
+      // Show original subtotal
+      document.getElementById('subtotalDisplay').textContent = fmt(originalSubtotal);
+      
+      // Show code discount row
+      var discRow = document.getElementById('discountRow');
+      discRow.style.display = 'flex';
+      document.getElementById('discountLabel').textContent = APPLIED_DISCOUNT.code + ' (' + APPLIED_DISCOUNT.title + ')';
+      document.getElementById('discountDisplay').textContent = '-' + fmt(codeDiscAmt);
+      
+      // Show payment method discount if applicable
+      var paymentDiscRow = document.querySelector('.payment-method-discount-row');
+      if (methodDiscAmt > 0) {
+        if (!paymentDiscRow) {
+          // Create payment method discount row if it doesn't exist
+          var discRow = document.getElementById('discountRow');
+          var newRow = document.createElement('div');
+          newRow.className = 'payment-method-discount-row';
+          newRow.style.cssText = 'display:flex;justify-content:space-between;padding:0.8rem 0;border-bottom:1px solid var(--sidebar-border);font-size:1.3rem;';
+          newRow.innerHTML = '<span id="paymentMethodLabel" style="color:var(--sidebar-muted);"></span><span id="paymentMethodDisplay" style="color:var(--green);font-weight:600;"></span>';
+          discRow.parentNode.insertBefore(newRow, document.getElementById('totalRow') || discRow.nextSibling);
+        }
+        
+        var pct = (methodDisc * 100).toFixed(0);
+        var methodLabel = {
+          interac: 'Interac',
+          zelle: 'Zelle',
+          crypto: 'Bitcoin'
+        }[method] || 'Discount';
+        
+        document.getElementById('paymentMethodLabel').textContent = methodLabel + ' discount (' + pct + '%)';
+        document.getElementById('paymentMethodDisplay').textContent = '-' + fmt(methodDiscAmt);
+      } else {
+        if (paymentDiscRow) paymentDiscRow.style.display = 'none';
+      }
+      
+      // Show final total
+      document.getElementById('totalDisplay').textContent = fmt(finalTotal);
+      document.getElementById('mobileTotalDisplay').textContent = fmt(finalTotal);
+      _setUsdEquiv(finalTotal);
+
+      var labels = {
+        card:    'Pay now · ' + fmt(finalTotal),
+        interac: 'Place order · ' + fmt(finalTotal),
+        zelle:   'Place order · ' + fmt(finalTotal),
+        crypto:  'Pay with Bitcoin · ' + fmt(finalTotal),
+        altcoin: 'Pay with altcoin · ' + fmt(finalTotal)
+      };
+      document.getElementById('btnLabel').textContent = labels[method] || labels.card;
+      
+      // UPDATE PAYMENT METHOD AMOUNTS in payment boxes (truncate, don't round)
+      var zelleFinal = Math.floor(afterCodeSubtotal * 0.95 * 100) / 100;
+      var zelleDiscount = afterCodeSubtotal - zelleFinal;
+      var zelleAmt = document.getElementById('zelleAmt');
+      if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal.toFixed(2);
+      var zelleAmtLine = document.getElementById('zelleAmtLine');
+      if (zelleAmtLine) zelleAmtLine.textContent = '$' + zelleFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+      var zelleSav = document.getElementById('zelleSavings');
+      if (zelleSav) zelleSav.textContent = '$' + zelleDiscount.toFixed(2);
+      
+      var interacFinal = Math.floor(afterCodeSubtotal * 0.90 * 100) / 100;
+      var interacDiscount = afterCodeSubtotal - interacFinal;
+      var interacAmt = document.getElementById('interacAmt');
+      if (interacAmt) interacAmt.textContent = '$' + interacFinal.toFixed(2);
+      var interacAmtLine = document.getElementById('interacAmtLine');
+      if (interacAmtLine) interacAmtLine.textContent = '$' + interacFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+      var interacSav = document.getElementById('interacSavings');
+      if (interacSav) interacSav.textContent = '$' + interacDiscount.toFixed(2);
+      
+      var cryptoFinal = Math.floor(afterCodeSubtotal * 0.90 * 100) / 100;
+      var cryptoDiscount = afterCodeSubtotal - cryptoFinal;
+      var cryptoAmt = document.getElementById('cryptoAmt');
+      if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal.toFixed(2);
+      var cryptoSav = document.getElementById('cryptoSavings');
+      if (cryptoSav) cryptoSav.textContent = '$' + cryptoDiscount.toFixed(2);
+
+      var altcoinFinal = Math.floor(afterCodeSubtotal * 0.93 * 100) / 100;
+      var altcoinDiscount = afterCodeSubtotal - altcoinFinal;
+      var altcoinAmt = document.getElementById('altcoinAmt');
+      if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal.toFixed(2);
+      var altcoinSav = document.getElementById('altcoinSavings');
+      if (altcoinSav) altcoinSav.textContent = '$' + altcoinDiscount.toFixed(2);
+      
+      return;
+    }
+
+    // No discount code - use payment method discount only.
+    // Clean up the .payment-method-discount-row created by the APPLIED_DISCOUNT
+    // branch above — otherwise removing a promo code leaves a stale duplicate row
+    // showing the old method-discount amount alongside the freshly-relabeled one.
+    var staleMethodRow = document.querySelector('.payment-method-discount-row');
+    if (staleMethodRow) staleMethodRow.remove();
+
+    var disc = DISCOUNTS[method] || 0;
+    var discAmt = +(SUBTOTAL * disc).toFixed(2);
+    var total = +(SUBTOTAL - discAmt).toFixed(2);
+
+    document.getElementById('subtotalDisplay').textContent = fmt(SUBTOTAL);
+    document.getElementById('totalDisplay').textContent = fmt(total);
+    document.getElementById('mobileTotalDisplay').textContent = fmt(total);
+    _setUsdEquiv(total);
+
+    var discRow = document.getElementById('discountRow');
+    if (discAmt > 0) {
+      discRow.style.display = 'flex';
+      var pct = (disc * 100).toFixed(0);
+      var discountMethodLabel = {
+        interac: 'Interac',
+        zelle:   'Zelle',
+        crypto:  'Bitcoin'
+      }[method] || 'Discount';
+      document.getElementById('discountLabel').textContent =
+        discountMethodLabel + ' discount (' + pct + '%)';
+      document.getElementById('discountDisplay').textContent = '-' + fmt(discAmt);
+    } else {
+      discRow.style.display = 'none';
+    }
+
+ var labels = {
+      card:    'Pay now · ' + fmt(total),
+      interac: 'Place order · ' + fmt(total),
+      zelle:   'Place order · ' + fmt(total),
+      crypto:  'Pay with Bitcoin · ' + fmt(total),
+      altcoin: 'Pay with altcoin · ' + fmt(total)
+    };
+    document.getElementById('btnLabel').textContent = labels[method] || labels.card;
+    
+    // Update payment method amounts (truncate, don't round)
+    var zelleFinal = Math.floor(SUBTOTAL * 0.95 * 100) / 100;
+    var zelleDiscount = SUBTOTAL - zelleFinal;
+    var zelleAmt = document.getElementById('zelleAmt');
+    if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal.toFixed(2);
+    var zelleAmtLine = document.getElementById('zelleAmtLine');
+    if (zelleAmtLine) zelleAmtLine.textContent = '$' + zelleFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+    var zelleSav = document.getElementById('zelleSavings');
+    if (zelleSav) zelleSav.textContent = '$' + zelleDiscount.toFixed(2);
+    
+    var interacFinal = Math.floor(SUBTOTAL * 0.90 * 100) / 100;
+    var interacDiscount = SUBTOTAL - interacFinal;
+    var interacAmt = document.getElementById('interacAmt');
+    if (interacAmt) interacAmt.textContent = '$' + interacFinal.toFixed(2);
+    var interacAmtLine = document.getElementById('interacAmtLine');
+    if (interacAmtLine) interacAmtLine.textContent = '$' + interacFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+    var interacSav = document.getElementById('interacSavings');
+    if (interacSav) interacSav.textContent = '$' + interacDiscount.toFixed(2);
+    
+    var cryptoFinal = Math.floor(SUBTOTAL * 0.90 * 100) / 100;
+    var cryptoDiscount = SUBTOTAL - cryptoFinal;
+    var cryptoAmt = document.getElementById('cryptoAmt');
+    if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal.toFixed(2);
+    var cryptoSav = document.getElementById('cryptoSavings');
+    if (cryptoSav) cryptoSav.textContent = '$' + cryptoDiscount.toFixed(2);
+
+    var altcoinFinal = Math.floor(SUBTOTAL * 0.93 * 100) / 100;
+    var altcoinDiscount = SUBTOTAL - altcoinFinal;
+    var altcoinAmt = document.getElementById('altcoinAmt');
+    if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal.toFixed(2);
+    var altcoinSav = document.getElementById('altcoinSavings');
+    if (altcoinSav) altcoinSav.textContent = '$' + altcoinDiscount.toFixed(2);
+  }
+
+  function selectMethod(method) {
+  // Show/hide sidebar USD row when a card-like method is selected (pymtz card, onramp_wp, or WPay 2D)
+  var usdRow = document.getElementById('usdEquivRow');
+  if (usdRow) usdRow.style.display = (method === 'card' || method === 'onramp_wp' || method === 'wpay_2d') ? 'block' : 'none';
+  if (method !== currentMethod) {
+    Object.keys(sessionStorage).forEach(function(k) {
+      if (k.indexOf('checkout_order_id_') === 0) sessionStorage.removeItem(k);
+    });
+    CHECKOUT_ORDER_ID = null;
+    reserveOrderId();
+  }
+  currentMethod = method;
+    var methods = document.querySelectorAll('.pay-method');
+    for (var i = 0; i < methods.length; i++) {
+      methods[i].classList.remove('active');
+    }
+    var ids = { card: 'pm-card', onramp_wp: 'pm-onramp_wp', stripe_direct: 'pm-stripe_direct', wpay: 'pm-wpay', wpay_2d: 'pm-wpay_2d', interac: 'pm-interac', zelle: 'pm-zelle', crypto: 'pm-crypto', altcoin: 'pm-altcoin' };
+    var el = document.getElementById(ids[method]);
+    if (el) el.classList.add('active');
+    updateTotals(method);
+  }
+
+  function toggleBilling() {
+    var cb = document.getElementById('sameBilling');
+    document.getElementById('billingFields').style.display = cb.checked ? 'none' : 'block';
+  }
+
+  var INTERAC_EMAIL = '{{ interac_email }}';
+  var ZELLE_EMAIL   = '{{ zelle_email }}';
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Brand colors come from the server (brand DB row → CSS vars in :root).
+    // We intentionally do NOT override them here based on STORE_COUNTRY —
+    // every store keeps its own accent_color / accent_hover.
+    var ie = document.getElementById('interacEmailDisplay');
+    if (ie) ie.textContent = INTERAC_EMAIL;
+    var ze = document.getElementById('zelleEmailDisplay');
+    if (ze) ze.textContent = ZELLE_EMAIL;
+  });
+
+  function copyEmail() {
+    var email = (currentMethod === 'zelle') ? ZELLE_EMAIL : INTERAC_EMAIL;
+    navigator.clipboard.writeText(email).then(function() {
+      showNotif('info', 'Email copied to clipboard!');
+    });
+  }
+
+  function updateOrderIdDisplay() {
+    if (!CHECKOUT_ORDER_ID) return;
+    var zelleEl   = document.getElementById('zelleOrderIdDisplay');
+    var interacEl = document.getElementById('interacOrderIdDisplay');
+    if (zelleEl)   zelleEl.textContent   = CHECKOUT_ORDER_ID;
+    if (interacEl) interacEl.textContent = CHECKOUT_ORDER_ID;
+  }
+
+  function copyOrderId() {
+    if (!CHECKOUT_ORDER_ID) { showNotif('error', 'Order ID not ready yet — refresh and try again.'); return; }
+    navigator.clipboard.writeText(CHECKOUT_ORDER_ID).then(function() {
+      showNotif('info', 'Order ID copied to clipboard!');
+    });
+  }
+
+  function toggleMobileCart() {
+    document.getElementById('sidebar').classList.toggle('open');
+  }
+
+  var CA_PROVINCES = '<option value="AB">Alberta</option><option value="BC">British Columbia</option><option value="MB">Manitoba</option><option value="NB">New Brunswick</option><option value="NL">Newfoundland</option><option value="NS">Nova Scotia</option><option value="NT">NW Territories</option><option value="NU">Nunavut</option><option value="ON" selected>Ontario</option><option value="PE">PEI</option><option value="QC">Quebec</option><option value="SK">Saskatchewan</option><option value="YT">Yukon</option>';
+  var US_STATES = '<option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option><option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option><option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="FL">Florida</option><option value="GA">Georgia</option><option value="HI">Hawaii</option><option value="ID">Idaho</option><option value="IL">Illinois</option><option value="IN">Indiana</option><option value="IA">Iowa</option><option value="KS">Kansas</option><option value="KY">Kentucky</option><option value="LA">Louisiana</option><option value="ME">Maine</option><option value="MD">Maryland</option><option value="MA">Massachusetts</option><option value="MI">Michigan</option><option value="MN">Minnesota</option><option value="MS">Mississippi</option><option value="MO">Missouri</option><option value="MT">Montana</option><option value="NE">Nebraska</option><option value="NV">Nevada</option><option value="NH">New Hampshire</option><option value="NJ">New Jersey</option><option value="NM">New Mexico</option><option value="NY">New York</option><option value="NC">North Carolina</option><option value="ND">North Dakota</option><option value="OH">Ohio</option><option value="OK">Oklahoma</option><option value="OR">Oregon</option><option value="PA">Pennsylvania</option><option value="RI">Rhode Island</option><option value="SC">South Carolina</option><option value="SD">South Dakota</option><option value="TN">Tennessee</option><option value="TX">Texas</option><option value="UT">Utah</option><option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option><option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option>';
+
+  function updateZoneLabel() {
+    var countrySelect = document.getElementById('country');
+    var zoneSelect    = document.getElementById('zone');
+    var zoneLabel     = document.querySelector('label[for="zone"]');
+    if (!countrySelect || !zoneSelect) return;
+    var isUS = countrySelect.value === 'US';
+    if (zoneLabel) zoneLabel.textContent = isUS ? 'State' : 'Province';
+    // Replace the option set entirely — display:none on <option> is unreliable
+    // (Chrome/Safari still show "hidden" options in the dropdown).
+    zoneSelect.innerHTML = isUS ? US_STATES : CA_PROVINCES;
+  }
+
+  function swapBillZone() {
+    var billCountry = document.getElementById('billCountry');
+    var billZoneEl = document.getElementById('billZone');
+    var billZoneLabel = document.querySelector('label[for="billZone"]');
+    if (!billCountry || !billZoneEl) return;
+    var isCA = billCountry.value === 'CA';
+    billZoneEl.innerHTML = isCA ? CA_PROVINCES : US_STATES;
+    if (billZoneLabel) billZoneLabel.textContent = isCA ? 'Province' : 'State';
+  }
+
+  function handleSubmit() {
+    var email     = document.getElementById('email').value.trim();
+    var firstName = document.getElementById('firstName').value.trim();
+    var lastName  = document.getElementById('lastName').value.trim();
+    var address1  = document.getElementById('address1').value.trim();
+    var city      = document.getElementById('city').value.trim();
+    var postal    = document.getElementById('postalCode').value.trim();
+
+    var phone = document.getElementById('phone').value.trim();
+
+    var checks = [
+      [!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), 'email-error',     'email',      'Email'],
+      [!firstName, 'firstName-error', 'firstName',  'First name'],
+      [!lastName,  'lastName-error',  'lastName',   'Last name'],
+      [!phone,     'phone-error',     'phone',      'Phone number'],
+      [!address1,  'address1-error',  'address1',   'Address'],
+      [!city,      'city-error',      'city',       'City'],
+      [!postal,    'postal-error',    'postalCode', 'Postal code']
+    ];
+    // Princeton-only fields — only validated when the DOM element is
+    // present (Jinja-gated to princetonpeptides.com). On any other store,
+    // the elements don't exist and these checks are skipped.
+    var companyEl = document.getElementById('company');
+    if (companyEl) {
+      checks.push([!companyEl.value.trim(), 'company-error', 'company', 'Company']);
+    }
+    var researchEl = document.getElementById('research_field');
+    if (researchEl) {
+      checks.push([!researchEl.value, 'research_field-error', 'research_field', 'Research field']);
+    }
+
+    var valid = true;
+    var missing = [];
+    var firstBadEl = null;
+    for (var i = 0; i < checks.length; i++) {
+      var fail    = checks[i][0];
+      var errEl   = document.getElementById(checks[i][1]);
+      var fieldEl = document.getElementById(checks[i][2]);
+      if (errEl) errEl.className = 'field-error' + (fail ? ' show' : '');
+      if (fail) {
+        valid = false;
+        missing.push(checks[i][3]);
+        if (!firstBadEl) firstBadEl = fieldEl;
+      }
+    }
+    if (!valid) {
+      var msg;
+      if (missing.length === 1 && missing[0] === 'Phone number') {
+        msg = 'Phone number is required for this payment method';
+      } else {
+        msg = missing.length === 1
+          ? 'Please fill in: ' + missing[0]
+          : 'Please fill in the required fields: ' + missing.join(', ');
+      }
+      showNotif('error', msg);
+      if (firstBadEl) {
+        firstBadEl.scrollIntoView({behavior:'smooth', block:'center'});
+        setTimeout(function(){ firstBadEl.focus(); }, 400);
+      }
+      return;
+    }
+
+    var btn = document.getElementById('submitBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    var sameBilling = document.getElementById('sameBilling').checked;
+
+    var payload = {
+      order_id:     CHECKOUT_ORDER_ID,
+      email:        document.getElementById('email').value.trim(),
+      first_name:   document.getElementById('firstName').value.trim(),
+      last_name:    document.getElementById('lastName').value.trim(),
+      phone:        phone,
+      address1:     document.getElementById('address1').value.trim(),
+      address2:     document.getElementById('address2').value.trim(),
+      city:         document.getElementById('city').value.trim(),
+      province:     document.getElementById('zone').value,
+      postal_code:  document.getElementById('postalCode').value.trim(),
+      country:      document.getElementById('country').value,
+      bill_same:      sameBilling ? '1' : '0',
+      bill_address1:  sameBilling ? null : document.getElementById('billAddress1').value.trim(),
+      bill_city:      sameBilling ? null : document.getElementById('billCity').value.trim(),
+      bill_province:  sameBilling ? null : document.getElementById('billZone').value,
+      bill_postal:    sameBilling ? null : document.getElementById('billPostal').value.trim(),
+      bill_country:   sameBilling ? null : document.getElementById('billCountry').value,
+      subtotal:     SUBTOTAL,
+      currency:     STORE_CURRENCY,
+      source_domain: document.getElementById('source_domain') ? document.getElementById('source_domain').value : '',
+      store_name:    new URLSearchParams(window.location.search).get('storename') || '',
+      store_country: STORE_COUNTRY,
+      payment_method: currentMethod,
+      discount_code: APPLIED_DISCOUNT ? APPLIED_DISCOUNT.code : null,
+      discount_amount: APPLIED_DISCOUNT ? APPLIED_DISCOUNT.discount_amount : 0,
+      payment_method_discount: +(SUBTOTAL * (DISCOUNTS[currentMethod] || 0)).toFixed(2),
+      // US-store optional password — backend uses it to create a Shopify
+      // customer account on the US fulfillment store once the order is paid.
+      // Field only exists in the DOM for US stores (Jinja-gated), so on CA
+      // checkouts this resolves to null and the backend ignores it.
+      account_password: (function() {
+        var el = document.getElementById('account_password');
+        var v = el ? el.value.trim() : '';
+        return v.length >= 5 ? v : null;
+      })(),
+      // Princeton-only business-info fields — null on any other store because
+      // the DOM elements are Jinja-gated to princetonpeptides.com.
+      company: (function() {
+        var el = document.getElementById('company');
+        var v = el ? el.value.trim() : '';
+        return v || null;
+      })(),
+      research_field: (function() {
+        var el = document.getElementById('research_field');
+        var v = el ? el.value : '';
+        return v || null;
+      })(),
+      items:        CART_ITEMS.map(function(i) {
+        return { product_id: i.id, title: i.name, variant: i.variant || null, qty: i.quantity, price: i.unitPrice };
+      })
+    };
+
+    var endpoint = '/api/checkout/' + currentMethod;
+
+    // === CARD PAYMENT — bridge dispatches Stripe/Shopify ===
+    // Test hook: ?card_mode=popup on the URL → opens pymtz in a centered
+    // popup window instead of full-page redirect. Same backend, same flow,
+    // just a different way of opening the payment URL. Remove the param to
+    // get the normal redirect behavior.
+    if (currentMethod === 'card') {
+      var _cardMode = new URLSearchParams(window.location.search).get('card_mode');
+      if (_cardMode === 'popup') {
+        handlePymtzPopupPayment(payload, btn);
+      } else {
+        handleCardPayment(payload, btn);
+      }
+      return;
+    }
+
+    // === CARD (STRIPE DIRECT) — open the Stripe Elements modal ===
+    // Separate processor, separate modal, customer tokenizes card via
+    // Stripe Elements (loaded from js.stripe.com).
+    if (currentMethod === 'stripe_direct') {
+      openStripeDirectModal(payload, btn);
+      return;
+    }
+
+    fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) {
+      var ct = r.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        return { ok: false, data: { detail: 'Server error (' + r.status + '). Please try again shortly.' } };
+      }
+      return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+    })
+    .then(function(res) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      if (!res.ok) { showNotif('error', res.data.detail || 'Something went wrong.'); return; }
+      // Order complete — clear reserved ID cache so next visit gets a fresh one
+      Object.keys(sessionStorage).forEach(function(k){
+        if (k.indexOf('checkout_order_id_') === 0) sessionStorage.removeItem(k);
+      });
+      if (currentMethod === 'card')      { window.location.href = withBrandAccent(res.data.redirectUrl); }
+      if (currentMethod === 'onramp_wp') { window.location.href = withBrandAccent(res.data.redirectUrl); }
+      if (currentMethod === 'wpay')      { window.location.href = withBrandAccent(res.data.redirectUrl); }
+      if (currentMethod === 'wpay_2d')   { window.location.href = withBrandAccent(res.data.redirectUrl); }
+      if (currentMethod === 'interac')   { window.location.href = withBrandAccent('/order/' + res.data.orderId + '/confirmation'); }
+      if (currentMethod === 'zelle')     { window.location.href = withBrandAccent('/order/' + res.data.orderId + '/confirmation'); }
+      if (currentMethod === 'crypto')    { window.location.href = withBrandAccent('/order/' + res.data.orderId + '/confirmation'); }
+      if (currentMethod === 'altcoin')   { window.location.href = withBrandAccent('/order/' + res.data.orderId + '/confirmation'); }
+    })
+    .catch(function() {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      showNotif('error', 'Network error. Please try again.');
+    });
+  }
+
+  // ─── STRIPE ELEMENTS — CUSTOM CARD FORM ────────────────────────────────
+  var stripeInstance = null;
+  var stripeElements = null;
+  var stripePaymentElement = null;
+  var currentClientSecret = null;
+  var currentIntentId = null;
+
+  // ─── HELCIM VARIABLES ─────────────────────────────────────────────────
+  var helcimCheckoutToken = null;
+  var helcimPendingId = null;
+
+  // ─── PROVIDER: HELCIM PAY ─────────────────────────────────────────────
+  // Uses HelcimPay.js's official API: appendHelcimPayIframe(checkoutToken)
+  // Helcim sends messages via window.postMessage when payment completes/fails.
+  function handleHelcimPayCheckout(data) {
+    if (!data.checkout_token) {
+      showNotif('error', 'Could not initialize Helcim checkout.');
+      return;
+    }
+
+    helcimCheckoutToken = data.checkout_token;
+    helcimPendingId = data.pending_id;
+
+    console.log('💳 Opening HelcimPay modal:', helcimCheckoutToken);
+
+    // Verify HelcimPay.js script loaded
+    if (typeof window.appendHelcimPayIframe !== 'function') {
+      console.error('❌ HelcimPay.js script not loaded — check <script> tag in <head>');
+      showNotif('error', 'Payment system not available. Please refresh and try again.');
+      var btn0 = document.getElementById('submitBtn');
+      if (btn0) { btn0.classList.remove('loading'); btn0.disabled = false; }
+      return;
+    }
+
+    // Listen for HelcimPay messages BEFORE opening the modal
+    //
+    // HelcimPay.js's actual payload shape (verified from production logs):
+    //
+    //   {
+    //     eventName: "helcim-pay-js-{checkoutToken}",
+    //     eventStatus: "SUCCESS" | "ABORTED" | true,         ← TOP-LEVEL — reliable
+    //     eventMessage: "{...JSON string for SUCCESS, plain text for ABORTED...}"
+    //   }
+    //
+    // For SUCCESS, parsed eventMessage looks like:
+    //   {
+    //     data: {
+    //       hash: "...",
+    //       data: {                       ← double-nested
+    //         transactionId: "48474244",
+    //         status: "APPROVED",
+    //         type: "purchase",
+    //         amount: "7",
+    //         currency: "CAD",
+    //         ...
+    //       }
+    //     },
+    //     status: 200,                    ← HTTP status code, NOT a payment status
+    //     statusText: "",
+    //     headers: {...}
+    //   }
+    //
+    // The CRITICAL trap: parsedMsg.status is 200 (number, HTTP code), NOT a
+    // payment status. We MUST use the outer event.data.eventStatus, never
+    // overwrite it from parsedMsg.status.
+    var messageHandler = function(event) {
+      var eventName = event.data?.eventName || event.data?.event || '';
+      var rawStatus = event.data?.eventStatus || event.data?.status || '';
+      var parsedMsg = null;
+
+      var looksHelcim = (
+        String(eventName).indexOf('helcim') !== -1 ||
+        (event.data && typeof event.data === 'object' && 'eventMessage' in event.data) ||
+        (event.data && typeof event.data === 'object' && 'eventStatus' in event.data)
+      );
+      if (looksHelcim) {
+        console.log('🪵 HelcimPay raw event:', JSON.stringify(event.data));
+      }
+
+      if (event.data && typeof event.data === 'object' && event.data.eventMessage) {
+        try {
+          parsedMsg = typeof event.data.eventMessage === 'string'
+            ? JSON.parse(event.data.eventMessage)
+            : event.data.eventMessage;
+          // DO NOT overwrite rawStatus here. parsedMsg.status is the HTTP
+          // status code (200), not a payment status. The outer eventStatus
+          // (set above) is the reliable success/abort signal.
+          console.log('📩 HelcimPay parsed: name=' + eventName, 'eventStatus=' + rawStatus, parsedMsg);
+        } catch (e) {
+          console.log('📩 HelcimPay non-JSON eventMessage:', event.data.eventMessage);
+        }
+      }
+
+      var statusUpper = String(rawStatus).toUpperCase();
+      var isOurEvent  = eventName === 'helcim-pay-js-' + helcimCheckoutToken;
+
+      // ── SUCCESS DETECTION ─────────────────────────────────────────────
+      // Primary signal: outer eventStatus === "SUCCESS"
+      // Fallbacks: the nested transaction's status field, or presence of a transactionId
+      var nestedTx = parsedMsg && parsedMsg.data && parsedMsg.data.data;  // double-nested
+      var nestedStatus = String(nestedTx?.status || '').toUpperCase();
+
+      var isSuccess = (
+        statusUpper === 'SUCCESS' ||
+        statusUpper === 'APPROVED' ||
+        statusUpper === 'COMPLETED' ||
+        nestedStatus === 'APPROVED' ||
+        nestedStatus === 'SUCCESS' ||
+        (isOurEvent && nestedTx && nestedTx.transactionId)
+      );
+
+      var isCancelled = (
+        statusUpper === 'ABORTED' ||
+        statusUpper === 'HIDE' ||
+        statusUpper === 'CLOSED' ||
+        statusUpper === 'CANCELLED' ||
+        statusUpper === 'CANCELED'
+      );
+
+      if (!isOurEvent && !isSuccess && !isCancelled) return;
+
+      if (isSuccess) {
+        console.log('✅ HelcimPay payment successful (eventStatus=' + rawStatus + ', nestedStatus=' + nestedStatus + ')');
+        window.removeEventListener('message', messageHandler);
+        clearReservedOrderId();
+
+        // Extract transactionId — the REAL path is parsedMsg.data.data.transactionId
+        var txId = '';
+        if (nestedTx) {
+          txId = nestedTx.transactionId || nestedTx.id || '';
+        }
+        // Fallbacks if structure changes in the future
+        if (!txId && parsedMsg) {
+          txId = parsedMsg.data?.transactionId
+              || parsedMsg.data?.transaction?.id
+              || parsedMsg.transactionId
+              || parsedMsg.transaction?.id
+              || parsedMsg.id
+              || '';
+        }
+        if (!txId && event.data) {
+          txId = event.data.transactionId || event.data.id || '';
+        }
+
+        var redirectUrl = withBrandAccent('/order/success?processor=helcim&session_id='
+                        + encodeURIComponent(helcimCheckoutToken));
+
+        if (!txId) {
+          console.warn('⚠️ No transactionId in HelcimPay event — MPC mirror / affiliate / email will be skipped. Raw msg:', parsedMsg);
+          showNotif('success', 'Payment successful! Redirecting...');
+          setTimeout(function(){ window.location.href = redirectUrl; }, 1000);
+          return;
+        }
+
+        console.log('🎯 Extracted transactionId:', txId);
+
+        // ─── POST /link with text/plain (no CORS preflight), then redirect.
+        var linkUrl = "{{ helcim_worker_url }}" + '/link';
+        var linkBody = JSON.stringify({
+          checkoutToken: helcimCheckoutToken,
+          transactionId: String(txId)
+        });
+
+        showNotif('success', 'Payment successful! Confirming...');
+
+        var redirected = false;
+        function doRedirect() {
+          if (redirected) return;
+          redirected = true;
+          window.location.href = redirectUrl;
+        }
+
+        setTimeout(doRedirect, 3000);  // hard timeout safety
+
+        try {
+          fetch(linkUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=UTF-8' },  // ← skips preflight
+            body: linkBody,
+            keepalive: true,
+            mode: 'cors',
+            credentials: 'omit'
+          })
+          .then(function(r) {
+            console.log('🔗 /link response:', r.status);
+            console.log('🔗 Linked transactionId', txId, '→ checkoutToken', helcimCheckoutToken);
+            doRedirect();
+          })
+          .catch(function(e) {
+            console.error('❌ /link POST failed:', e);
+            try {
+              var blob = new Blob([linkBody], { type: 'text/plain;charset=UTF-8' });
+              var sent = navigator.sendBeacon(linkUrl, blob);
+              console.log('🔗 sendBeacon fallback (queued:', sent + ')');
+            } catch (e2) {
+              console.error('❌ sendBeacon fallback also failed:', e2);
+            }
+            doRedirect();
+          });
+        } catch (e) {
+          console.error('❌ Could not start /link fetch:', e);
+          doRedirect();
+        }
+      } else if (isCancelled) {
+        console.log('⚠️ HelcimPay payment cancelled/aborted (eventStatus=' + rawStatus + ')');
+        window.removeEventListener('message', messageHandler);
+        var btn1 = document.getElementById('submitBtn');
+        if (btn1) { btn1.classList.remove('loading'); btn1.disabled = false; }
+      }
+    };
+    window.addEventListener('message', messageHandler);
+
+    // Open the modal — appendHelcimPayIframe is the official global function
+    try {
+      window.appendHelcimPayIframe(helcimCheckoutToken);
+    } catch (err) {
+      console.error('❌ Error opening HelcimPay modal:', err);
+      window.removeEventListener('message', messageHandler);
+      showNotif('error', 'Could not open payment form. Please try again.');
+      var btn2 = document.getElementById('submitBtn');
+      if (btn2) { btn2.classList.remove('loading'); btn2.disabled = false; }
+    }
+  }
+
+  // ─── CARD PAYMENT DISPATCHER ──────────────────────────────────────────
+  // Bridge decides which provider (Stripe / Helcim / Shopify) handles this card.
+  function handleCardPayment(payload, btn) {
+    window._lastCheckoutPayload = payload;
+
+    fetch('/api/checkout/card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) {
+      var ct = r.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        return { ok: false, data: { error: 'Server error (' + r.status + '). Please try again shortly.' } };
+      }
+      return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+    })
+    .then(function(res) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      if (!res.ok) {
+        showNotif('error', res.data.detail || res.data.error || 'Card payment setup failed');
+        return;
+      }
+
+      clearReservedOrderId();
+
+      // pymtz hosted page — redirect customer to enter card details.
+      // handleShopifyRedirect is reused: it just does window.location.href = redirectUrl.
+      if (res.data.redirectUrl) return handleShopifyRedirect(res.data);
+
+      console.error('Card payment: unknown response shape', res.data);
+      showNotif('error', 'Could not initialize payment.');
+    })
+    .catch(function(err) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      console.error('Card payment error:', err);
+      showNotif('error', 'Network error. Please try again.');
+    });
+  }
+
+  // ─── PROVIDER: PYMTZ POPUP (test variant) ─────────────────────────────
+  // Opt-in via ?card_mode=popup on the URL. Same backend as handleCardPayment
+  // (/api/checkout/card → returns pymtz payment_url) but opens the URL in a
+  // centered popup window so the customer never leaves our tab. After
+  // payment, pymtz redirects the popup to our return_url (on our origin) —
+  // we detect that via same-origin polling, close the popup, and navigate
+  // the parent window to the confirmation page.
+  //
+  // Existing redirect flow is unchanged — this is purely additive.
+  function handlePymtzPopupPayment(payload, btn) {
+    window._lastCheckoutPayload = payload;
+
+    fetch('/api/checkout/card', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    })
+    .then(function(r) {
+      var ct = r.headers.get('content-type') || '';
+      if (!ct.includes('application/json')) {
+        return { ok: false, data: { error: 'Server error (' + r.status + ').' } };
+      }
+      return r.json().then(function(d) { return { ok: r.ok, data: d }; });
+    })
+    .then(function(res) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      if (!res.ok || !res.data.redirectUrl) {
+        showNotif('error', res.data.detail || res.data.error || 'Card payment setup failed');
+        return;
+      }
+
+      clearReservedOrderId();
+
+      var url     = res.data.redirectUrl;
+      var orderId = res.data.orderId;
+
+      // Centered popup. Mid-sized — large enough for pymtz's hosted form
+      // including 3DS challenge iframes, small enough that customer still
+      // sees our checkout behind it.
+      var w = 480, h = 720;
+      var left = Math.max(0, (window.screen.width  - w) / 2);
+      var top  = Math.max(0, (window.screen.height - h) / 2);
+      var features =
+        'width=' + w + ',height=' + h + ',left=' + left + ',top=' + top +
+        ',toolbar=no,menubar=no,location=no,resizable=yes,scrollbars=yes';
+
+      var popup = window.open(url, 'pymtz_popup', features);
+
+      // Popup blocker fallback — degrade to a full-page redirect so the
+      // customer's payment attempt isn't dropped.
+      if (!popup || popup.closed) {
+        showNotif('info', 'Popup blocked — redirecting…');
+        window.location.href = url;
+        return;
+      }
+
+      showNotif('info', 'Complete payment in the popup window…');
+
+      // Poll for either (a) popup closed manually, or (b) popup navigated
+      // back to our origin (= pymtz redirected to return_url after pay or
+      // cancel_url after cancel). Reading popup.location while it's on
+      // pymtz.co throws SecurityError — we just swallow that and keep
+      // polling.
+      var pollInterval = setInterval(function() {
+        try {
+          if (popup.closed) {
+            clearInterval(pollInterval);
+            // Customer closed the popup — could be paid, cancelled, or
+            // abandoned. The confirmation page status-verifies via
+            // /api/checkout/status/{orderId} so let it decide.
+            window.location.href = '/order/' + orderId + '/confirmation';
+            return;
+          }
+          // Same-origin navigation — pymtz redirected back to us
+          if (popup.location && popup.location.origin === window.location.origin) {
+            clearInterval(pollInterval);
+            try { popup.close(); } catch (e) {}
+            window.location.href = '/order/' + orderId + '/confirmation';
+          }
+        } catch (e) {
+          // Cross-origin — popup still on pymtz.co. Keep polling.
+        }
+      }, 500);
+    })
+    .catch(function(err) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      console.error('pymtz popup card error:', err);
+      showNotif('error', 'Network error. Please try again.');
+    });
+  }
+
+  // ─── PROVIDER: SHOPIFY ────────────────────────────────────────────────
+  // Bridge routed to a Shopify checkout store. Customer redirects to the
+  // Shopify-hosted invoice URL, enters card there, never returns to portal.
+  function handleShopifyRedirect(data) {
+    if (!data.redirectUrl) {
+      showNotif('error', 'Could not initialize Shopify checkout.');
+      return;
+    }
+    showNotif('info', 'Redirecting to secure payment…');
+    setTimeout(function() {
+      window.location.href = withBrandAccent(data.redirectUrl);
+    }, 600);
+  }
+
+  // ─── STRIPE DIRECT MODAL ──────────────────────────────────────────────
+  // Loads Stripe Elements once on first open, then reuses the same Element
+  // across opens. Stripe handles all card tokenization client-side; our
+  // server only ever sees the PaymentMethod ID.
+  var _stripeDirectState = null;     // { payload, pageBtn }
+  var _stripeDirectInstance = null;  // Stripe(...) instance
+  var _stripeDirectElements = null;  // Elements() container
+  var _stripeDirectCardEl = null;    // CardElement instance
+  var STRIPE_PUBLISHABLE_KEY_FOR_DIRECT = "{{ stripe_publishable_key if stripe_direct_enabled else '' }}";
+
+  function _stripeDirectShowError(msg) {
+    var box = document.getElementById('stripeDirectCardError');
+    if (box) { box.style.display = 'block'; box.textContent = msg; }
+  }
+  function _stripeDirectClearError() {
+    var box = document.getElementById('stripeDirectCardError');
+    if (box) { box.style.display = 'none'; box.textContent = ''; }
+  }
+
+  function _ensureStripeDirectMounted() {
+    // Stripe.js loaded once at the top of the page (via <script src=...>)
+    if (typeof Stripe === 'undefined' || !Stripe) return false;
+    if (!STRIPE_PUBLISHABLE_KEY_FOR_DIRECT) return false;
+    if (_stripeDirectCardEl) return true;   // already mounted
+
+    _stripeDirectInstance = Stripe(STRIPE_PUBLISHABLE_KEY_FOR_DIRECT);
+    _stripeDirectElements = _stripeDirectInstance.elements();
+    _stripeDirectCardEl = _stripeDirectElements.create('card', {
+      hidePostalCode: false,
+      style: {
+        base: {
+          fontSize: '16px',
+          fontFamily: '"DM Sans", sans-serif',
+          color: '#111',
+          '::placeholder': { color: '#888' },
+        },
+        invalid: { color: '#b91c1c' },
+      },
+    });
+    _stripeDirectCardEl.mount('#stripeDirectCardElement');
+    _stripeDirectCardEl.on('change', function(e) {
+      if (e.error) _stripeDirectShowError(e.error.message);
+      else _stripeDirectClearError();
+    });
+    return true;
+  }
+
+  function openStripeDirectModal(payload, pageBtn) {
+    var modal = document.getElementById('stripeDirectModal');
+    if (!modal) { showNotif('error', 'Card form unavailable.'); return; }
+
+    if (pageBtn) { pageBtn.classList.remove('loading'); pageBtn.disabled = false; }
+    _stripeDirectState = { payload: payload, pageBtn: pageBtn };
+
+    // Mirror the page's "Pay now · $X" amount onto the modal Pay button
+    var pageLabel = document.getElementById('btnLabel');
+    var amtEl     = document.getElementById('stripeDirectPayBtnAmount');
+    if (pageLabel && amtEl) {
+      amtEl.textContent = pageLabel.textContent.replace(/^\s*Pay now\s*·?\s*/i, '');
+    }
+
+    // Reset modal Pay button state
+    var payBtn = document.getElementById('stripeDirectPayBtn');
+    if (payBtn) {
+      payBtn.disabled = false;
+      payBtn.classList.remove('loading');
+      var lbl = document.getElementById('stripeDirectPayBtnLabel');
+      if (lbl && payBtn.dataset.label) lbl.innerHTML = payBtn.dataset.label;
+    }
+
+    _stripeDirectClearError();
+
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // Mount Stripe Elements (idempotent — only happens on first open)
+    if (!_ensureStripeDirectMounted()) {
+      _stripeDirectShowError('Card form failed to load. Refresh and try again.');
+      return;
+    }
+
+    // Focus the card element after mount
+    setTimeout(function() {
+      if (_stripeDirectCardEl) _stripeDirectCardEl.focus();
+    }, 100);
+  }
+
+  function closeStripeDirectModal() {
+    var modal = document.getElementById('stripeDirectModal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+    if (_stripeDirectState && _stripeDirectState.pageBtn) {
+      _stripeDirectState.pageBtn.classList.remove('loading');
+      _stripeDirectState.pageBtn.disabled = false;
+    }
+    _stripeDirectState = null;
+  }
+
+  function handleStripeDirectPayment() {
+    if (!_stripeDirectState) return;
+    var payload = _stripeDirectState.payload;
+    var modalBtn = document.getElementById('stripeDirectPayBtn');
+    function _finish() {
+      if (modalBtn) {
+        modalBtn.disabled = false;
+        modalBtn.classList.remove('loading');
+        if (modalBtn.dataset.label) {
+          var lbl = document.getElementById('stripeDirectPayBtnLabel');
+          if (lbl) lbl.innerHTML = modalBtn.dataset.label;
+        }
+      }
+    }
+
+    _stripeDirectClearError();
+    if (!_stripeDirectInstance || !_stripeDirectCardEl) {
+      _stripeDirectShowError('Card form not loaded — refresh and try again.');
+      _finish();
+      return;
+    }
+
+    // Step 1: tokenize card → PaymentMethod ID via Stripe.js
+    var billingDetails = {
+      name:  ((payload.first_name || '') + ' ' + (payload.last_name || '')).trim(),
+      email: payload.email || '',
+      address: {
+        line1:       (payload.bill_same === '1' || payload.bill_same === 1) ? (payload.address1 || '') : (payload.bill_address1 || ''),
+        city:        (payload.bill_same === '1' || payload.bill_same === 1) ? (payload.city     || '') : (payload.bill_city     || ''),
+        state:       (payload.bill_same === '1' || payload.bill_same === 1) ? (payload.province || '') : (payload.bill_province || ''),
+        postal_code: (payload.bill_same === '1' || payload.bill_same === 1) ? (payload.postal_code || '') : (payload.bill_postal || ''),
+        country:     (payload.bill_same === '1' || payload.bill_same === 1) ? (payload.country  || '') : (payload.bill_country  || ''),
+      },
+    };
+
+    _stripeDirectInstance.createPaymentMethod({
+      type:    'card',
+      card:    _stripeDirectCardEl,
+      billing_details: billingDetails,
+    }).then(function(result) {
+      if (result.error) {
+        _stripeDirectShowError(result.error.message || 'Card validation failed.');
+        _finish();
+        return;
+      }
+      // Step 2: send the PaymentMethod ID to our server
+      payload.payment_method_id = result.paymentMethod.id;
+
+      return fetch('/api/checkout/stripe_direct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function(r) {
+        var ct = r.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          return { ok: false, status: r.status, data: { detail: 'Server error (' + r.status + ').' } };
+        }
+        return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; });
+      }).then(function(res) {
+        // ── 3DS / SCA required — Stripe.js handles the challenge ─────────
+        if (res.data && res.data.requires_action && res.data.payment_intent_client_secret) {
+          return _stripeDirectInstance.handleCardAction(res.data.payment_intent_client_secret).then(function(actionResult) {
+            if (actionResult.error) {
+              _stripeDirectShowError(actionResult.error.message || 'Authentication failed.');
+              _finish();
+              return;
+            }
+            // After successful 3DS, re-submit to our server to finalize.
+            // (We use the same payment_method_id; Stripe associates it with
+            // the now-authenticated PaymentIntent.)
+            return fetch('/api/checkout/stripe_direct', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            }).then(function(r) {
+              return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; });
+            }).then(_handleStripeDirectFinalResult);
+          });
+        }
+        return _handleStripeDirectFinalResult(res);
+      });
+    }).catch(function(err) {
+      _stripeDirectShowError('Network error. Please try again.');
+      _finish();
+    });
+
+    function _handleStripeDirectFinalResult(res) {
+      if (res && res.ok && res.data && res.data.success) {
+        Object.keys(sessionStorage).forEach(function(k){
+          if (k.indexOf('checkout_order_id_') === 0) sessionStorage.removeItem(k);
+        });
+        var modal = document.getElementById('stripeDirectModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        window.location.href = withBrandAccent(res.data.redirectUrl);
+        return;
+      }
+      var msg;
+      if (res && res.status === 402 && res.data && res.data.detail) {
+        var d = res.data.detail;
+        msg = (d.message || 'Card was declined.') + (d.code ? ' (' + d.code + ')' : '');
+      } else {
+        msg = (res && res.data && (res.data.detail || res.data.message)) || 'Card payment failed. Please try again.';
+      }
+      _stripeDirectShowError(msg);
+      _finish();
+    }
+  }
+
+  function _amountUsdEquiv() {
+    var v = parseFloat(SUBTOTAL) || 0;
+    return STORE_CURRENCY === 'CAD' ? (v / USD_CONVERSION_RATE) : v;
+  }
+
+  // Hide the WPay option entirely when the order is under WPay's $20 USD
+  // minimum — the backend already rejects it (400) but the customer should
+  // never see an option they can't actually use. If WPay was the selected
+  // method and the cart just dropped below the floor (quantity change,
+  // promo code), fall back to Card so the customer isn't stuck on a
+  // now-hidden option.
+  function _applyWpayMinimum() {
+    var el = document.getElementById('pm-wpay');
+    if (!el) return;   // wpay_enabled was false server-side — nothing to do
+    var usd = _amountUsdEquiv();
+    var below = usd > 0 && usd < WPAY_MIN_USD;
+    el.style.display = below ? 'none' : '';
+    if (below && currentMethod === 'wpay') {
+      var cardRadio = document.querySelector('input[name="paymentMethod"][value="card"]');
+      if (cardRadio) cardRadio.checked = true;
+      selectMethod('card');
+    }
+  }
+
+  // Same treatment for WPay 2D — separate option, separate (lower) minimum.
+  function _applyWpay2dMinimum() {
+    var el = document.getElementById('pm-wpay_2d');
+    if (!el) return;
+    var usd = _amountUsdEquiv();
+    var below = usd > 0 && usd < WPAY_2D_MIN_USD;
+    el.style.display = below ? 'none' : '';
+    if (below && currentMethod === 'wpay_2d') {
+      var cardRadio = document.querySelector('input[name="paymentMethod"][value="card"]');
+      if (cardRadio) cardRadio.checked = true;
+      selectMethod('card');
+    }
+  }
+
+  // ─── PROVIDER: STRIPE ELEMENTS ────────────────────────────────────────
+  // Bridge routed to a Stripe account. Opens the custom card modal on the
+  // portal — customer never leaves the page, payment confirms in-place.
+  function handleStripeElements(data) {
+    currentClientSecret = data.client_secret;
+    currentIntentId     = data.intent_id;
+    openStripeModal(data);
+  }
+
+  // ─── HELPER: clear reserved order ID ──────────────────────────────────
+  function clearReservedOrderId() {
+    Object.keys(sessionStorage).forEach(function(k){
+      if (k.indexOf('checkout_order_id_') === 0) sessionStorage.removeItem(k);
+    });
+  }
+
+  function openStripeModal(data) {
+    document.getElementById('stripeModal').style.display = 'flex';
+
+    // Update modal total display
+    var totalEl = document.getElementById('stripePayBtnAmount');
+    if (totalEl) {
+      var curr = data.currency || 'CAD';
+      var amount = parseFloat(data.amount || 0).toFixed(2);
+      totalEl.textContent = curr + ' $' + amount;
+    }
+
+    // Initialize Stripe.js with the brand accent color
+    stripeInstance = Stripe(data.publishable_key);
+    var accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#dc2626';
+
+    var appearance = {
+      theme: 'flat',
+      variables: {
+        colorPrimary: accentColor,
+        colorBackground: '#ffffff',
+        colorText: '#111111',
+        colorDanger: '#df1b41',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        spacingUnit: '4px',
+        borderRadius: '8px',
+        fontSizeBase: '15px',
+      },
+      rules: {
+        '.Input': {
+          border: '1.5px solid #e2e0da',
+          padding: '12px 14px',
+          fontSize: '15px',
+        },
+        '.Input:focus': {
+          border: '1.5px solid ' + accentColor,
+          boxShadow: '0 0 0 3px ' + accentColor + '20',
+        },
+        '.Label': {
+          fontWeight: '500',
+          fontSize: '13px',
+          color: '#444',
+          marginBottom: '6px',
+        },
+      },
+    };
+
+    stripeElements = stripeInstance.elements({
+      clientSecret: data.client_secret,
+      appearance: appearance,
+      // Disable Stripe Link (the "Save my information for faster checkout" panel)
+      loader: 'auto',
+    });
+
+    // Card-only payment element (no wallets, no Link, no extras)
+    stripePaymentElement = stripeElements.create('payment', {
+      layout: 'tabs',
+      paymentMethodOrder: ['card'],
+      defaultValues: {
+        billingDetails: {
+          // we don't pass any defaults — Stripe won't show those fields
+        },
+      },
+      fields: {
+        billingDetails: {
+          name: 'never',
+          email: 'never',
+          phone: 'never',
+          address: {
+            country: 'never',
+            line1: 'never',
+            line2: 'never',
+            city: 'never',
+            state: 'never',
+            postalCode: 'auto',
+          },
+        },
+      },
+      wallets: {
+        applePay: 'never',
+        googlePay: 'never',
+      },
+      // Disable Stripe Link entirely (the "Save my information for faster checkout")
+      terms: {
+        card: 'never',
+      },
+    });
+
+    stripePaymentElement.mount('#stripe-payment-element');
+
+    // Reset Pay button
+    var payBtn = document.getElementById('stripePayBtn');
+    if (payBtn) {
+      payBtn.disabled = false;
+      payBtn.classList.remove('loading');
+      payBtn.textContent = '';
+      var icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:8px;vertical-align:-3px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>';
+      payBtn.innerHTML = icon + 'Pay <span id="stripePayBtnAmount">' + (data.currency || 'CAD') + ' $' + parseFloat(data.amount || 0).toFixed(2) + '</span>';
+    }
+  }
+
+  function submitStripePayment() {
+    if (!stripeInstance || !stripeElements || !currentClientSecret) {
+      showNotif('error', 'Payment form not ready. Please try again.');
+      return;
+    }
+
+    var payBtn = document.getElementById('stripePayBtn');
+    payBtn.disabled = true;
+    payBtn.classList.add('loading');
+    payBtn.textContent = 'Processing...';
+
+    var errorEl = document.getElementById('stripeFormError');
+    if (errorEl) errorEl.textContent = '';
+
+    // Step 1: Submit elements first (validates form)
+    stripeElements.submit().then(function(submitResult) {
+      if (submitResult.error) {
+        if (errorEl) errorEl.textContent = submitResult.error.message || 'Please check your card details.';
+        resetPayButton();
+        return;
+      }
+
+      // Step 2: Confirm payment with billing details from our form
+      var p = window._lastCheckoutPayload || {};
+      var fullName = ((p.first_name || '') + ' ' + (p.last_name || '')).trim() || 'Customer';
+
+      var billingDetails = {
+        name: fullName,
+        email: p.email || '',
+        phone: p.phone || '',
+        address: {
+          line1:       p.address1 || '',
+          line2:       p.address2 || '',
+          city:        p.city || '',
+          state:       p.province || '',
+          postal_code: p.postal_code || '',
+          country:     (p.country || 'CA').toUpperCase(),
+        },
+      };
+
+      stripeInstance.confirmPayment({
+        elements: stripeElements,
+        clientSecret: currentClientSecret,
+        confirmParams: {
+          return_url: window.location.origin + '/order/success?session_id=' + encodeURIComponent(currentIntentId),
+          payment_method_data: {
+            billing_details: billingDetails,
+          },
+        },
+        redirect: 'if_required',
+      })
+      .then(function(result) {
+        if (result.error) {
+          if (errorEl) errorEl.textContent = result.error.message || 'Payment failed';
+          resetPayButton();
+        } else if (result.paymentIntent && result.paymentIntent.status === 'succeeded') {
+          // Success — redirect to thank-you page
+          window.location.href = withBrandAccent('/order/success?session_id=' + encodeURIComponent(currentIntentId));
+        }
+      })
+      .catch(function(err) {
+        console.error('confirmPayment error:', err);
+        if (errorEl) errorEl.textContent = 'Network error. Please try again.';
+        resetPayButton();
+      });
+    }).catch(function(err) {
+      console.error('elements.submit error:', err);
+      if (errorEl) errorEl.textContent = 'Could not validate payment form.';
+      resetPayButton();
+    });
+  }
+
+  function resetPayButton() {
+    var payBtn = document.getElementById('stripePayBtn');
+    if (!payBtn) return;
+    payBtn.disabled = false;
+    payBtn.classList.remove('loading');
+    payBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:8px;vertical-align:-3px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>Try again';
+  }
+
+  function closeStripeModal() {
+    if (stripePaymentElement) {
+      try { stripePaymentElement.destroy(); } catch(e) {}
+    }
+    stripePaymentElement = null;
+    stripeElements = null;
+    stripeInstance = null;
+    currentClientSecret = null;
+    currentIntentId = null;
+    document.getElementById('stripeModal').style.display = 'none';
+    document.getElementById('stripe-payment-element').innerHTML = '';
+    var errorEl = document.getElementById('stripeFormError');
+    if (errorEl) errorEl.textContent = '';
+  }
+
+  // Wire up modal handlers
+  document.addEventListener('DOMContentLoaded', function() {
+    var closeBtn = document.getElementById('stripeModalClose');
+    if (closeBtn) closeBtn.addEventListener('click', closeStripeModal);
+    var modal = document.getElementById('stripeModal');
+    if (modal) modal.addEventListener('click', function(e) {
+      if (e.target === modal) closeStripeModal();
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && document.getElementById('stripeModal').style.display === 'flex') {
+        closeStripeModal();
+      }
+    });
+    var payBtn = document.getElementById('stripePayBtn');
+    if (payBtn) payBtn.addEventListener('click', submitStripePayment);
+
+    // ── Stripe direct modal handlers ─────────────────────────────────────
+    var stripeDirectClose = document.getElementById('stripeDirectModalClose');
+    if (stripeDirectClose) stripeDirectClose.addEventListener('click', closeStripeDirectModal);
+    var stripeDirectModalEl = document.getElementById('stripeDirectModal');
+    if (stripeDirectModalEl) stripeDirectModalEl.addEventListener('click', function(e) {
+      if (e.target === stripeDirectModalEl) closeStripeDirectModal();   // backdrop click
+    });
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && stripeDirectModalEl && stripeDirectModalEl.style.display === 'flex') {
+        closeStripeDirectModal();
+      }
+    });
+    var stripeDirectPayBtn = document.getElementById('stripeDirectPayBtn');
+    if (stripeDirectPayBtn) stripeDirectPayBtn.addEventListener('click', function() {
+      stripeDirectPayBtn.dataset.label = (document.getElementById('stripeDirectPayBtnLabel') || {}).innerHTML || stripeDirectPayBtn.innerHTML;
+      stripeDirectPayBtn.disabled = true;
+      var lbl = document.getElementById('stripeDirectPayBtnLabel');
+      if (lbl) lbl.innerHTML = 'Processing…';
+      handleStripeDirectPayment();
+    });
+
+  });
+
+  function showNotif(type, msg) {
+    var el = document.getElementById('notif');
+    el.textContent = msg;
+    el.className = 'notif ' + type + ' show';
+    setTimeout(function() { el.className = 'notif ' + type; }, 4000);
+  }
+
+  function renderItems() {
+    var list = document.getElementById('itemList');
+    if (!list) return;
+    if (!CART_ITEMS.length) {
+      list.innerHTML = '<div style="color:var(--sidebar-muted);font-size:1.3rem;padding:1.4rem 0;">No items in cart.</div>';
+      return;
+    }
+    var vialIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>';
+    var html = '';
+    var totalItems = 0;
+    CART_ITEMS.forEach(function(item) {
+      totalItems += item.quantity;
+      var lineTotal = (item.unitPrice * item.quantity).toFixed(2);
+      var isFree = item.unitPrice === 0;
+      var imgUrl = item.image || '';
+      if (imgUrl && imgUrl.indexOf('//') === 0) imgUrl = 'https:' + imgUrl;
+      if (imgUrl && imgUrl.indexOf('cdn.shopify.com') !== -1) {
+        imgUrl = imgUrl.replace(/(\.(jpe?g|png|webp|gif))(\?|$)/i, '_120x120$1$3');
+      }
+      var imgHtml = imgUrl
+        ? '<img src="' + imgUrl + '" alt="' + item.name.replace(/"/g, '&quot;') + '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\'"><div style="display:none">' + vialIcon + '</div>'
+        : vialIcon;
+      
+      // Calculate original price if discount code was applied
+      var displayPrice = lineTotal;
+      if (APPLIED_DISCOUNT && !isFree) {
+        if (APPLIED_DISCOUNT.type === 'percentage') {
+          var factor = 1 - (parseFloat(APPLIED_DISCOUNT.value) / 100);
+          displayPrice = (lineTotal / factor).toFixed(2);
+        } else if (APPLIED_DISCOUNT.type === 'fixed') {
+          displayPrice = (lineTotal + (APPLIED_DISCOUNT.discount_amount / CART_ITEMS.length)).toFixed(2);
+        }
+      }
+      
+      html += '<div class="item">';
+      html += '<div class="item-img-wrap"><div class="item-img">' + imgHtml + '</div><span class="item-qty">' + item.quantity + '</span></div>';
+      html += '<div><div class="item-name">' + item.name + ' <span style="font-size: 0.85em; color: var(--sidebar-text); font-weight: 600;">X ' + item.quantity + '</span></div>';
+      if (item.variant) html += '<div class="item-variant">' + item.variant + '</div>';
+      html += '</div>';
+      html += '<div class="item-price' + (isFree ? ' free' : '') + '">' + (isFree ? 'FREE' : '$' + displayPrice) + '</div>';
+      html += '</div>';
+    });
+    list.innerHTML = html;
+    var detail = document.getElementById('mobileCartDetail');
+    if (detail) detail.textContent = STORE_CURRENCY + ' · ' + totalItems + ' item' + (totalItems !== 1 ? 's' : '');
+    var subLabel = document.getElementById('subtotalLabel');
+    if (subLabel) subLabel.textContent = 'Subtotal · ' + totalItems + ' item' + (totalItems !== 1 ? 's' : '');
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Country change: swap province/state options
+    var zoneLabel = document.querySelector('label[for="zone"]');
+    var countryEl = document.getElementById('country');
+    if (countryEl) {
+      countryEl.addEventListener('change', function() {
+        var isCA = this.value === 'CA';
+        var zoneEl = document.getElementById('zone');
+
+        if (zoneEl) {
+          zoneEl.innerHTML = isCA ? CA_PROVINCES : US_STATES;
+        }
+        if (zoneLabel) {
+          zoneLabel.textContent = isCA ? 'Province' : 'State';
+        }
+
+        var pmInterac = document.getElementById('pm-interac');
+        var pmZelle   = document.getElementById('pm-zelle');
+        if (pmInterac) pmInterac.style.display = '';
+        if (pmZelle)   pmZelle.style.display   = '';
+        if (!isCA && currentMethod === 'interac') {
+          var fallback = CARD_ENABLED ? 'card' : 'altcoin';
+          var rb = document.querySelector('input[value="' + fallback + '"]');
+          if (rb) rb.checked = true;
+          selectMethod(fallback);
+        }
+        if (isCA && currentMethod === 'zelle') {
+          var fallback = CARD_ENABLED ? 'card' : 'altcoin';
+          var rb = document.querySelector('input[value="' + fallback + '"]');
+          if (rb) rb.checked = true;
+          selectMethod(fallback);
+        }
+      });
+    }
+
+    // Auto-select country and update province/state label
+    var countrySelect = document.getElementById('country');
+    var zoneSelect = document.getElementById('zone');
+    var zoneLabel = document.querySelector('label[for="zone"]');
+    
+    // Determine store country - check both template and current selection
+    var storeCountry = (STORE_COUNTRY && STORE_COUNTRY.trim() && STORE_COUNTRY !== '{{ store_country }}') ? STORE_COUNTRY : null;
+    
+    // If store country couldn't be determined, detect from payment method (Zelle = US, Interac = CA)
+    if (!storeCountry) {
+      var zelleRadio = document.querySelector('input[value="zelle"]');
+      var interacRadio = document.querySelector('input[value="interac"]');
+      if (zelleRadio && zelleRadio.offsetParent !== null) {
+        storeCountry = 'US';
+      } else if (interacRadio && interacRadio.offsetParent !== null) {
+        storeCountry = 'CA';
+      }
+    }
+    
+    if (storeCountry === 'US') {
+      countrySelect.value = 'US';
+      if (zoneLabel) zoneLabel.textContent = 'State';
+    } else {
+      countrySelect.value = 'CA';
+      if (zoneLabel) zoneLabel.textContent = 'Province';
+    }
+    
+    // Update zone options and select first available
+    updateZoneLabel();
+    
+    // Also update billing country/state — the bill country dropdown is forced
+    // to the store's country, but the bill zone <select> is rendered with
+    // Canadian provinces as defaults; swap to US states when on a US store
+    // (otherwise a US billing address shows CA provinces in the dropdown).
+    var billCountry = document.getElementById('billCountry');
+    var billZoneEl = document.getElementById('billZone');
+    var billZoneLabel = document.querySelector('label[for="billZone"]');
+    if (billCountry) {
+      billCountry.value = storeCountry === 'US' ? 'US' : 'CA';
+      if (billZoneLabel) billZoneLabel.textContent = storeCountry === 'US' ? 'State' : 'Province';
+      if (billZoneEl) billZoneEl.innerHTML = storeCountry === 'US' ? US_STATES : CA_PROVINCES;
+    }
+
+    // Init totals with correct default method
+    // Card if enabled, otherwise zelle (US) or interac (CA)
+    var defaultMethod = CARD_ENABLED ? 'card' : ('{{ store_country }}' === 'US' ? 'zelle' : 'interac');
+    
+    // Auto-select the default payment method
+    var defaultRadio = document.querySelector('input[value="' + defaultMethod + '"]');
+    if (defaultRadio) {
+      defaultRadio.checked = true;
+      selectMethod(defaultMethod);
+    }
+    
+    renderItems();
+    updateTotals(defaultMethod);
+
+    // Reserve order ID immediately on page load
+    reserveOrderId();
+
+    // Wire up auto-save listeners on every field
+    setupAutoSave();
+  });
+
+  // ── Returning-customer prefill (US stores only) ─────────────────────────
+  // Clicking "Sign in to autofill" opens an inline mini-form. On submit we
+  // POST {email, password} to /api/customer/lookup; on success we populate
+  // every shipping field and the customer just picks payment and pays.
+  document.addEventListener('DOMContentLoaded', function () {
+    var toggle  = document.getElementById('returningToggle');
+    var panel   = document.getElementById('returningPanel');
+    var row     = document.getElementById('returningRow');
+    var emailEl = document.getElementById('returningEmail');
+    var pwEl    = document.getElementById('returningPassword');
+    var submit  = document.getElementById('returningSubmit');
+    var cancel  = document.getElementById('returningCancel');
+    var status  = document.getElementById('returningStatus');
+    if (!toggle || !panel || !submit) return;
+
+    toggle.addEventListener('click', function (e) {
+      e.preventDefault();
+      panel.style.display = 'block';
+      row.style.display   = 'none';
+      setTimeout(function(){ if (emailEl) emailEl.focus(); }, 50);
+    });
+
+    cancel.addEventListener('click', function () {
+      panel.style.display = 'none';
+      row.style.display   = '';
+      status.textContent  = '';
+    });
+
+    function setVal(id, v) {
+      var el = document.getElementById(id);
+      if (!el || !v) return;
+      el.value = v;
+      // Fire input event so any field-level listeners (label-up etc) update
+      el.dispatchEvent(new Event('input',  {bubbles:true}));
+      el.dispatchEvent(new Event('change', {bubbles:true}));
+    }
+
+    submit.addEventListener('click', function () {
+      var email = (emailEl.value || '').trim();
+      var pw    = pwEl.value || '';
+      if (!email || !pw) {
+        status.textContent = 'Enter your email and password.';
+        return;
+      }
+      status.textContent = 'Signing in…';
+      submit.disabled = true;
+      fetch('/api/customer/lookup', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email: email, password: pw })
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        submit.disabled = false;
+        if (!j || !j.ok) {
+          status.textContent = 'Invalid email or password.';
+          return;
+        }
+        var p = j.profile || {};
+        setVal('email',      p.email);
+        setVal('firstName',  p.first_name);
+        setVal('lastName',   p.last_name);
+        setVal('phone',      p.phone);
+        setVal('address1',   p.address1);
+        setVal('address2',   p.address2);
+        setVal('city',       p.city);
+        setVal('postalCode', p.postal_code);
+        if (p.country) {
+          setVal('country', p.country);
+          // Country drives the zone (state/province) dropdown contents
+          if (typeof updateZoneLabel === 'function') {
+            try { updateZoneLabel(); } catch (_) {}
+          }
+        }
+        if (p.province) setVal('zone', p.province);
+
+        status.textContent = '';
+        panel.style.display = 'none';
+        row.style.display   = '';
+        if (typeof showNotif === 'function') {
+          showNotif('success', 'Welcome back — your details are filled in.');
+        }
+      })
+      .catch(function () {
+        submit.disabled = false;
+        status.textContent = 'Could not sign in — please try again.';
+      });
+    });
+  });
+</script>
+
+<!-- ───── STRIPE ELEMENTS PAYMENT MODAL ───── -->
+<div id="stripeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;align-items:center;justify-content:center;padding:1.6rem;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.6rem 2rem;border-bottom:1px solid #f0f0f0;">
+      <div>
+        <div style="font-size:1.6rem;font-weight:600;color:#111;letter-spacing:-0.01em;">Payment details</div>
+        <div style="font-size:1.2rem;color:#888;margin-top:0.2rem;">Secure card payment</div>
+      </div>
+      <button id="stripeModalClose" type="button" aria-label="Close" style="background:#f5f5f5;border:none;width:3.2rem;height:3.2rem;border-radius:50%;font-size:1.8rem;color:#666;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:background 0.15s;" onmouseover="this.style.background='#eee'" onmouseout="this.style.background='#f5f5f5'">&times;</button>
+    </div>
+
+    <!-- Stripe Payment Element mount point -->
+    <div style="padding:2rem;">
+      <div id="stripe-payment-element" style="min-height:200px;"></div>
+
+      <!-- Error message -->
+      <div id="stripeFormError" style="color:#df1b41;font-size:1.35rem;margin-top:1.2rem;min-height:1.6rem;text-align:center;"></div>
+
+      <!-- Pay button -->
+      <button id="stripePayBtn" type="button" style="width:100%;height:5.2rem;background:var(--accent,#dc2626);color:#fff;border:none;border-radius:10px;font-size:1.5rem;font-weight:600;font-family:inherit;cursor:pointer;margin-top:1.6rem;display:flex;align-items:center;justify-content:center;transition:background 0.15s,transform 0.1s;" onmouseover="this.style.background='var(--accent-hover,#b91c1c)'" onmouseout="this.style.background='var(--accent,#dc2626)'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:8px;vertical-align:-3px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Pay <span id="stripePayBtnAmount" style="margin-left:6px;">CAD $0.00</span>
+      </button>
+
+      <!-- Security note -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:0.8rem;margin-top:1.6rem;font-size:1.2rem;color:#888;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <span>Secured by Stripe • Your card info is encrypted</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── STRIPE DIRECT CARD MODAL ──────────────────────────────────────────
+     Pops up when "Pay now" is clicked while Credit Card (Stripe) is selected.
+     Customer enters card via Stripe Elements (mounted on #stripeDirectCardElement),
+     and the modal Pay button confirms the PaymentIntent on the backend. -->
+<div id="stripeDirectModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:99999;align-items:center;justify-content:center;padding:1.6rem;backdrop-filter:blur(4px);">
+  <div style="background:#fff;border-radius:14px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:1.6rem 2rem;border-bottom:1px solid #f0f0f0;">
+      <div>
+        <div style="font-size:1.6rem;font-weight:600;color:#111;letter-spacing:-0.01em;">Card payment</div>
+        <div style="font-size:1.2rem;color:#888;margin-top:0.2rem;">Secured by Stripe</div>
+      </div>
+      <button id="stripeDirectModalClose" type="button" aria-label="Close" style="background:#f5f5f5;border:none;width:3.2rem;height:3.2rem;border-radius:50%;font-size:1.8rem;color:#666;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0;transition:background 0.15s;" onmouseover="this.style.background='#eee'" onmouseout="this.style.background='#f5f5f5'">&times;</button>
+    </div>
+
+    <!-- Body — Stripe Elements card form -->
+    <div style="padding:2rem;">
+      <!-- Stripe Elements card input mounts here -->
+      <div id="stripeDirectCardElement" style="padding:1rem 1.2rem;border:1.5px solid #d6d3c8;border-radius:8px;background:#fff;min-height:4.2rem;"></div>
+      <div id="stripeDirectCardError" style="display:none;color:#b91c1c;font-size:1.2rem;padding:0.6rem 0;margin-top:0.6rem;"></div>
+
+      <!-- Pay button -->
+      <button id="stripeDirectPayBtn" type="button" style="width:100%;height:5.2rem;background:var(--accent,#dc2626);color:#fff;border:none;border-radius:10px;font-size:1.5rem;font-weight:600;font-family:inherit;cursor:pointer;margin-top:1.6rem;display:flex;align-items:center;justify-content:center;transition:background 0.15s;" onmouseover="this.style.background='var(--accent-hover,#b91c1c)'" onmouseout="this.style.background='var(--accent,#dc2626)'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:8px;vertical-align:-3px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        <span id="stripeDirectPayBtnLabel">Pay <span id="stripeDirectPayBtnAmount"></span></span>
+      </button>
+
+      <!-- Security note -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:0.8rem;margin-top:1.6rem;font-size:1.2rem;color:#888;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <span>Your card info is encrypted</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>

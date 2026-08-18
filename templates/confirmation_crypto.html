@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Pay with Bitcoin — {{ store_name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:62.5%}
+body{font-family:"DM Sans",sans-serif;font-size:1.5rem;line-height:1.5;color:#111;background:#f8f7f4;min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+:root{
+  --accent:{{ accent_color }};
+  --dark:#0f1117;
+  --green:#1a7e2e;
+  --green-bg:#edfbee;
+  --blue-dark:#0d2240;
+  --blue-mid:#1a3a5c;
+  --blue-light:#f0f5ff;
+  --blue-border:#c5d7f5;
+  --border:#e2e0da;
+}
+
+/* ── HEADER ── */
+.header{background:var(--dark);padding:1.8rem 4rem;display:flex;align-items:center;justify-content:space-between}
+.header-brand{display:flex;align-items:center;gap:1.2rem;text-decoration:none}
+.header-logo{width:3.2rem;height:3.2rem;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.header-logo svg{width:1.8rem;height:1.8rem;fill:#fff}
+.header-name{font-size:1.7rem;font-weight:600;color:#fff;letter-spacing:-0.02em}
+.header-secure{display:flex;align-items:center;gap:0.6rem;font-size:1.25rem;color:rgba(255,255,255,0.45)}
+.header-secure svg{width:1.4rem;height:1.4rem;fill:none;stroke:rgba(255,255,255,0.45);stroke-width:1.5}
+
+/* ── LAYOUT ── */
+.main{flex:1;display:flex;justify-content:center;padding:4rem 2rem}
+.outer{width:100%;max-width:110rem}
+
+/* ── BANNER ── */
+.banner{background:var(--blue-mid);border-radius:12px 12px 0 0;padding:1.1rem 2rem;color:#fff;display:flex;align-items:center;gap:1.2rem}
+.banner-icon{width:3rem;height:3rem;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.banner-icon svg{width:1.6rem;height:1.6rem;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.banner-text h1{font-size:1.45rem;font-weight:600;letter-spacing:-0.02em;margin-bottom:0}
+.banner-text p{font-size:1.2rem;opacity:0.8;display:none}
+.banner-status{margin-left:auto;flex-shrink:0}
+
+/* ── TWO-COLUMN BODY ── */
+.body-grid{
+  display:grid;
+  grid-template-columns:1fr 420px;
+  background:#fff;
+  border:1px solid var(--border);
+  border-top:none;
+  border-radius:0 0 12px 12px;
+  overflow:hidden;
+}
+
+/* ── LEFT PANEL ── */
+.left-panel{padding:3rem;border-right:1px solid var(--border)}
+
+/* ref box */
+.ref-box{background:var(--dark);border-radius:10px;padding:2.2rem;margin-bottom:2.4rem;text-align:center}
+.ref-label{font-size:1.15rem;font-weight:500;color:#8b8a85;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.8rem}
+.ref-code{font-family:"DM Mono",monospace;font-size:2.2rem;font-weight:600;color:#fff;letter-spacing:0.08em;display:flex;align-items:center;justify-content:center;gap:1.2rem;flex-wrap:wrap;margin-bottom:1rem}
+.copy-code-btn{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-family:"DM Sans",sans-serif;font-size:1.2rem;padding:0.4rem 1rem;cursor:pointer;transition:background 0.15s}
+.copy-code-btn:hover{background:rgba(255,255,255,0.2)}
+.ref-note{font-size:1.2rem;color:#8b8a85;line-height:1.6}
+.ref-note strong{color:#e8e6e0}
+
+/* steps */
+.steps-box{background:var(--blue-light);border:1.5px solid var(--blue-border);border-radius:8px;padding:2rem;margin-bottom:2.4rem}
+.steps-title{font-size:1.4rem;font-weight:600;color:var(--blue-dark);margin-bottom:1.2rem;display:flex;align-items:center;gap:0.8rem}
+.steps-title svg{width:1.6rem;height:1.6rem;fill:none;stroke:var(--blue-mid);stroke-width:2}
+.step-list{list-style:none;padding:0}
+.step-list li{display:flex;gap:1.2rem;padding:0.9rem 0;border-bottom:1px solid var(--blue-border);font-size:1.35rem;color:var(--blue-mid);line-height:1.5}
+.step-list li:last-child{border-bottom:none}
+.step-badge{width:2.2rem;height:2.2rem;background:var(--blue-border);color:var(--blue-dark);border-radius:50%;font-size:1.1rem;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0.1rem}
+.amount-hl{font-family:"DM Mono",monospace;font-weight:600;color:var(--blue-dark)}
+
+/* summary */
+.summary-section{margin-top:0.4rem}
+.summary-row{display:flex;justify-content:space-between;align-items:center;padding:0.9rem 0;border-bottom:1px solid var(--border);font-size:1.4rem}
+.summary-row:last-child{border-bottom:none}
+.summary-label{color:#888}
+.summary-value{font-weight:500;color:#111}
+.summary-row.grand{padding-top:1.4rem;border-top:2px solid var(--border);border-bottom:none}
+.summary-row.grand .summary-label{font-size:1.5rem;font-weight:600;color:#111}
+.summary-row.grand .summary-value{font-family:"DM Mono",monospace;font-size:2rem;font-weight:600;color:#111}
+
+/* polling */
+.polling{text-align:center;font-size:1.25rem;color:#999;margin-top:1.8rem}
+.polling.confirmed{font-size:2rem;font-weight:600;color:var(--green);background:var(--green-bg);border:1.5px solid var(--green);border-radius:8px;padding:1.6rem;margin-top:1.6rem}
+.polling.confirmed .check-big{font-size:2.4rem;margin-right:0.6rem;vertical-align:-2px}
+.banner.paid{background:var(--green)}
+.dot{animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+/* status pill */
+.status-pill{display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1.4rem;border-radius:3rem;font-size:1.25rem;font-weight:600}
+.status-pending{background:#fff6ed;color:#b98900}
+.status-paid{background:var(--green-bg);color:var(--green)}
+.status-expired{background:#fff0f0;color:#d72c0d}
+
+/* ── RIGHT PANEL (BTCPay) ── */
+.right-panel{
+  display:flex;
+  flex-direction:column;
+  background:#f8f7f4;
+}
+.right-header{
+  padding:2rem 2.4rem 1.4rem;
+  border-bottom:1px solid var(--border);
+  background:#fff;
+}
+.right-header-title{font-size:1.4rem;font-weight:600;color:#111;margin-bottom:0.3rem}
+.right-header-sub{font-size:1.2rem;color:#888}
+.btcpay-wrap{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  padding:1.6rem;
+}
+.btcpay-wrap iframe{
+  width:100%;
+  flex:1;
+  min-height:520px;
+  border:none;
+  border-radius:10px;
+  display:block;
+}
+.btcpay-note{
+  font-size:1.15rem;
+  color:#888;
+  text-align:center;
+  margin-top:1.2rem;
+  line-height:1.5;
+}
+.btcpay-note svg{
+  display:inline;
+  width:1.2rem;
+  height:1.2rem;
+  fill:none;
+  stroke:#aaa;
+  stroke-width:2;
+  vertical-align:middle;
+  margin-right:0.3rem;
+}
+
+/* ── NOTIFICATION ── */
+.notif{position:fixed;top:2rem;right:2rem;z-index:9999;padding:1.2rem 1.8rem;border-radius:8px;font-size:1.4rem;font-weight:500;background:var(--dark);color:#fff;transform:translateX(120%);transition:transform 0.3s ease;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.notif.show{transform:translateX(0)}
+
+/* ── FOOTER ── */
+.footer{text-align:center;padding:2.4rem;font-size:1.2rem;color:#aaa}
+
+/* ── RESPONSIVE ── */
+.mobile-orderref{display:none}
+@media(max-width:860px){
+  .body-grid{grid-template-columns:1fr;grid-template-rows:auto auto}
+  /* Mobile order: order-ID bar → how-to-pay steps → Bitcoin payment frame */
+  .left-panel{order:1;border-right:none;border-bottom:1px solid var(--border);padding:2rem 1.6rem}
+  .right-panel{order:2;min-height:auto;border-bottom:none}
+  .left-panel .ref-box{display:none}   /* shown as the top bar instead */
+  .right-header{padding:1.4rem 1.6rem 1rem}
+  .btcpay-wrap{padding:1.2rem}
+  .btcpay-wrap iframe{min-height:620px}   /* full QR + invoice, no crop */
+  .banner{display:none}
+  .header{padding:1.4rem 1.6rem}
+  /* order reference bar, sits right under the header above the QR frame */
+  .mobile-orderref{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.2rem 1.6rem;background:#fff;border-bottom:1px solid var(--border)}
+  .mobile-orderref .mor-label{font-size:1.05rem;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.2rem}
+  .mobile-orderref .mor-code{font-family:'DM Mono',monospace;font-size:1.5rem;font-weight:600;color:#111}
+}
+</style>
+{% if is_v2 %}{% include "_v2_confirmation_reskin.html" %}{% endif %}
+</head>
+<body>
+<div class="notif" id="notif"></div>
+
+<header class="header">
+  <a class="header-brand" href="/">
+    {% if logo_url %}
+    <img src="{{ logo_url }}" alt="{{ store_name }}" style="max-height:3.2rem"/>
+    {% else %}
+    <div class="header-logo"><svg viewBox="0 0 24 24"><path d="M12 2a5 5 0 015 5c0 2.1-1.3 3.9-3.1 4.7L16 19H8l2.1-7.3A5 5 0 0112 2z"/></svg></div>
+    <span class="header-name">{{ store_name }}</span>
+    {% endif %}
+  </a>
+  <div class="header-secure">
+    <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    Secure checkout
+  </div>
+</header>
+
+<main class="main">
+  <div class="outer">
+
+    <!-- BANNER -->
+    <div class="banner{% if payment_status == "paid" %} paid{% endif %}">
+      <div class="banner-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      </div>
+      <div class="banner-text">
+        <div style="font-size:1.05rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;opacity:0.8;margin-bottom:0.15rem;">{{ store_name }}</div>
+        {% if payment_status == "paid" %}
+        <h1>Payment Successful!</h1>
+        <p>Thank you — your order is being processed.</p>
+        {% else %}
+        <h1>Complete Your Bitcoin Payment</h1>
+        <p>Scan the QR code or use your wallet app — your order is reserved for 60 minutes</p>
+        {% endif %}
+      </div>
+      <div class="banner-status">
+        <span class="status-pill status-{{ payment_status }}" id="statusPill">
+          {% if payment_status == "paid" %}&#10003; Confirmed{% else %}&#8987; Awaiting payment{% endif %}
+        </span>
+      </div>
+    </div>
+
+    <!-- MOBILE-ONLY order reference bar (above the payment frame) -->
+    <div class="mobile-orderref">
+      <div>
+        <div class="mor-label">Your order reference</div>
+        <div class="mor-code">{{ order_id }}</div>
+      </div>
+      <button class="copy-code-btn" onclick="copyRef()">Copy</button>
+    </div>
+
+    <!-- TWO-COLUMN BODY -->
+    <div class="body-grid">
+
+      <!-- LEFT: ORDER INFO + STEPS -->
+      <div class="left-panel">
+
+        <div class="ref-box">
+          <div class="ref-label">Your order reference</div>
+          <div class="ref-code">
+            <span>{{ order_id }}</span>
+            <button class="copy-code-btn" onclick="copyRef()">Copy</button>
+          </div>
+          <div class="ref-note"><strong>Keep this page open</strong> until your payment is confirmed below.</div>
+        </div>
+
+        <div class="steps-box">
+          <div class="steps-title">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            How to pay with Bitcoin
+          </div>
+          <ol class="step-list">
+            <li>
+              <span class="step-badge">1</span>
+              <span>Open your Bitcoin wallet app (Coinbase, Trust Wallet, Exodus, etc.)</span>
+            </li>
+            <li>
+              <span class="step-badge">2</span>
+              <span>Tap <strong>Send</strong> and scan the QR code on the right, or copy the Bitcoin address</span>
+            </li>
+            <li>
+              <span class="step-badge">3</span>
+              <span>Send exactly <span class="amount-hl">${{ "%.2f"|format(total) }} {{ currency }}</span> worth of BTC — the exact BTC amount is shown on the invoice</span>
+            </li>
+            <li>
+              <span class="step-badge">4</span>
+              <span>Confirm the transaction in your wallet — this page will automatically update when payment is received</span>
+            </li>
+          </ol>
+        </div>
+
+        {% if items %}
+        <div class="steps-box" style="margin-bottom:2.4rem">
+          <div class="steps-title" style="margin-bottom:1rem">
+            <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+            Your Order
+          </div>
+          {% for item in items %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0.8rem 0;border-bottom:1px solid var(--blue-border);font-size:1.35rem;color:var(--blue-mid)">
+            <div>
+              <span style="font-weight:500">{{ item.title }}</span>
+              {% if item.variant %}<span style="color:#888;font-size:1.2rem"> · {{ item.variant }}</span>{% endif %}
+              <span style="color:#888;font-size:1.2rem"> × {{ item.qty }}</span>
+            </div>
+            <span style="font-family:'DM Mono',monospace;font-weight:600;color:var(--blue-dark)">${{ "%.2f"|format(item.total|float) }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        
+        <div class="summary-section">
+          <div class="summary-row">
+            <span class="summary-label">Order reference</span>
+            <span class="summary-value" style="font-family:'DM Mono',monospace">{{ order_id }}</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Payment method</span>
+            <span class="summary-value">Bitcoin (BTC)</span>
+          </div>
+          <div class="summary-row">
+            <span class="summary-label">Discount applied</span>
+            <span class="summary-value" style="color:var(--green);font-weight:600">10% crypto discount</span>
+          </div>
+          <div class="summary-row grand">
+            <span class="summary-label">Total to pay</span>
+            <span class="summary-value">${{ "%.2f"|format(total) }} {{ currency }}</span>
+          </div>
+        </div>
+
+        {% if payment_status == "paid" %}
+        <div class="polling confirmed" id="pollingNotice">
+          <span class="check-big">&#10003;</span>Payment received! Your order is confirmed.
+        </div>
+        {% else %}
+        <div class="polling" id="pollingNotice">
+          <span class="dot">&#9679;</span> Waiting for your payment...
+        </div>
+        {% endif %}
+
+      </div>
+
+      <!-- RIGHT: BTCPAY IFRAME -->
+      <div class="right-panel">
+        <div class="right-header">
+          <div class="right-header-title">Bitcoin Invoice</div>
+          <div class="right-header-sub">Powered by BTCPay Server · Expires in 60 min</div>
+        </div>
+        <div class="btcpay-wrap">
+          {% if btcpay_url %}
+          <iframe
+            src="{{ btcpay_url }}"
+            scrolling="no"
+            allowtransparency="true"
+            style="background:transparent;">
+          </iframe>
+          {% else %}
+          <div style="display:flex;align-items:center;justify-content:center;flex:1;color:#888;font-size:1.4rem;">
+            Invoice not available. Please contact support.
+          </div>
+          {% endif %}
+          <div class="btcpay-note">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Payments are processed securely via BTCPay Server
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<footer class="footer">{{ store_name }} — Questions? Contact our support team.</footer>
+
+<script>
+var ORDER_ID   = "{{ order_id }}";
+var PAY_STATUS = "{{ payment_status }}";
+
+function showNotif(msg) {
+  var el = document.getElementById("notif");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(function() { el.classList.remove("show"); }, 3000);
+}
+
+function copyRef() {
+  navigator.clipboard.writeText(ORDER_ID).then(function() {
+    showNotif("Order reference copied!");
+    var btn = document.querySelector(".copy-code-btn");
+    if (btn) { btn.textContent = "Copied!"; setTimeout(function(){ btn.textContent = "Copy"; }, 2000); }
+  });
+}
+
+function updateUI(status) {
+  var pill   = document.getElementById("statusPill");
+  var notice = document.getElementById("pollingNotice");
+  var banner = document.querySelector(".banner");
+  if (status === "paid") {
+    if (banner) {
+      banner.classList.add("paid");
+      var h1 = banner.querySelector(".banner-text h1");
+      var p  = banner.querySelector(".banner-text p");
+      if (h1) h1.textContent = "Payment Successful!";
+      if (p)  p.textContent  = "Thank you — your order is being processed.";
+    }
+    if (pill) { pill.textContent = "\u2713 Confirmed"; pill.className = "status-pill status-paid"; }
+    if (notice) {
+      notice.className = "polling confirmed";
+      notice.innerHTML = '<span class="check-big">\u2713</span>Payment received! Your order is confirmed.';
+    }
+    return true;
+  }
+  if (status === "expired") {
+    if (pill) { pill.textContent = "Expired"; pill.className = "status-pill status-expired"; }
+    if (notice) notice.textContent = "This invoice has expired. Please place a new order.";
+    return true;
+  }
+  return false;
+}
+
+// Start polling
+var polls = 0;
+function poll() {
+  if (polls++ > 90) {
+    var notice = document.getElementById("pollingNotice");
+    if (notice) notice.textContent = "Payment not detected yet. It may take a few minutes to confirm.";
+    return;
+  }
+  fetch("/api/checkout/status/" + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!updateUI(data.paymentStatus)) setTimeout(poll, 20000);
+    })
+    .catch(function() { setTimeout(poll, 20000); });
+}
+
+if (PAY_STATUS !== "paid") {
+  fetch("/api/checkout/status/" + ORDER_ID)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!updateUI(data.paymentStatus)) setTimeout(poll, 20000);
+    })
+    .catch(function() { setTimeout(poll, 20000); });
+}
+</script>
+</body>
+</html>

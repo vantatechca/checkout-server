@@ -1,0 +1,25 @@
+# Secrets — never commit real credentials
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Backups / stray artifacts accumulated during manual SSH work
+*.bak
+*.bak.*
+
+# Build artifacts
+*.tar.gz
+wpay_deploy.tar.gz
+
+# Editor / OS
+.DS_Store
+*.log
+
+# Node (scratch scripts, playwright, etc. — not part of the app)
+node_modules/
