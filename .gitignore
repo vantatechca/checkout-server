@@ -21,5 +21,8 @@ wpay_deploy.tar.gz
 .DS_Store
 *.log
 
+# Celery Beat runtime state
+celerybeat-schedule
+
 # Node (scratch scripts, playwright, etc. — not part of the app)
 node_modules/
