@@ -4,9 +4,9 @@ Internal admin endpoints (should be behind IP whitelist in Nginx, not public).
 GET  /admin/orders              → list orders with filters
 GET  /admin/orders/{id}         → order detail
 POST /admin/orders/{id}/mark-paid   → manually mark any order paid (creates a Shopify order)
-POST /admin/orders/{id}/shipping/mark-paid → lightweight mark-paid for the Shipping tab (no Shopify order)
-POST /admin/orders/{id}/shipping/rates     → live Shippo rate quote for an order
-POST /admin/orders/{id}/shipping/buy-label → purchase a Shippo shipping label
+POST /admin/orders/{id}/shipping/rates     → live Shippo rate quote for an order (any status)
+POST /admin/orders/{id}/shipping/mark-paid-and-buy-label → mark paid (no Shopify order) + buy the quoted label, in one action
+POST /admin/orders/{id}/shipping/buy-label → purchase a Shippo shipping label for an already-paid order
 POST /admin/interac/match       → manually match an unmatched Interac payment
 GET  /admin/interac/unmatched   → list Interac payments needing manual review
 GET  /admin/brands              → list brands
@@ -308,23 +308,15 @@ async def list_orders(
                 (ZellePayment.id.is_(None))
              )
 
-    # "Shipping" tab — the fulfillment-first workflow: orders still needing
-    # payment (so they can be marked paid without a Shopify order) OR orders
-    # already paid but not yet shipped (so a label can be bought), regardless
-    # of which mark-paid path was used. Once a label is bought (shipped_at
-    # set), the order drops off this tab but stays visible in Paid.
+    # "Shipping" tab — a record of orders fulfilled through the combined
+    # Shippo flow specifically (Pending tab's "Mark Paid (Shippo)" button,
+    # which marks paid AND buys the label in one action). Requires BOTH
+    # paid_via_shippo and a tracking number — a Shopify-paid order that
+    # separately got a label bought for it does not belong here.
     if shipping == "yes":
         q = q.where(
-            _sa_or(
-                _sa_and(
-                    Order.payment_status == PaymentStatus.pending,
-                    _sa_or(Order.payment_method != PaymentMethod.card, _is_delayed_card()),
-                ),
-                _sa_and(
-                    Order.payment_status == PaymentStatus.paid,
-                    Order.shipped_at.is_(None),
-                ),
-            )
+            Order.paid_via_shippo == True,  # noqa: E712
+            Order.tracking_number.is_not(None),
         )
 
     # Failed tab — payment never succeeded; admin can attempt recovery
@@ -496,22 +488,12 @@ async def order_stats(
     )
 
     # Mirrors list_orders' exact `shipping=yes` filter (the Shipping tab's
-    # real query): not-yet-paid orders (fulfillment-first mark-paid) PLUS
-    # paid-but-not-yet-shipped orders (buy a label), regardless of which
-    # mark-paid path was used.
+    # real query): orders fulfilled through the combined Shippo flow only.
     shipping_q = select(sa_func.count()).select_from(Order).where(
         and_(
             *base_filter,
-            or_(
-                and_(
-                    Order.payment_status == PaymentStatus.pending,
-                    or_(Order.payment_method != PaymentMethod.card, _is_delayed_card()),
-                ),
-                and_(
-                    Order.payment_status == PaymentStatus.paid,
-                    Order.shipped_at.is_(None),
-                ),
-            ),
+            Order.paid_via_shippo == True,  # noqa: E712
+            Order.tracking_number.is_not(None),
         )
     )
 
@@ -886,35 +868,14 @@ class ShippingBuyLabelRequest(BaseModel):
     height_in: float
 
 
-@router.post("/orders/{order_id}/shipping/mark-paid", dependencies=[Depends(require_write_access)])
-async def mark_order_paid_shipping(
-    order_id: str,
-    body: MarkPaidRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    await _apply_paid_status(
-        db, order_id, body.notes,
-        "Marked paid via Shipping tab (no Shopify order)",
-    )
-    await log_admin_activity(
-        db, request,
-        action="shipping_mark_paid", target_type="order", target_id=order_id,
-        details=(body.notes or "no note")[:200],
-    )
-
-    result = await db.execute(
-        select(Order).where(Order.id == order_id)
-        .options(selectinload(Order.items))
-    )
-    order = result.scalar_one_or_none()
-
-    from services.order_finalize import finalize_paid_order
-    result_info = await finalize_paid_order(order, db, label="shipping-mark-paid", create_shopify=False)
-    resp = {"success": True, "orderId": order_id}
-    if result_info.get("affiliate_error"):
-        resp["affiliateError"] = result_info["affiliate_error"]
-    return resp
+class ShippingMarkPaidBuyLabelRequest(BaseModel):
+    notes:     Optional[str] = None
+    rate_id:   str
+    carrier:   str
+    weight_oz: float
+    length_in: float
+    width_in:  float
+    height_in: float
 
 
 @router.get("/orders/{order_id}/shipping/default-address", dependencies=[Depends(require_write_access)])
@@ -958,6 +919,91 @@ async def get_shipping_rates(
     except ShippoError as e:
         raise HTTPException(502, f"Could not fetch shipping rates: {e}")
     return {"success": True, "rates": rates}
+
+
+@router.post("/orders/{order_id}/shipping/mark-paid-and-buy-label", dependencies=[Depends(require_write_access)])
+async def mark_paid_and_buy_label(
+    order_id: str,
+    body: ShippingMarkPaidBuyLabelRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Pending tab's "Mark Paid (Shippo)" flow — marks the order paid WITHOUT
+    creating a Shopify order, then immediately buys the label for the rate
+    the admin already picked (via /shipping/rates). One admin action, two
+    steps. Sets paid_via_shippo=True so this order (and only orders that
+    complete this exact path) show up on the Shipping tab afterward.
+
+    If the label purchase fails after the order is already marked paid, the
+    order is left paid-but-unlabeled rather than rolled back — the affiliate
+    webhook/email have already fired by that point too. It's still reachable
+    via the Paid tab's Buy Shipping Label section as a fallback, so nothing
+    about the purchase is lost, but it won't yet show on the Shipping tab.
+    """
+    await _apply_paid_status(
+        db, order_id, body.notes,
+        "Marked paid + label bought via Shippo (no Shopify order)",
+    )
+
+    result = await db.execute(
+        select(Order).where(Order.id == order_id)
+        .options(selectinload(Order.items))
+    )
+    order = result.scalar_one_or_none()
+
+    from services.order_finalize import finalize_paid_order
+    finalize_info = await finalize_paid_order(order, db, label="shipping-mark-paid-buy-label", create_shopify=False)
+
+    order.paid_via_shippo = True
+    await db.commit()
+
+    await log_admin_activity(
+        db, request,
+        action="shipping_mark_paid", target_type="order", target_id=order_id,
+        details=(body.notes or "no note")[:200],
+    )
+
+    from services.shippo import ShippoClient, ShippoError
+    try:
+        label = await ShippoClient().buy_label(
+            rate_id=body.rate_id,
+            order_id=order_id,
+            carrier=body.carrier,
+        )
+    except ShippoError as e:
+        resp = {
+            "success":    True,
+            "orderId":    order_id,
+            "paid":       True,
+            "labelError": f"Order was marked paid, but the label purchase failed: {e}",
+        }
+        if finalize_info.get("affiliate_error"):
+            resp["affiliateError"] = finalize_info["affiliate_error"]
+        return resp
+
+    order.tracking_number       = label["tracking_number"]
+    order.tracking_url          = label["tracking_url"]
+    order.carrier                = label["carrier"]
+    order.label_url              = label["label_url"]
+    order.shippo_transaction_id  = label["transaction_id"]
+    order.shipped_at             = datetime.now(timezone.utc)
+    order.package_weight_oz      = body.weight_oz
+    order.package_length_in      = body.length_in
+    order.package_width_in       = body.width_in
+    order.package_height_in      = body.height_in
+    await db.commit()
+
+    await log_admin_activity(
+        db, request,
+        action="create_label", target_type="order", target_id=order_id,
+        details=f"{label['carrier']} — {label['tracking_number']}"[:200],
+    )
+
+    resp = {"success": True, "orderId": order_id, "paid": True, **label}
+    if finalize_info.get("affiliate_error"):
+        resp["affiliateError"] = finalize_info["affiliate_error"]
+    return resp
 
 
 @router.post("/orders/{order_id}/shipping/buy-label", dependencies=[Depends(require_write_access)])

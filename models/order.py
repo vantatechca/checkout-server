@@ -25,7 +25,7 @@ This is the canonical order.py with all features:
 import enum
 from sqlalchemy import (
     Column, Integer, String, Text, Numeric, DateTime,
-    Enum, ForeignKey, Index
+    Enum, ForeignKey, Index, Boolean
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -189,6 +189,11 @@ class Order(Base):
     package_length_in      = Column(Numeric(5, 2), nullable=True)
     package_width_in       = Column(Numeric(5, 2), nullable=True)
     package_height_in      = Column(Numeric(5, 2), nullable=True)
+    # True only when marked paid AND labeled through the combined Shippo
+    # flow (Pending tab's "Mark Paid (Shippo)" button) — distinguishes that
+    # from a Shopify-paid order that separately got a label bought for it,
+    # so the Shipping tab can show exactly the former.
+    paid_via_shippo        = Column(Boolean, nullable=False, default=False)
 
     # --- Customer email tracking ---
     last_customer_email_at = Column(DateTime, nullable=True)
@@ -274,6 +279,7 @@ class Order(Base):
             "packageLengthIn":      float(self.package_length_in) if self.package_length_in is not None else None,
             "packageWidthIn":       float(self.package_width_in) if self.package_width_in is not None else None,
             "packageHeightIn":      float(self.package_height_in) if self.package_height_in is not None else None,
+            "paidViaShippo":        bool(self.paid_via_shippo),
 
             # Email tracking
             "lastCustomerEmailAt":  self.last_customer_email_at.isoformat() if self.last_customer_email_at else None,

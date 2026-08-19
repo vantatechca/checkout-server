@@ -1280,9 +1280,26 @@
                 + '</div>';
             }
           } else if (o.paymentStatus === "paid") {
-            action = o.trackingNumber
-              ? '<span class="action-btn btn-paid">\u2713 Paid</span>'
-              : '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>';
+            if (o.paidViaShippo && o.trackingNumber) {
+              // Shipping tab rows are exactly this condition \u2014 show the
+              // tracking/label right in the list instead of a plain badge.
+              action =
+                '<div style="font-size:1.2rem;line-height:1.5;">' +
+                '<div><strong>' + _escapeHtml(o.carrier || "\u2014") + '</strong></div>' +
+                '<div class="mono">' +
+                (o.trackingUrl
+                  ? '<a href="' + _escapeHtml(o.trackingUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation();">' + _escapeHtml(o.trackingNumber) + '</a>'
+                  : _escapeHtml(o.trackingNumber)) +
+                '</div>' +
+                (o.labelUrl
+                  ? '<a href="' + _escapeHtml(o.labelUrl) + '" target="_blank" rel="noopener" onclick="event.stopPropagation();">View Label</a>'
+                  : '') +
+                '</div>';
+            } else {
+              action = o.trackingNumber
+                ? '<span class="action-btn btn-paid">\u2713 Paid</span>'
+                : '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>';
+            }
           } else if (
             o.paymentStatus === "failed" ||
             o.paymentStatus === "expired"
@@ -2315,32 +2332,23 @@
               html += '<a href="' + _escapeHtml(o.labelUrl) + '" target="_blank" rel="noopener" class="action-btn" style="display:inline-block;margin-top:1rem;height:4rem;line-height:4rem;padding:0 1.6rem;font-size:1.3rem;">View Label</a>';
             }
           } else {
-            var addrField = function (id, label, span) {
-              return '<label style="font-size:1.2rem;color:#888;grid-column:span ' + (span || 1) + ';">' + label +
-                '<input id="' + id + '" type="text" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
-            };
-            html +=
-              '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Ship From (prefilled — edit if needed)</div>' +
-              '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
-              addrField("shipFromName", "Name", 2) +
-              addrField("shipFromPhone", "Phone", 2) +
-              addrField("shipFromStreet1", "Address line 1", 4) +
-              addrField("shipFromStreet2", "Address line 2", 4) +
-              addrField("shipFromCity", "City", 2) +
-              addrField("shipFromState", "Province/State", 1) +
-              addrField("shipFromZip", "Postal/Zip", 1) +
-              addrField("shipFromCountry", "Country (CA/US)", 1) +
-              '</div>' +
-              '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Parcel</div>' +
-              '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
-              '<label style="font-size:1.2rem;color:#888;">Weight (oz)<input id="shipWeightOz" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
-              '<label style="font-size:1.2rem;color:#888;">Length (in)<input id="shipLengthIn" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
-              '<label style="font-size:1.2rem;color:#888;">Width (in)<input id="shipWidthIn" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
-              '<label style="font-size:1.2rem;color:#888;">Height (in)<input id="shipHeightIn" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
-              '</div>' +
-              '<button id="shipGetRatesBtn" class="action-btn" style="width:100%;height:4rem;" onclick="fetchShippingRates(\'' + _escapeForInlineJs(o.id) + '\')">Get Rates</button>' +
+            html += _shippingFormFieldsHtml();
+            html += '<button id="shipGetRatesBtn" class="action-btn" style="width:100%;height:4rem;" onclick="fetchShippingRates(\'' + _escapeForInlineJs(o.id) + '\', \'buyLabel\')">Get Rates</button>' +
               '<div id="shippingRatesResult"></div>';
           }
+          html += '</div>';
+        }
+
+        // Mark Paid (Shippo) — pending orders only. Hidden until the footer
+        // button reveals it; clicking Get Rates here does NOT require the
+        // order to be paid first (Shippo rate lookups don't care), and the
+        // final action marks paid + buys the label in one combined call.
+        if (!window.IS_VIEWER && isPending) {
+          html += '<div class="modal-section" id="shippoMarkPaidSection" style="display:none;">';
+          html += '<div class="modal-section-title">Mark Paid + Buy Shipping Label (Shippo)</div>';
+          html += _shippingFormFieldsHtml();
+          html += '<button id="shipGetRatesBtn" class="action-btn" style="width:100%;height:4rem;" onclick="fetchShippingRates(\'' + _escapeForInlineJs(o.id) + '\', \'markPaidBuyLabel\')">Get Rates</button>';
+          html += '<div id="shippingRatesResult"></div>';
           html += '</div>';
         }
 
@@ -2362,9 +2370,9 @@
             o.id +
             "');closeModal()\">Cancel Order</button>";
           html +=
-            "<button style=\"height:4.8rem;padding:0 1.6rem;background:#f3e8ff;color:#7c3aed;border:1.5px solid #7c3aed;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:600;cursor:pointer;\" title=\"Marks paid without creating a Shopify order \u2014 for the Shipping tab's fulfillment-first workflow\" onclick=\"markPaidShipping('" +
+            "<button style=\"height:4.8rem;padding:0 1.6rem;background:#f3e8ff;color:#7c3aed;border:1.5px solid #7c3aed;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:600;cursor:pointer;\" title=\"Reveals the parcel/address form below \u2014 marks paid WITHOUT creating a Shopify order and buys the shipping label in one action\" onclick=\"showShippoLabelForm('" +
             o.id +
-            "')\">\ud83d\udce6 Mark Paid (No Shopify)</button>";
+            "')\">\ud83d\udce6 Mark Paid (Shippo)</button>";
           html +=
             '<button class="modal-confirm" id="modalConfirmBtn" onclick="confirmMarkPaid()">\u2713 Mark as Paid</button>';
           html += "</div>";
@@ -2386,24 +2394,7 @@
         document.getElementById("modalBody").innerHTML = html;
 
         if (!window.IS_VIEWER && o.paymentStatus === "paid" && !o.trackingNumber) {
-          fetch("/admin/orders/" + o.id + "/shipping/default-address", { credentials: "include" })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              var a = (data && data.address) || {};
-              var setVal = function (id, v) {
-                var el = document.getElementById(id);
-                if (el) el.value = v || "";
-              };
-              setVal("shipFromName", a.name);
-              setVal("shipFromStreet1", a.street1);
-              setVal("shipFromStreet2", a.street2);
-              setVal("shipFromCity", a.city);
-              setVal("shipFromState", a.state);
-              setVal("shipFromZip", a.zip);
-              setVal("shipFromCountry", a.country);
-              setVal("shipFromPhone", a.phone);
-            })
-            .catch(function () {});
+          _prefillShipFromAddress(o.id);
         }
 
         fetch("/admin/orders/" + o.id, { credentials: "include" })
@@ -2608,50 +2599,84 @@
 
       /* ─── SHIPPING (Shippo) ──────────────────────── */
 
-      // Lightweight mark-paid for the Shipping tab — deliberately does NOT
-      // create a Shopify order (see routes/admin.py:/orders/{id}/shipping/mark-paid).
-      // Only the normal "Mark as Paid" button (confirmMarkPaid above) does that.
-      async function markPaidShipping(orderId) {
-        var ok = await showConfirm({
-          title: "Mark paid — no Shopify order",
-          body:
-            "This marks the order paid WITHOUT creating a Shopify order or " +
-            "affecting inventory. Use this only for the Shipping tab's " +
-            "fulfillment-first workflow. The affiliate payout still fires " +
-            "normally.\n\nContinue?",
-          okText: "Mark paid",
-        });
-        if (!ok) return;
-
-        fetch("/admin/orders/" + orderId + "/shipping/mark-paid", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ notes: null }),
-        })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-          .then(function (res) {
-            if (res.ok && res.data.success) {
-              var warning = _markPaidWarningMsg(res.data);
-              if (warning) {
-                showToast("warning", "✓ Order " + orderId + " marked paid (no Shopify order), but: " + warning);
-              } else {
-                showToast("success", "✓ Order " + orderId + " marked paid (no Shopify order)");
-              }
-              loadOrders();
-              _refreshOrderAndReopen(orderId);
-            } else {
-              showToast("error", res.data.detail || "Failed to mark paid");
-            }
-          })
-          .catch(function () {
-            showToast("error", "Network error. Try again.");
-          });
+      // Shared Ship From + Parcel field block — used by both the paid-order
+      // "Buy Shipping Label" section and the pending-order "Mark Paid
+      // (Shippo)" section. Safe to reuse the same element ids in both
+      // places since only one of the two branches is ever rendered for a
+      // given order (an order is either pending or paid, never both).
+      function _shippingFormFieldsHtml() {
+        var addrField = function (id, label, span) {
+          return '<label style="font-size:1.2rem;color:#888;grid-column:span ' + (span || 1) + ';">' + label +
+            '<input id="' + id + '" type="text" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+        };
+        var dimField = function (id, label) {
+          return '<label style="font-size:1.2rem;color:#888;">' + label +
+            '<input id="' + id + '" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+        };
+        return (
+          '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Ship From (prefilled — edit if needed)</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
+          addrField("shipFromName", "Name", 2) +
+          addrField("shipFromPhone", "Phone", 2) +
+          addrField("shipFromStreet1", "Address line 1", 4) +
+          addrField("shipFromStreet2", "Address line 2", 4) +
+          addrField("shipFromCity", "City", 2) +
+          addrField("shipFromState", "Province/State", 1) +
+          addrField("shipFromZip", "Postal/Zip", 1) +
+          addrField("shipFromCountry", "Country (CA/US)", 1) +
+          '</div>' +
+          '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Parcel</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
+          dimField("shipWeightOz", "Weight (oz)") +
+          dimField("shipLengthIn", "Length (in)") +
+          dimField("shipWidthIn", "Width (in)") +
+          dimField("shipHeightIn", "Height (in)") +
+          '</div>'
+        );
       }
 
-      // Selected rate, kept between fetchShippingRates and confirmBuyShippingLabel.
-      var _selectedShippingRate = null;
+      // Prefills the Ship From fields from the configured CA/US default for
+      // this order's currency — still fully editable afterward.
+      function _prefillShipFromAddress(orderId) {
+        fetch("/admin/orders/" + orderId + "/shipping/default-address", { credentials: "include" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var a = (data && data.address) || {};
+            var setVal = function (id, v) {
+              var el = document.getElementById(id);
+              if (el) el.value = v || "";
+            };
+            setVal("shipFromName", a.name);
+            setVal("shipFromStreet1", a.street1);
+            setVal("shipFromStreet2", a.street2);
+            setVal("shipFromCity", a.city);
+            setVal("shipFromState", a.state);
+            setVal("shipFromZip", a.zip);
+            setVal("shipFromCountry", a.country);
+            setVal("shipFromPhone", a.phone);
+          })
+          .catch(function () {});
+      }
 
-      function fetchShippingRates(orderId) {
+      // Reveals the pending order's hidden Mark Paid (Shippo) section —
+      // clicking the footer button triggers this instead of immediately
+      // marking paid, since the parcel/address form and rate selection need
+      // to happen BEFORE the combined mark-paid-and-buy-label call.
+      function showShippoLabelForm(orderId) {
+        var section = document.getElementById("shippoMarkPaidSection");
+        if (!section) return;
+        section.style.display = "block";
+        _prefillShipFromAddress(orderId);
+        section.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+
+      // Selected rate + which flow triggered it, kept between
+      // fetchShippingRates and confirmBuyShippingLabel/confirmMarkPaidAndBuyLabel.
+      var _selectedShippingRate = null;
+      var _shippingRateMode = "buyLabel"; // "buyLabel" | "markPaidBuyLabel"
+
+      function fetchShippingRates(orderId, mode) {
+        _shippingRateMode = mode || "buyLabel";
         var weight = parseFloat(document.getElementById("shipWeightOz").value);
         var length = parseFloat(document.getElementById("shipLengthIn").value);
         var width  = parseFloat(document.getElementById("shipWidthIn").value);
@@ -2712,7 +2737,8 @@
                 '</label>';
             });
             html += '</div>';
-            html += '<button id="shipBuyLabelBtn" class="modal-confirm" style="margin-top:1rem;width:100%;" disabled onclick="confirmBuyShippingLabel(\'' + _escapeForInlineJs(orderId) + '\')">Select a rate above</button>';
+            var confirmFn = _shippingRateMode === "markPaidBuyLabel" ? "confirmMarkPaidAndBuyLabel" : "confirmBuyShippingLabel";
+            html += '<button id="shipBuyLabelBtn" class="modal-confirm" style="margin-top:1rem;width:100%;" disabled onclick="' + confirmFn + '(\'' + _escapeForInlineJs(orderId) + '\')">Select a rate above</button>';
             resultEl.innerHTML = html;
             resultEl.dataset.rates = JSON.stringify(rates);
           })
@@ -2731,7 +2757,8 @@
         var buyBtn = document.getElementById("shipBuyLabelBtn");
         if (buyBtn && _selectedShippingRate) {
           buyBtn.disabled = false;
-          buyBtn.textContent = "Buy Label — $" + _selectedShippingRate.amount.toFixed(2) + " " + _selectedShippingRate.currency;
+          var prefix = _shippingRateMode === "markPaidBuyLabel" ? "Mark Paid & Buy Label — $" : "Buy Label — $";
+          buyBtn.textContent = prefix + _selectedShippingRate.amount.toFixed(2) + " " + _selectedShippingRate.currency;
         }
       }
 
@@ -2779,6 +2806,68 @@
           .catch(function () {
             showToast("error", "Network error. Try again.");
             if (btn) { btn.disabled = false; btn.textContent = "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+          });
+      }
+
+      // Pending tab's combined "Mark Paid (Shippo)" action — marks paid
+      // WITHOUT creating a Shopify order, then buys the already-quoted
+      // label, in one backend call. See routes/admin.py's
+      // mark_paid_and_buy_label for what happens if the label purchase
+      // fails after the order is already marked paid (it isn't rolled back).
+      async function confirmMarkPaidAndBuyLabel(orderId) {
+        if (!_selectedShippingRate) return;
+        var rate = _selectedShippingRate;
+        var ok = await showConfirm({
+          title: "Mark paid & purchase shipping label?",
+          body:
+            "This marks the order paid WITHOUT creating a Shopify order, then buys a " +
+            rate.carrier + " " + rate.servicelevel + " label for $" +
+            rate.amount.toFixed(2) + " " + rate.currency + ".\n\n" +
+            "The label purchase charges your Shippo account for real — it cannot be undone from here.",
+          okText: "Mark paid & buy label",
+          danger: true,
+        });
+        if (!ok) return;
+
+        var weight = parseFloat(document.getElementById("shipWeightOz").value);
+        var length = parseFloat(document.getElementById("shipLengthIn").value);
+        var width  = parseFloat(document.getElementById("shipWidthIn").value);
+        var height = parseFloat(document.getElementById("shipHeightIn").value);
+
+        var btn = document.getElementById("shipBuyLabelBtn");
+        if (btn) { btn.disabled = true; btn.textContent = "Processing…"; }
+
+        fetch("/admin/orders/" + orderId + "/shipping/mark-paid-and-buy-label", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rate_id: rate.rate_id, carrier: rate.carrier,
+            weight_oz: weight, length_in: length, width_in: width, height_in: height,
+          }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (res.ok && res.data.success) {
+              if (res.data.labelError) {
+                showToast("warning", "✓ Order " + orderId + " marked paid, but: " + res.data.labelError);
+              } else {
+                var warning = _markPaidWarningMsg(res.data);
+                if (warning) {
+                  showToast("warning", "✓ Order " + orderId + " marked paid + label bought, but: " + warning);
+                } else {
+                  showToast("success", "✓ Order " + orderId + " marked paid — label purchased, tracking " + res.data.tracking_number);
+                }
+              }
+              loadOrders();
+              _refreshOrderAndReopen(orderId);
+            } else {
+              showToast("error", res.data.detail || "Failed to mark paid / buy label");
+              if (btn) { btn.disabled = false; btn.textContent = "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+            }
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+            if (btn) { btn.disabled = false; btn.textContent = "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
           });
       }
 
