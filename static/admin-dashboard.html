@@ -2599,20 +2599,48 @@
 
       /* ─── SHIPPING (Shippo) ──────────────────────── */
 
+      // Cloudflare (staging/prod both sit behind it) replaces a 5xx
+      // response body with its own generic HTML error page instead of
+      // passing the origin's JSON through — a plain r.json() there throws,
+      // which surfaced as a misleading "Network error" for a real, specific
+      // Shippo failure. Catch that and fall back to the HTTP status instead.
+      function _safeJsonResponse(r) {
+        return r.json().catch(function () { return {}; }).then(function (d) {
+          return { ok: r.ok, status: r.status, data: d || {} };
+        });
+      }
+
       // Shared Ship From + Parcel field block — used by both the paid-order
       // "Buy Shipping Label" section and the pending-order "Mark Paid
       // (Shippo)" section. Safe to reuse the same element ids in both
       // places since only one of the two branches is ever rendered for a
       // given order (an order is either pending or paid, never both).
       function _shippingFormFieldsHtml() {
+        // autocomplete="off" plus a bogus/unique autocomplete token — ids
+        // like "shipFromCity"/"shipFromZip" are strong signals to Chrome's
+        // address-autofill heuristics, which will happily overwrite these
+        // with a saved profile or nearby page text otherwise (that's what
+        // produced "Canada" in the Country field and a mangled Name value
+        // in practice — Shippo then rejects the invalid country and the
+        // rate request fails).
         var addrField = function (id, label, span) {
           return '<label style="font-size:1.2rem;color:#888;grid-column:span ' + (span || 1) + ';">' + label +
-            '<input id="' + id + '" type="text" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+            '<input id="' + id + '" type="text" autocomplete="off" data-lpignore="true" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
         };
         var dimField = function (id, label) {
           return '<label style="font-size:1.2rem;color:#888;">' + label +
-            '<input id="' + id + '" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+            '<input id="' + id + '" type="number" min="0" step="0.1" autocomplete="off" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
         };
+        // Country is a fixed CA/US dropdown, not free text — Shippo requires
+        // a strict 2-letter ISO code, and this also can't be autofilled with
+        // a full country name the way a text input can.
+        var countryField =
+          '<label style="font-size:1.2rem;color:#888;">Country' +
+          '<select id="shipFromCountry" autocomplete="off" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;">' +
+          '<option value="">Select…</option>' +
+          '<option value="CA">CA — Canada</option>' +
+          '<option value="US">US — United States</option>' +
+          '</select></label>';
         return (
           '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Ship From (prefilled — edit if needed)</div>' +
           '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
@@ -2623,7 +2651,7 @@
           addrField("shipFromCity", "City", 2) +
           addrField("shipFromState", "Province/State", 1) +
           addrField("shipFromZip", "Postal/Zip", 1) +
-          addrField("shipFromCountry", "Country (CA/US)", 1) +
+          countryField +
           '</div>' +
           '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Parcel</div>' +
           '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
@@ -2715,10 +2743,10 @@
             from_address: fromAddress,
           }),
         })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(_safeJsonResponse)
           .then(function (res) {
             if (!res.ok || !res.data.success) {
-              showToast("error", res.data.detail || "Could not fetch rates");
+              showToast("error", res.data.detail || ("Could not fetch rates (HTTP " + res.status + ")"));
               return;
             }
             var rates = res.data.rates || [];
@@ -2792,14 +2820,14 @@
             weight_oz: weight, length_in: length, width_in: width, height_in: height,
           }),
         })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(_safeJsonResponse)
           .then(function (res) {
             if (res.ok && res.data.success) {
               showToast("success", "✓ Label purchased — tracking " + res.data.tracking_number);
               loadOrders();
               _refreshOrderAndReopen(orderId);
             } else {
-              showToast("error", res.data.detail || "Failed to purchase label");
+              showToast("error", res.data.detail || ("Failed to purchase label (HTTP " + res.status + ")"));
               if (btn) { btn.disabled = false; btn.textContent = "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
             }
           })
@@ -2845,7 +2873,7 @@
             weight_oz: weight, length_in: length, width_in: width, height_in: height,
           }),
         })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(_safeJsonResponse)
           .then(function (res) {
             if (res.ok && res.data.success) {
               if (res.data.labelError) {
@@ -2861,7 +2889,7 @@
               loadOrders();
               _refreshOrderAndReopen(orderId);
             } else {
-              showToast("error", res.data.detail || "Failed to mark paid / buy label");
+              showToast("error", res.data.detail || ("Failed to mark paid / buy label (HTTP " + res.status + ")"));
               if (btn) { btn.disabled = false; btn.textContent = "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
             }
           })

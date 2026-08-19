@@ -917,7 +917,11 @@ async def get_shipping_rates(
             from_address=body.from_address.dict() if body.from_address else None,
         )
     except ShippoError as e:
-        raise HTTPException(502, f"Could not fetch shipping rates: {e}")
+        # 400, not 502 — staging/prod sit behind Cloudflare, which replaces a
+        # 502 response body with its own generic HTML error page instead of
+        # passing through our JSON, so the real Shippo error never reaches
+        # the frontend (surfaces there as a misleading "Network error").
+        raise HTTPException(400, f"Could not fetch shipping rates: {e}")
     return {"success": True, "rates": rates}
 
 
@@ -1028,7 +1032,7 @@ async def buy_shipping_label(
             carrier=body.carrier,
         )
     except ShippoError as e:
-        raise HTTPException(502, f"Could not purchase shipping label: {e}")
+        raise HTTPException(400, f"Could not purchase shipping label: {e}")
 
     order.tracking_number       = label["tracking_number"]
     order.tracking_url          = label["tracking_url"]
