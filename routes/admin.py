@@ -80,6 +80,76 @@ async def _cache_set(cache_key: str, value, ttl: int) -> None:
         logger.warning(f"[cache] Redis write failed for {cache_key}: {e}")
 
 
+async def _cached_live_check(cache_key: str, check_fn, ttl: int = 300) -> Optional[bool]:
+    """
+    Like _cache_get/_cache_set but for a live external-API key-validity
+    ping, with a much longer TTL (default 5min) than the 8s used for the
+    main monitoring snapshot — monitoring_health is polled every 30s while
+    any admin has the Dashboard tab open, and a key's validity doesn't
+    change minute-to-minute, so without this a live ping would fire on
+    that same hot cadence instead of ~once per 5 minutes.
+
+    check_fn() returns True (confirmed working), False (confirmed broken —
+    401/403), or None (couldn't tell — network hiccup, unexpected status).
+    Wrapped in {"live": ...} so a cached None is distinguishable from a
+    cache miss (both would otherwise decode to plain None via _cache_get).
+    """
+    cached = await _cache_get(cache_key)
+    if cached is not None:
+        return cached.get("live")
+    result = await check_fn()
+    await _cache_set(cache_key, {"live": result}, ttl=ttl)
+    return result
+
+
+async def _shopify_live_status(store_domain: str, api_token: str, cache_suffix: str) -> Optional[bool]:
+    """True = key confirmed working, False = confirmed bad (401/403), None
+    = not configured or couldn't tell (network issue) — callers should only
+    treat an explicit False as "broken", never downgrade status on None."""
+    if not store_domain or not api_token:
+        return None
+
+    async def _ping():
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(
+                    f"https://{store_domain}/admin/api/2024-07/shop.json",
+                    headers={"X-Shopify-Access-Token": api_token},
+                )
+            if resp.status_code == 200:
+                return True
+            if resp.status_code in (401, 403):
+                return False
+            return None
+        except Exception:
+            return None
+
+    return await _cached_live_check(f"admin:health:live:shopify_{cache_suffix}", _ping)
+
+
+async def _shippo_live_status(api_token: str) -> Optional[bool]:
+    """Same True/False/None contract as _shopify_live_status above."""
+    if not api_token:
+        return None
+
+    async def _ping():
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(
+                    "https://api.goshippo.com/carrier_accounts/",
+                    headers={"Authorization": f"ShippoToken {api_token}"},
+                )
+            if resp.status_code == 200:
+                return True
+            if resp.status_code in (401, 403):
+                return False
+            return None
+        except Exception:
+            return None
+
+    return await _cached_live_check("admin:health:live:shippo", _ping)
+
+
 # Card `payment_ref` prefixes that indicate an asynchronous flow — the order
 # legitimately sits in `pending` while it waits for an external event:
 #   pay_  → pymtz card processor   (admin manually marks paid)
@@ -690,6 +760,8 @@ async def mark_order_paid(
     resp = {"success": True, "orderId": order_id}
     if result_info.get("shopify_error"):
         resp["shopifyError"] = result_info["shopify_error"]
+    if result_info.get("affiliate_error"):
+        resp["affiliateError"] = result_info["affiliate_error"]
     return resp
 
 
@@ -742,8 +814,11 @@ async def mark_order_paid_shipping(
     order = result.scalar_one_or_none()
 
     from services.order_finalize import finalize_paid_order
-    await finalize_paid_order(order, db, label="shipping-mark-paid", create_shopify=False)
-    return {"success": True, "orderId": order_id}
+    result_info = await finalize_paid_order(order, db, label="shipping-mark-paid", create_shopify=False)
+    resp = {"success": True, "orderId": order_id}
+    if result_info.get("affiliate_error"):
+        resp["affiliateError"] = result_info["affiliate_error"]
+    return resp
 
 
 @router.post("/orders/{order_id}/shipping/rates", dependencies=[Depends(require_write_access)])
@@ -1299,6 +1374,8 @@ async def manual_interac_match(
     resp = {"success": True, "orderId": order.id}
     if result_info.get("shopify_error"):
         resp["shopifyError"] = result_info["shopify_error"]
+    if result_info.get("affiliate_error"):
+        resp["affiliateError"] = result_info["affiliate_error"]
     return resp
 
 
@@ -1373,6 +1450,8 @@ async def manual_zelle_match(
     resp = {"success": True, "orderId": order.id}
     if result_info.get("shopify_error"):
         resp["shopifyError"] = result_info["shopify_error"]
+    if result_info.get("affiliate_error"):
+        resp["affiliateError"] = result_info["affiliate_error"]
     return resp
 
 
@@ -1539,6 +1618,75 @@ async def monitoring_health(db: AsyncSession = Depends(get_db)):
         "last_created": None,
         "paid_count": 0,
         "paid_revenue": 0.0,
+    }
+
+    # Shopify — two separate stores (CA/US), same split as pymtz. Unlike
+    # every processor above, "enabled" here also requires a LIVE, cached key
+    # check (see _shopify_live_status) — a bad/expired API key is exactly
+    # the failure mode this card exists to catch, not just presence.
+    # keyInvalid distinguishes "confirmed broken" (red dot) from "not set up"
+    # (gray dot) on the frontend — both would otherwise look identical.
+    shopify_ca_domain = getattr(settings, "SHOPIFY_STORE_DOMAIN", "") or ""
+    shopify_ca_token  = getattr(settings, "SHOPIFY_API_TOKEN", "") or ""
+    shopify_ca_configured = bool(shopify_ca_domain and shopify_ca_token)
+    shopify_ca_live = await _shopify_live_status(shopify_ca_domain, shopify_ca_token, "ca")
+    processors["shopify_ca"] = {
+        "label":        "Shopify CA",
+        "configured":   shopify_ca_configured,
+        "enabled":      shopify_ca_configured and shopify_ca_live is not False,
+        "keyInvalid":   shopify_ca_live is False,
+        "mode":         "LIVE",
+        "last_paid":    None, "last_created": None,
+        "paid_count":   0,    "paid_revenue": 0.0,
+    }
+
+    shopify_us_domain = getattr(settings, "SHOPIFY_STORE_DOMAIN_US", "") or ""
+    shopify_us_token  = getattr(settings, "SHOPIFY_API_TOKEN_US", "") or ""
+    shopify_us_configured = bool(shopify_us_domain and shopify_us_token)
+    shopify_us_live = await _shopify_live_status(shopify_us_domain, shopify_us_token, "us")
+    processors["shopify_us"] = {
+        "label":        "Shopify US",
+        "configured":   shopify_us_configured,
+        "enabled":      shopify_us_configured and shopify_us_live is not False,
+        "keyInvalid":   shopify_us_live is False,
+        "mode":         "LIVE",
+        "last_paid":    None, "last_created": None,
+        "paid_count":   0,    "paid_revenue": 0.0,
+    }
+
+    # Shippo — shipping labels. Activity here is real, DB-backed data
+    # (Order.shipped_at, added with the Shippo integration) rather than the
+    # zeroed-out placeholders above, since we actually track label purchases.
+    shippo_token = getattr(settings, "SHIPPO_API_TOKEN", "") or ""
+    shippo_master_enabled = bool(getattr(settings, "SHIPPO_ENABLED", False))
+    shippo_live = await _shippo_live_status(shippo_token)
+    shippo_last_shipped = (await db.execute(
+        select(func.max(Order.shipped_at)).where(Order.shipped_at.isnot(None))
+    )).scalar()
+    shippo_today_count = (await db.execute(
+        select(func.count(Order.id)).where(Order.shipped_at >= today_start)
+    )).scalar()
+    processors["shippo"] = {
+        "label":        "Shippo",
+        "configured":   bool(shippo_token),
+        "enabled":      bool(shippo_token) and shippo_master_enabled and shippo_live is not False,
+        "keyInvalid":   shippo_live is False,
+        "mode":         "LIVE",
+        "last_paid":    shippo_last_shipped.isoformat() if shippo_last_shipped else None,
+        "last_created": None,
+        "paid_count":   int(shippo_today_count or 0),
+        "paid_revenue": 0.0,
+    }
+
+    # Affiliate webhook — no safe read-only ping exists for this (it's a
+    # one-way webhook receiver, not a queryable API), so this reflects
+    # configuration only, not confirmed live validity like the two above.
+    processors["affiliate"] = {
+        "label":      "Affiliate Webhook",
+        "configured": bool(getattr(settings, "AFFILIATE_DASHBOARD_URL", "")),
+        "enabled":    bool(getattr(settings, "AFFILIATE_DASHBOARD_URL", "")),
+        "mode":       "LIVE",
+        "last_paid": None, "last_created": None, "paid_count": 0, "paid_revenue": 0.0,
     }
 
     # ── today's KPIs ──────────────────────────────────────────────────────────

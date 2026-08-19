@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 class FinalizeResult(TypedDict):
     shopify_order_number: Optional[str]
     shopify_error:        Optional[str]
+    affiliate_error:      Optional[str]
 
 
 async def finalize_paid_order(
@@ -49,15 +50,18 @@ async def finalize_paid_order(
            regardless of this flag, per the policy explained above.
     label: short tag for log lines, e.g. "stripe_direct", "admin-mark-paid".
 
-    Returns {"shopify_order_number": str|None, "shopify_error": str|None}.
-    A real Shopify failure (bad/expired API key, Shopify rejecting the
-    request, network error — as opposed to the store simply not having
-    Shopify configured) is both logged AND appended to order.payment_notes,
-    so it's visible on the order record itself, not just server logs — and
-    callers with a human directly watching (the admin mark-paid endpoints)
-    surface `shopify_error` in their response too. Never raises — every
-    side effect is independently try/except'd so a failure in one doesn't
-    block the others.
+    Returns {"shopify_order_number": str|None, "shopify_error": str|None,
+    "affiliate_error": str|None}. A real failure in either Shopify (bad/
+    expired API key, Shopify rejecting the request, network error — as
+    opposed to the store simply not having Shopify configured) or the
+    affiliate webhook (rosicteam rejecting the request or being
+    unreachable — NOT simply AFFILIATE_DASHBOARD_URL being unset) is both
+    logged AND appended to order.payment_notes, so it's visible on the
+    order record itself, not just server logs — and callers with a human
+    directly watching (the admin mark-paid endpoints) surface
+    `shopify_error`/`affiliate_error` in their response too. Never raises —
+    every side effect is independently try/except'd so a failure in one
+    doesn't block the others.
     """
     shopify_order_number = None
     shopify_error = None
@@ -89,11 +93,27 @@ async def finalize_paid_order(
 
     # Unconditional — fires regardless of Shopify's outcome above. See module
     # docstring: this is a deliberate policy decision, not an oversight.
+    affiliate_error = None
     try:
-        from routes.webhooks import _send_affiliate_webhook
-        await _send_affiliate_webhook(order)
+        from routes.webhooks import _send_affiliate_webhook, AffiliateWebhookError
+        try:
+            await _send_affiliate_webhook(order)
+        except AffiliateWebhookError as e:
+            affiliate_error = str(e)
+            logger.error(f"Affiliate webhook failed for {order.id} ({label}): {e}")
+            try:
+                order.payment_notes = (
+                    (order.payment_notes or "") +
+                    f" | ⚠ Affiliate webhook failed: {affiliate_error}"
+                )[:1000]
+                await db.commit()
+            except Exception as note_err:
+                logger.error(f"Could not persist affiliate failure note for {order.id}: {note_err}")
     except Exception as e:
-        logger.error(f"Affiliate webhook failed for {order.id} ({label}): {e}")
+        # Belt-and-suspenders — keeps the "never raises" guarantee even for
+        # something outside the AffiliateWebhookError contract.
+        affiliate_error = str(e)
+        logger.error(f"Affiliate webhook error for {order.id} ({label}): {e}")
 
     if send_email and order.email:
         try:
@@ -124,4 +144,8 @@ async def finalize_paid_order(
         except Exception as e:
             logger.error(f"Confirmation email failed for {order.id} ({label}): {e}")
 
-    return {"shopify_order_number": shopify_order_number, "shopify_error": shopify_error}
+    return {
+        "shopify_order_number": shopify_order_number,
+        "shopify_error":        shopify_error,
+        "affiliate_error":      affiliate_error,
+    }

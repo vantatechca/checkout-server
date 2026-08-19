@@ -1590,11 +1590,17 @@
           // Dot color = enabled state, NOT recency of last payment.
           // A low-volume processor with no activity for weeks is still healthy
           // if it's configured + enabled. "Stale" red dots were misleading.
+          // keyInvalid (Shippo/Shopify only, via a live cached ping) is a
+          // distinct third state — "configured but the key is confirmed
+          // broken" looks identical to "never set up" without this.
           var tone;
-          if (!p.configured)        tone = "off";   // gray — not set up
+          if (p.keyInvalid)         tone = "bad";   // red — key confirmed broken
+          else if (!p.configured)   tone = "off";   // gray — not set up
           else if (!p.enabled)      tone = "off";   // gray — kill-switch flipped
           else                      tone = "ok";    // green — ready to process
-          var modeBadge = p.enabled
+          var modeBadge = p.keyInvalid
+            ? '<span style="font-size:1.05rem;background:#fee2e2;color:#991b1b;padding:0.15rem 0.5rem;border-radius:4px">KEY INVALID</span>'
+            : p.enabled
             ? '<span style="font-size:1.05rem;background:#e5e7eb;color:#374151;padding:0.15rem 0.5rem;border-radius:4px">' + p.mode + '</span>'
             : '<span style="font-size:1.05rem;background:#fee2e2;color:#991b1b;padding:0.15rem 0.5rem;border-radius:4px">DISABLED</span>';
           var lastLine = p.last_paid
@@ -2477,12 +2483,9 @@
           })
           .then(function (data) {
             if (data.success) {
-              if (data.shopifyError) {
-                showToast(
-                  "warning",
-                  "\u2713 Order " + pendingOrder.id + " marked paid, but Shopify order creation failed: " +
-                  data.shopifyError + " \u2014 create it manually.",
-                );
+              var warning = _markPaidWarningMsg(data);
+              if (warning) {
+                showToast("warning", "\u2713 Order " + pendingOrder.id + " marked paid, but: " + warning);
               } else {
                 showToast(
                   "success",
@@ -2570,7 +2573,12 @@
           .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
           .then(function (res) {
             if (res.ok && res.data.success) {
-              showToast("success", "✓ Order " + orderId + " marked paid (no Shopify order)");
+              var warning = _markPaidWarningMsg(res.data);
+              if (warning) {
+                showToast("warning", "✓ Order " + orderId + " marked paid (no Shopify order), but: " + warning);
+              } else {
+                showToast("success", "✓ Order " + orderId + " marked paid (no Shopify order)");
+              }
               closeModal();
               loadOrders();
             } else {
@@ -2784,12 +2792,9 @@
           })
           .then(function (res) {
             if (res.ok && res.data.success) {
-              if (res.data.shopifyError) {
-                showToast(
-                  "warning",
-                  "✓ Order " + orderId + " marked paid, but Shopify order creation failed: " +
-                  res.data.shopifyError + " — create it manually.",
-                );
+              var warning = _markPaidWarningMsg(res.data);
+              if (warning) {
+                showToast("warning", "✓ Order " + orderId + " marked paid, but: " + warning);
               } else {
                 showToast("success", "✓ Order " + orderId + " marked as paid");
               }
@@ -2802,6 +2807,16 @@
           .catch(function () {
             showToast("error", "Network error");
           });
+      }
+
+      // Shared by every "mark paid" success handler — combines shopifyError
+      // and affiliateError (finalize_paid_order can hit both independently)
+      // into one warning message, or returns null if everything succeeded.
+      function _markPaidWarningMsg(data) {
+        var parts = [];
+        if (data.shopifyError)   parts.push("Shopify order creation failed: " + data.shopifyError);
+        if (data.affiliateError) parts.push("Affiliate webhook failed: " + data.affiliateError);
+        return parts.length ? parts.join(" · ") : null;
       }
 
       function showToast(type, msg) {

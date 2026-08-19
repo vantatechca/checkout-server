@@ -26,6 +26,10 @@ router = APIRouter(prefix="/webhooks", tags=["webhooks"])
 logger = logging.getLogger(__name__)
 
 
+class AffiliateWebhookError(Exception):
+    pass
+
+
 async def _send_affiliate_webhook(order) -> None:
     """
     Notify the rosicteam dashboard whenever an order transitions to paid.
@@ -35,17 +39,22 @@ async def _send_affiliate_webhook(order) -> None:
     an empty string in that case so rosicteam can record the sale under "no
     affiliate" while still tracking total order flow.
 
-    Bails only if AFFILIATE_DASHBOARD_URL isn't configured (dev/local).
-    Errors are caught + logged; no retry — failed sends are surfaced in the
-    log only. Callers are expected to use the helper idempotently.
+    Returns normally (no exception) on success — including the "not
+    configured" case (dev/local), which is an intentional skip, not a
+    failure. Raises AffiliateWebhookError on a real failure — a non-2xx
+    response from rosicteam, or a transport error (timeout, DNS, connection
+    refused). Callers (finalize_paid_order) catch this to surface it rather
+    than the old behavior of silently logging a non-2xx as if it were a
+    successful send. No retry either way — a caught failure is not retried
+    here; it's on the caller to decide what to do with it.
     """
+    affiliate_url = getattr(settings, "AFFILIATE_DASHBOARD_URL", "")
+    if not affiliate_url:
+        return
+    items_summary = ", ".join(
+        f"{item.qty}x {item.title}" for item in (order.items or [])
+    )
     try:
-        affiliate_url = getattr(settings, "AFFILIATE_DASHBOARD_URL", "")
-        if not affiliate_url:
-            return
-        items_summary = ", ".join(
-            f"{item.qty}x {item.title}" for item in (order.items or [])
-        )
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 f"{affiliate_url}/api/webhooks/order-paid",
@@ -60,9 +69,15 @@ async def _send_affiliate_webhook(order) -> None:
                     "currency":            order.currency or "CAD",
                 },
             )
-        logger.info(f"Affiliate webhook sent for {order.id}: {resp.status_code}")
     except Exception as e:
         logger.warning(f"Affiliate webhook failed for {order.id}: {e}")
+        raise AffiliateWebhookError(f"Could not reach affiliate dashboard: {e}") from e
+
+    if resp.status_code >= 400:
+        logger.warning(f"Affiliate webhook rejected for {order.id}: {resp.status_code} — {resp.text[:200]}")
+        raise AffiliateWebhookError(f"Affiliate dashboard returned {resp.status_code}: {resp.text[:200]}")
+
+    logger.info(f"Affiliate webhook sent for {order.id}: {resp.status_code}")
 
 
 # ─── POST /webhooks/btcpay ────────────────────────────────────────────────────
