@@ -95,7 +95,7 @@ class ShippoClient:
         from_address: Optional[dict] = None,
     ) -> list[dict]:
         """
-        Creates a Shippo shipment (address_from + address_to + parcel) and
+        Creates a Shippo shipment (address_from + address_to + parcels) and
         returns the live carrier rates. No customs_declaration — see module
         docstring. Returns a normalized, price-sorted list.
 
@@ -109,14 +109,14 @@ class ShippoClient:
         body = {
             "address_from": from_address or self._from_address(order),
             "address_to":   self._to_address(order),
-            "parcel": {
+            "parcels": [{
                 "length":      str(length_in),
                 "width":       str(width_in),
                 "height":      str(height_in),
                 "distance_unit": "in",
                 "weight":      str(weight_oz),
                 "mass_unit":   "oz",
-            },
+            }],
             "async": False,
         }
 
