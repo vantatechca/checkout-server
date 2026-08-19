@@ -2313,7 +2313,23 @@
               html += '<a href="' + _escapeHtml(o.labelUrl) + '" target="_blank" rel="noopener" class="action-btn" style="display:inline-block;margin-top:1rem;height:4rem;line-height:4rem;padding:0 1.6rem;font-size:1.3rem;">View Label</a>';
             }
           } else {
+            var addrField = function (id, label, span) {
+              return '<label style="font-size:1.2rem;color:#888;grid-column:span ' + (span || 1) + ';">' + label +
+                '<input id="' + id + '" type="text" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+            };
             html +=
+              '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Ship From (prefilled — edit if needed)</div>' +
+              '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
+              addrField("shipFromName", "Name", 2) +
+              addrField("shipFromPhone", "Phone", 2) +
+              addrField("shipFromStreet1", "Address line 1", 4) +
+              addrField("shipFromStreet2", "Address line 2", 4) +
+              addrField("shipFromCity", "City", 2) +
+              addrField("shipFromState", "Province/State", 1) +
+              addrField("shipFromZip", "Postal/Zip", 1) +
+              addrField("shipFromCountry", "Country (CA/US)", 1) +
+              '</div>' +
+              '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Parcel</div>' +
               '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
               '<label style="font-size:1.2rem;color:#888;">Weight (oz)<input id="shipWeightOz" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
               '<label style="font-size:1.2rem;color:#888;">Length (in)<input id="shipLengthIn" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
@@ -2366,6 +2382,27 @@
 
         document.getElementById("modalTitle").textContent = "Order " + o.id;
         document.getElementById("modalBody").innerHTML = html;
+
+        if (!window.IS_VIEWER && o.paymentStatus === "paid" && !o.trackingNumber) {
+          fetch("/admin/orders/" + o.id + "/shipping/default-address", { credentials: "include" })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+              var a = (data && data.address) || {};
+              var setVal = function (id, v) {
+                var el = document.getElementById(id);
+                if (el) el.value = v || "";
+              };
+              setVal("shipFromName", a.name);
+              setVal("shipFromStreet1", a.street1);
+              setVal("shipFromStreet2", a.street2);
+              setVal("shipFromCity", a.city);
+              setVal("shipFromState", a.state);
+              setVal("shipFromZip", a.zip);
+              setVal("shipFromCountry", a.country);
+              setVal("shipFromPhone", a.phone);
+            })
+            .catch(function () {});
+        }
 
         fetch("/admin/orders/" + o.id, { credentials: "include" })
           .then(function (r) {
@@ -2603,6 +2640,21 @@
           return;
         }
 
+        var fromAddress = {
+          name:    document.getElementById("shipFromName").value,
+          street1: document.getElementById("shipFromStreet1").value,
+          street2: document.getElementById("shipFromStreet2").value,
+          city:    document.getElementById("shipFromCity").value,
+          state:   document.getElementById("shipFromState").value,
+          zip:     document.getElementById("shipFromZip").value,
+          country: document.getElementById("shipFromCountry").value,
+          phone:   document.getElementById("shipFromPhone").value,
+        };
+        if (!fromAddress.name || !fromAddress.street1 || !fromAddress.city || !fromAddress.state || !fromAddress.zip || !fromAddress.country) {
+          showToast("error", "Fill in the Ship From address first");
+          return;
+        }
+
         _selectedShippingRate = null;
         var btn = document.getElementById("shipGetRatesBtn");
         var resultEl = document.getElementById("shippingRatesResult");
@@ -2614,6 +2666,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             weight_oz: weight, length_in: length, width_in: width, height_in: height,
+            from_address: fromAddress,
           }),
         })
           .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })

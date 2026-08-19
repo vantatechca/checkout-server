@@ -18,6 +18,7 @@ review; do not extend this client to fabricate a customs declaration.
 Docs: https://docs.goshippo.com
 """
 import logging
+from typing import Optional
 
 import httpx
 
@@ -63,6 +64,12 @@ class ShippoClient:
             addr["zip"]   = getattr(settings, "SHIPPO_FROM_POSTAL_CA", "") or ""
         return addr
 
+    def default_from_address(self, order) -> dict:
+        """Public wrapper — used to prefill the admin's Buy Label form with
+        the configured CA/US default so it isn't typed from scratch every
+        time, while still letting the admin edit it before purchase."""
+        return self._from_address(order)
+
     def _to_address(self, order) -> dict:
         """Ship-to address — straight from the order's shipping fields,
         already on the Order row."""
@@ -81,21 +88,26 @@ class ShippoClient:
         self,
         order,
         *,
-        weight_oz:  float,
-        length_in:  float,
-        width_in:   float,
-        height_in:  float,
+        weight_oz:    float,
+        length_in:    float,
+        width_in:     float,
+        height_in:    float,
+        from_address: Optional[dict] = None,
     ) -> list[dict]:
         """
         Creates a Shippo shipment (address_from + address_to + parcel) and
         returns the live carrier rates. No customs_declaration — see module
         docstring. Returns a normalized, price-sorted list.
+
+        from_address: admin-edited override from the Buy Label form (prefilled
+        with default_from_address() but editable). Falls back to the
+        configured CA/US default when not supplied.
         """
         if not self.api_token:
             raise ShippoError("SHIPPO_API_TOKEN not configured")
 
         body = {
-            "address_from": self._from_address(order),
+            "address_from": from_address or self._from_address(order),
             "address_to":   self._to_address(order),
             "parcel": {
                 "length":      str(length_in),

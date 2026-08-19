@@ -832,11 +832,23 @@ async def mark_order_paid(
 # creates a Shopify order exactly as before; this is a deliberately separate,
 # additive endpoint, not a change to the existing one.
 
+class ShippingFromAddress(BaseModel):
+    name:    str = ""
+    street1: str = ""
+    street2: str = ""
+    city:    str = ""
+    state:   str = ""
+    zip:     str = ""
+    country: str = ""
+    phone:   str = ""
+
+
 class ShippingRatesRequest(BaseModel):
     weight_oz: float
     length_in: float
     width_in:  float
     height_in: float
+    from_address: Optional[ShippingFromAddress] = None
 
 
 class ShippingBuyLabelRequest(BaseModel):
@@ -879,6 +891,23 @@ async def mark_order_paid_shipping(
     return resp
 
 
+@router.get("/orders/{order_id}/shipping/default-address", dependencies=[Depends(require_write_access)])
+async def get_shipping_default_address(
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Returns the configured CA/US ship-from default for this order's
+    currency, so the Buy Label form can prefill it — the admin can still
+    edit every field before requesting rates."""
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(404, "Order not found")
+
+    from services.shippo import ShippoClient
+    return {"success": True, "address": ShippoClient().default_from_address(order)}
+
+
 @router.post("/orders/{order_id}/shipping/rates", dependencies=[Depends(require_write_access)])
 async def get_shipping_rates(
     order_id: str,
@@ -898,6 +927,7 @@ async def get_shipping_rates(
             length_in=body.length_in,
             width_in=body.width_in,
             height_in=body.height_in,
+            from_address=body.from_address.dict() if body.from_address else None,
         )
     except ShippoError as e:
         raise HTTPException(502, f"Could not fetch shipping rates: {e}")
