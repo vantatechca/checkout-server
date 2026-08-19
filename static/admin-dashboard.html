@@ -2473,6 +2473,25 @@
         pendingOrder = null;
       }
 
+      // After marking an order paid, the modal should immediately show the
+      // now-paid branch (Buy Shipping Label section etc.) instead of closing
+      // and forcing the admin to hunt the order down again. openDetail()
+      // renders from the client-side `allOrders` cache, so it needs a fresh
+      // copy of this one order patched in first — loadOrders() alone isn't
+      // enough because the order may no longer match the current tab's
+      // filter (e.g. it just left Pending/Shipping) and would be silently
+      // dropped from the list openDetail reads from.
+      function _refreshOrderAndReopen(orderId) {
+        return fetch("/admin/orders/" + orderId, { credentials: "include" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var idx = allOrders.findIndex(function (x) { return x.id === orderId; });
+            if (idx >= 0) allOrders[idx] = data; else allOrders.push(data);
+            openDetail(orderId);
+          })
+          .catch(function () {});
+      }
+
       async function confirmMarkPaid() {
         if (!pendingOrder) return;
         var btn = document.getElementById("modalConfirmBtn");
@@ -2529,8 +2548,8 @@
                   "\u2713 Order " + pendingOrder.id + " marked as paid",
                 );
               }
-              closeModal();
               loadOrders();
+              _refreshOrderAndReopen(pendingOrder.id);
             } else showToast("error", "Failed to mark paid");
           })
           .catch(function () {
@@ -2616,8 +2635,8 @@
               } else {
                 showToast("success", "✓ Order " + orderId + " marked paid (no Shopify order)");
               }
-              closeModal();
               loadOrders();
+              _refreshOrderAndReopen(orderId);
             } else {
               showToast("error", res.data.detail || "Failed to mark paid");
             }
@@ -2748,8 +2767,8 @@
           .then(function (res) {
             if (res.ok && res.data.success) {
               showToast("success", "✓ Label purchased — tracking " + res.data.tracking_number);
-              closeModal();
               loadOrders();
+              _refreshOrderAndReopen(orderId);
             } else {
               showToast("error", res.data.detail || "Failed to purchase label");
               if (btn) { btn.disabled = false; btn.textContent = "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
