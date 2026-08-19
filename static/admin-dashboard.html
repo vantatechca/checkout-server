@@ -2477,10 +2477,18 @@
           })
           .then(function (data) {
             if (data.success) {
-              showToast(
-                "success",
-                "\u2713 Order " + pendingOrder.id + " marked as paid",
-              );
+              if (data.shopifyError) {
+                showToast(
+                  "warning",
+                  "\u2713 Order " + pendingOrder.id + " marked paid, but Shopify order creation failed: " +
+                  data.shopifyError + " \u2014 create it manually.",
+                );
+              } else {
+                showToast(
+                  "success",
+                  "\u2713 Order " + pendingOrder.id + " marked as paid",
+                );
+              }
               closeModal();
               loadOrders();
             } else showToast("error", "Failed to mark paid");
@@ -2776,7 +2784,15 @@
           })
           .then(function (res) {
             if (res.ok && res.data.success) {
-              showToast("success", "✓ Order " + orderId + " marked as paid");
+              if (res.data.shopifyError) {
+                showToast(
+                  "warning",
+                  "✓ Order " + orderId + " marked paid, but Shopify order creation failed: " +
+                  res.data.shopifyError + " — create it manually.",
+                );
+              } else {
+                showToast("success", "✓ Order " + orderId + " marked as paid");
+              }
               loadOrders();
               updateStats();
             } else {
@@ -2792,9 +2808,13 @@
         var el = document.getElementById("toast");
         el.textContent = msg;
         el.className = "toast " + type + " show";
+        // Warnings (e.g. "marked paid but Shopify failed") tend to carry a
+        // longer, more important message — give them more time on screen
+        // than a routine success toast.
+        var duration = type === "warning" ? 9000 : 4000;
         setTimeout(function () {
           el.className = "toast " + type;
-        }, 4000);
+        }, duration);
       }
 
       /* ─── Styled async confirm / prompt (replaces native browser dialogs) ── */

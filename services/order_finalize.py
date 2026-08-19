@@ -16,9 +16,14 @@ parameter to opt out of it. Consolidating here means every path to "paid"
 enforces that same invariant instead of re-implementing it (correctly or not).
 """
 import logging
-from typing import Optional
+from typing import Optional, TypedDict
 
 logger = logging.getLogger(__name__)
+
+
+class FinalizeResult(TypedDict):
+    shopify_order_number: Optional[str]
+    shopify_error:        Optional[str]
 
 
 async def finalize_paid_order(
@@ -28,7 +33,7 @@ async def finalize_paid_order(
     send_email: bool = True,
     create_shopify: bool = True,
     label: str = "",
-) -> Optional[str]:
+) -> FinalizeResult:
     """
     order: an Order ORM instance with `.items` already eager-loaded
            (selectinload(Order.items)) — required for both Shopify and email.
@@ -44,19 +49,40 @@ async def finalize_paid_order(
            regardless of this flag, per the policy explained above.
     label: short tag for log lines, e.g. "stripe_direct", "admin-mark-paid".
 
-    Returns the Shopify order_number (str) if created, else None.
-    Never raises — every side effect is independently try/except'd so a
-    failure in one doesn't block the others.
+    Returns {"shopify_order_number": str|None, "shopify_error": str|None}.
+    A real Shopify failure (bad/expired API key, Shopify rejecting the
+    request, network error — as opposed to the store simply not having
+    Shopify configured) is both logged AND appended to order.payment_notes,
+    so it's visible on the order record itself, not just server logs — and
+    callers with a human directly watching (the admin mark-paid endpoints)
+    surface `shopify_error` in their response too. Never raises — every
+    side effect is independently try/except'd so a failure in one doesn't
+    block the others.
     """
     shopify_order_number = None
+    shopify_error = None
     if create_shopify:
+        from services.shopify import create_shopify_order, ShopifyOrderError
         try:
-            from services.shopify import create_shopify_order
             shopify_order = await create_shopify_order(order)
             if shopify_order:
                 shopify_order_number = str(shopify_order.get("order_number", ""))
                 logger.info(f"✅ Shopify order #{shopify_order_number} created for {order.id} ({label})")
+        except ShopifyOrderError as e:
+            shopify_error = str(e)
+            logger.error(f"Shopify order creation failed for {order.id} ({label}): {e}")
+            try:
+                order.payment_notes = (
+                    (order.payment_notes or "") +
+                    f" | ⚠ Shopify order creation failed: {shopify_error}"
+                )[:1000]
+                await db.commit()
+            except Exception as note_err:
+                logger.error(f"Could not persist Shopify failure note for {order.id}: {note_err}")
         except Exception as e:
+            # Belt-and-suspenders — keeps the "never raises" guarantee even
+            # for something outside the ShopifyOrderError contract.
+            shopify_error = str(e)
             logger.error(f"Shopify order creation error for {order.id} ({label}): {e}")
     else:
         logger.info(f"Shopify order creation skipped for {order.id} ({label}) — create_shopify=False")
@@ -98,4 +124,4 @@ async def finalize_paid_order(
         except Exception as e:
             logger.error(f"Confirmation email failed for {order.id} ({label}): {e}")
 
-    return shopify_order_number
+    return {"shopify_order_number": shopify_order_number, "shopify_error": shopify_error}

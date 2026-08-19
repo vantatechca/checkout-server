@@ -13,10 +13,25 @@ logger = logging.getLogger(__name__)
 SHOPIFY_API_VERSION = "2024-07"
 
 
+class ShopifyOrderError(Exception):
+    """
+    Raised when Shopify order creation fails for a real reason (bad/expired
+    API key, Shopify rejecting the request, network error) — as opposed to
+    the store simply not having Shopify configured, which is an accepted,
+    silent skip (see the `if not store_domain or not api_token` branch
+    below). Callers use this to surface an actionable error instead of the
+    failure only ever showing up in server logs.
+    """
+    pass
+
+
 async def create_shopify_order(order) -> Optional[dict]:
     """
-    Creates a paid order in Shopify when manually marked as paid.
-    Returns the Shopify order dict or None if failed.
+    Creates a paid order in Shopify when marked as paid.
+    Returns the Shopify order dict, or None if this store has no Shopify
+    credentials configured (an intentional, silent skip — not every store
+    uses Shopify). Raises ShopifyOrderError if credentials ARE configured
+    but the API call itself fails.
     """
     # Pick Shopify admin store based on order currency
     # USD orders (always Zelle, or Crypto from US stores) → US admin store
@@ -169,9 +184,16 @@ async def create_shopify_order(order) -> Optional[dict]:
             )
             return shopify_order
         else:
+            # 401/403 here almost always means an expired/revoked API token —
+            # the single most common real-world cause of this failing.
             logger.error(f"❌ Shopify order creation failed: {response.status_code} — {response.text}")
-            return None
+            raise ShopifyOrderError(
+                f"Shopify {store_label} store rejected the order "
+                f"({response.status_code}): {response.text[:300]}"
+            )
 
+    except ShopifyOrderError:
+        raise
     except Exception as e:
         logger.error(f"❌ Shopify API error: {e}")
-        return None
+        raise ShopifyOrderError(f"Could not reach Shopify {store_label} store: {e}")

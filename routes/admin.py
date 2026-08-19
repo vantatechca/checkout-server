@@ -686,8 +686,11 @@ async def mark_order_paid(
     order = result.scalar_one_or_none()
 
     from services.order_finalize import finalize_paid_order
-    await finalize_paid_order(order, db, label="admin-mark-paid")
-    return {"success": True, "orderId": order_id}
+    result_info = await finalize_paid_order(order, db, label="admin-mark-paid")
+    resp = {"success": True, "orderId": order_id}
+    if result_info.get("shopify_error"):
+        resp["shopifyError"] = result_info["shopify_error"]
+    return resp
 
 
 # ─── Shipping (Shippo) ──────────────────────────────────────────────────────
@@ -1291,9 +1294,12 @@ async def manual_interac_match(
     order = ord_result.scalar_one_or_none()
 
     from services.order_finalize import finalize_paid_order
-    await finalize_paid_order(order, db, label="interac-manual-match")
+    result_info = await finalize_paid_order(order, db, label="interac-manual-match")
 
-    return {"success": True, "orderId": order.id}
+    resp = {"success": True, "orderId": order.id}
+    if result_info.get("shopify_error"):
+        resp["shopifyError"] = result_info["shopify_error"]
+    return resp
 
 
 # ─── Zelle manual matching ────────────────────────────────────────────────────
@@ -1362,9 +1368,12 @@ async def manual_zelle_match(
     order = ord_result.scalar_one_or_none()
 
     from services.order_finalize import finalize_paid_order
-    await finalize_paid_order(order, db, label="zelle-manual-match")
+    result_info = await finalize_paid_order(order, db, label="zelle-manual-match")
 
-    return {"success": True, "orderId": order.id}
+    resp = {"success": True, "orderId": order.id}
+    if result_info.get("shopify_error"):
+        resp["shopifyError"] = result_info["shopify_error"]
+    return resp
 
 
 # ─── Brands ──────────────────────────────────────────────────────────────────

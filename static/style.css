@@ -1203,6 +1203,9 @@
       .toast.error {
         background: var(--red);
       }
+      .toast.warning {
+        background: #b98900;
+      }
       .results-count {
         font-size: 1.3rem;
         color: #888;
