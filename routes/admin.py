@@ -451,15 +451,41 @@ async def order_stats(
     if currency:
         base_filter.append(Order.currency == currency.upper())
 
-    pending_q = select(sa_func.count()).select_from(Order).where(
+    # Mirrors list_orders' exact `status=pending&not_emailed=yes` filter (the
+    # Pending tab's real query) — must also exclude underpaid Interac/Zelle
+    # orders like that query does, or this badge overcounts vs. what the tab
+    # actually lists (an underpaid-but-unemailed order belongs in Awaiting).
+    pending_q = (
+        select(sa_func.count())
+        .select_from(Order)
+        .outerjoin(InteracPayment, InteracPayment.order_id == Order.id)
+        .outerjoin(ZellePayment,   ZellePayment.order_id   == Order.id)
+        .where(
+            and_(
+                *base_filter,
+                Order.payment_status == PaymentStatus.pending,
+                or_(
+                    Order.payment_method != PaymentMethod.card,
+                    _is_delayed_card(),    # pymtz / Highriskify / WP onramp
+                ),
+                or_(Order.customer_emails_sent == 0, Order.customer_emails_sent.is_(None)),
+                or_(InteracPayment.status.is_(None), InteracPayment.status != "underpaid"),
+                or_(ZellePayment.status.is_(None),   ZellePayment.status   != "underpaid"),
+            )
+        )
+    )
+
+    # Mirrors list_orders' exact `status=pending` filter with no other params
+    # (the Shipping tab's real query) — no emailed/underpaid exclusion, since
+    # that tab intentionally shows every not-yet-paid order.
+    shipping_q = select(sa_func.count()).select_from(Order).where(
         and_(
             *base_filter,
             Order.payment_status == PaymentStatus.pending,
             or_(
                 Order.payment_method != PaymentMethod.card,
-                _is_delayed_card(),    # pymtz / Highriskify / WP onramp
+                _is_delayed_card(),
             ),
-            or_(Order.customer_emails_sent == 0, Order.customer_emails_sent.is_(None)),
         )
     )
 
@@ -502,6 +528,34 @@ async def order_stats(
         )
     )
 
+    # Mirrors list_orders' exact `awaiting=yes` filter (the Awaiting tab's
+    # real query): pending-and-already-emailed OR underpaid via any method.
+    # Previously this badge was computed client-side as pending + underpaid,
+    # which double-counted an underpaid-but-unemailed order (it's already
+    # inside `pending`) and didn't require the emailed flag the real tab does.
+    awaiting_q = (
+        select(sa_func.count())
+        .select_from(Order)
+        .outerjoin(InteracPayment,     InteracPayment.order_id     == Order.id)
+        .outerjoin(ZellePayment,       ZellePayment.order_id       == Order.id)
+        .outerjoin(NowPaymentsInvoice, NowPaymentsInvoice.order_id == Order.id)
+        .where(
+            and_(
+                *base_filter,
+                or_(
+                    and_(
+                        Order.payment_status == PaymentStatus.pending,
+                        or_(Order.payment_method != PaymentMethod.card, _is_delayed_card()),
+                        Order.customer_emails_sent > 0,
+                    ),
+                    InteracPayment.status == "underpaid",
+                    ZellePayment.status   == "underpaid",
+                    NowPaymentsInvoice.status == "underpaid",
+                ),
+            )
+        )
+    )
+
     # Failed = failed OR expired — both are "recoverable" terminal states
     failed_q = select(sa_func.count()).select_from(Order).where(
         and_(
@@ -533,6 +587,8 @@ async def order_stats(
     )
 
     pending_count    = (await db.execute(pending_q)).scalar_one()
+    shipping_count   = (await db.execute(shipping_q)).scalar_one()
+    awaiting_count   = (await db.execute(awaiting_q)).scalar_one()
     paid_count       = (await db.execute(paid_q)).scalar_one()
     paid_today_count = (await db.execute(paid_today_q)).scalar_one()
     all_count        = (await db.execute(all_q)).scalar_one()
@@ -590,6 +646,8 @@ async def order_stats(
 
     result = {
         "pending":         pending_count,
+        "shipping":        shipping_count,
+        "awaiting":        awaiting_count,
         "paid":            paid_count,
         "paidToday":       paid_today_count,
         "all":             all_count,

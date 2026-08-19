@@ -983,8 +983,8 @@
             })();
 
             updateTabCount("pendingCount", s.pending);
-            updateTabCount("shippingCount", s.pending);
-            updateTabCount("awaitingCount", s.pending + s.underpaid);
+            updateTabCount("shippingCount", s.shipping);
+            updateTabCount("awaitingCount", s.awaiting);
             updateTabCount("allCount", s.all);
             updateTabCount("paidCount", s.paid);
             updateTabCount("failedCount", s.failed || 0);
