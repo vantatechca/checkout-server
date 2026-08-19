@@ -1280,7 +1280,9 @@
                 + '</div>';
             }
           } else if (o.paymentStatus === "paid") {
-            action = '<span class="action-btn btn-paid">\u2713 Paid</span>';
+            action = o.trackingNumber
+              ? '<span class="action-btn btn-paid">\u2713 Paid</span>'
+              : '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>';
           } else if (
             o.paymentStatus === "failed" ||
             o.paymentStatus === "expired"
@@ -3724,7 +3726,7 @@
       function buildOrdersUrl(limit) {
         var url = "/admin/orders?limit=" + (limit || 500);
         if (currentTab === "pending")      url += "&status=pending&not_emailed=yes";
-        else if (currentTab === "shipping") url += "&status=pending";
+        else if (currentTab === "shipping") url += "&shipping=yes";
         else if (currentTab === "awaiting") url += "&awaiting=yes";
         else if (currentTab === "paid")     url += "&status=paid";
         else if (currentTab === "failed")   url += "&failed=yes";

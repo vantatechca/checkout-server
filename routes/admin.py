@@ -24,7 +24,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlalchemy import select, desc, or_ as _sa_or, cast as _sa_cast, String as _sa_String
+from sqlalchemy import select, desc, or_ as _sa_or, and_ as _sa_and, cast as _sa_cast, String as _sa_String
 
 from database import get_db
 from models.order import Order, InteracPayment, ZellePayment, CryptoInvoice, NowPaymentsInvoice, PaymentStatus, PaymentMethod
@@ -230,6 +230,7 @@ async def list_orders(
     not_emailed: Optional[str] = Query(None),
     abandoned:   Optional[str] = Query(None),
     failed:      Optional[str] = Query(None),
+    shipping:    Optional[str] = Query(None),
     limit:       int           = Query(50, le=100000),   # high cap so CSV export can pull the full dataset
     offset:      int           = Query(0),
     db: AsyncSession = Depends(get_db),
@@ -306,6 +307,25 @@ async def list_orders(
                 (InteracPayment.id.is_(None)) &
                 (ZellePayment.id.is_(None))
              )
+
+    # "Shipping" tab — the fulfillment-first workflow: orders still needing
+    # payment (so they can be marked paid without a Shopify order) OR orders
+    # already paid but not yet shipped (so a label can be bought), regardless
+    # of which mark-paid path was used. Once a label is bought (shipped_at
+    # set), the order drops off this tab but stays visible in Paid.
+    if shipping == "yes":
+        q = q.where(
+            _sa_or(
+                _sa_and(
+                    Order.payment_status == PaymentStatus.pending,
+                    _sa_or(Order.payment_method != PaymentMethod.card, _is_delayed_card()),
+                ),
+                _sa_and(
+                    Order.payment_status == PaymentStatus.paid,
+                    Order.shipped_at.is_(None),
+                ),
+            )
+        )
 
     # Failed tab — payment never succeeded; admin can attempt recovery
     if failed == "yes":
@@ -475,16 +495,22 @@ async def order_stats(
         )
     )
 
-    # Mirrors list_orders' exact `status=pending` filter with no other params
-    # (the Shipping tab's real query) — no emailed/underpaid exclusion, since
-    # that tab intentionally shows every not-yet-paid order.
+    # Mirrors list_orders' exact `shipping=yes` filter (the Shipping tab's
+    # real query): not-yet-paid orders (fulfillment-first mark-paid) PLUS
+    # paid-but-not-yet-shipped orders (buy a label), regardless of which
+    # mark-paid path was used.
     shipping_q = select(sa_func.count()).select_from(Order).where(
         and_(
             *base_filter,
-            Order.payment_status == PaymentStatus.pending,
             or_(
-                Order.payment_method != PaymentMethod.card,
-                _is_delayed_card(),
+                and_(
+                    Order.payment_status == PaymentStatus.pending,
+                    or_(Order.payment_method != PaymentMethod.card, _is_delayed_card()),
+                ),
+                and_(
+                    Order.payment_status == PaymentStatus.paid,
+                    Order.shipped_at.is_(None),
+                ),
             ),
         )
     )
