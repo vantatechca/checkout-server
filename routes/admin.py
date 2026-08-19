@@ -3,7 +3,10 @@ Internal admin endpoints (should be behind IP whitelist in Nginx, not public).
 
 GET  /admin/orders              → list orders with filters
 GET  /admin/orders/{id}         → order detail
-POST /admin/orders/{id}/mark-paid   → manually mark any order paid
+POST /admin/orders/{id}/mark-paid   → manually mark any order paid (creates a Shopify order)
+POST /admin/orders/{id}/shipping/mark-paid → lightweight mark-paid for the Shipping tab (no Shopify order)
+POST /admin/orders/{id}/shipping/rates     → live Shippo rate quote for an order
+POST /admin/orders/{id}/shipping/buy-label → purchase a Shippo shipping label
 POST /admin/interac/match       → manually match an unmatched Interac payment
 GET  /admin/interac/unmatched   → list Interac payments needing manual review
 GET  /admin/brands              → list brands
@@ -611,20 +614,28 @@ def _apply_overrides(template: dict, override: CustomerEmailOverride) -> dict:
     return out
 
 
-@router.post("/orders/{order_id}/mark-paid", dependencies=[Depends(require_write_access)])
-async def mark_order_paid(
+async def _apply_paid_status(
+    db: AsyncSession,
     order_id: str,
-    body: MarkPaidRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
+    notes: Optional[str],
+    default_note: str,
+) -> Order:
+    """
+    Shared core of "mark this pending order as paid": looks up the order,
+    rejects if missing/already paid, flips payment_status/paid_at, and
+    syncs the Interac/Zelle payment record if applicable (clears underpaid
+    flag, tops up received_amount). Does NOT call finalize_paid_order —
+    callers decide Shopify/email/affiliate behavior themselves. Used by
+    both the normal mark-paid endpoint and the Shipping tab's lightweight
+    (no-Shopify) one.
+    """
     result = await db.execute(
-    select(Order).where(Order.id == order_id)
-    .options(selectinload(Order.interac_payment))
-    .options(selectinload(Order.zelle_payment))
-    .options(selectinload(Order.items))
-)
-    order  = result.scalar_one_or_none()
+        select(Order).where(Order.id == order_id)
+        .options(selectinload(Order.interac_payment))
+        .options(selectinload(Order.zelle_payment))
+        .options(selectinload(Order.items))
+    )
+    order = result.scalar_one_or_none()
 
     if not order:
         raise HTTPException(404, "Order not found")
@@ -633,7 +644,7 @@ async def mark_order_paid(
 
     order.payment_status = PaymentStatus.paid
     order.paid_at        = datetime.now(timezone.utc)
-    order.payment_notes  = body.notes or "Manually marked paid by admin"
+    order.payment_notes  = notes or default_note
 
     # If Interac, also update interac_payment record (clears underpaid flag if it was set)
     if order.payment_method == PaymentMethod.interac and order.interac_payment:
@@ -651,6 +662,17 @@ async def mark_order_paid(
             order.zelle_payment.received_amount = order.total
 
     await db.commit()
+    return order
+
+
+@router.post("/orders/{order_id}/mark-paid", dependencies=[Depends(require_write_access)])
+async def mark_order_paid(
+    order_id: str,
+    body: MarkPaidRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await _apply_paid_status(db, order_id, body.notes, "Manually marked paid by admin")
     await log_admin_activity(
         db, request,
         action="mark_paid", target_type="order", target_id=order_id,
@@ -666,6 +688,128 @@ async def mark_order_paid(
     from services.order_finalize import finalize_paid_order
     await finalize_paid_order(order, db, label="admin-mark-paid")
     return {"success": True, "orderId": order_id}
+
+
+# ─── Shipping (Shippo) ──────────────────────────────────────────────────────
+#
+# The "Shipping" tab in the admin dashboard lists pending orders and lets an
+# admin mark one paid WITHOUT creating a Shopify order — that's the only
+# behavioral difference from the normal mark-paid endpoint above. Every
+# other path to "paid" (Pending tab, Interac/Zelle match, webhooks) still
+# creates a Shopify order exactly as before; this is a deliberately separate,
+# additive endpoint, not a change to the existing one.
+
+class ShippingRatesRequest(BaseModel):
+    weight_oz: float
+    length_in: float
+    width_in:  float
+    height_in: float
+
+
+class ShippingBuyLabelRequest(BaseModel):
+    rate_id:   str
+    carrier:   str
+    weight_oz: float
+    length_in: float
+    width_in:  float
+    height_in: float
+
+
+@router.post("/orders/{order_id}/shipping/mark-paid", dependencies=[Depends(require_write_access)])
+async def mark_order_paid_shipping(
+    order_id: str,
+    body: MarkPaidRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    await _apply_paid_status(
+        db, order_id, body.notes,
+        "Marked paid via Shipping tab (no Shopify order)",
+    )
+    await log_admin_activity(
+        db, request,
+        action="shipping_mark_paid", target_type="order", target_id=order_id,
+        details=(body.notes or "no note")[:200],
+    )
+
+    result = await db.execute(
+        select(Order).where(Order.id == order_id)
+        .options(selectinload(Order.items))
+    )
+    order = result.scalar_one_or_none()
+
+    from services.order_finalize import finalize_paid_order
+    await finalize_paid_order(order, db, label="shipping-mark-paid", create_shopify=False)
+    return {"success": True, "orderId": order_id}
+
+
+@router.post("/orders/{order_id}/shipping/rates", dependencies=[Depends(require_write_access)])
+async def get_shipping_rates(
+    order_id: str,
+    body: ShippingRatesRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(404, "Order not found")
+
+    from services.shippo import ShippoClient, ShippoError
+    try:
+        rates = await ShippoClient().get_rates(
+            order,
+            weight_oz=body.weight_oz,
+            length_in=body.length_in,
+            width_in=body.width_in,
+            height_in=body.height_in,
+        )
+    except ShippoError as e:
+        raise HTTPException(502, f"Could not fetch shipping rates: {e}")
+    return {"success": True, "rates": rates}
+
+
+@router.post("/orders/{order_id}/shipping/buy-label", dependencies=[Depends(require_write_access)])
+async def buy_shipping_label(
+    order_id: str,
+    body: ShippingBuyLabelRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if order.payment_status != PaymentStatus.paid:
+        raise HTTPException(400, "Order must be paid before buying a shipping label")
+
+    from services.shippo import ShippoClient, ShippoError
+    try:
+        label = await ShippoClient().buy_label(
+            rate_id=body.rate_id,
+            order_id=order_id,
+            carrier=body.carrier,
+        )
+    except ShippoError as e:
+        raise HTTPException(502, f"Could not purchase shipping label: {e}")
+
+    order.tracking_number       = label["tracking_number"]
+    order.tracking_url          = label["tracking_url"]
+    order.carrier                = label["carrier"]
+    order.label_url              = label["label_url"]
+    order.shippo_transaction_id  = label["transaction_id"]
+    order.shipped_at             = datetime.now(timezone.utc)
+    order.package_weight_oz      = body.weight_oz
+    order.package_length_in      = body.length_in
+    order.package_width_in       = body.width_in
+    order.package_height_in      = body.height_in
+    await db.commit()
+
+    await log_admin_activity(
+        db, request,
+        action="create_label", target_type="order", target_id=order_id,
+        details=f"{label['carrier']} — {label['tracking_number']}"[:200],
+    )
+    return {"success": True, "orderId": order_id, **label}
 
 # ─── Email preview ────────────────────────────────────────────────────────────
 

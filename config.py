@@ -161,6 +161,32 @@ class Settings(BaseSettings):
     PYMTZ_API_KEY_US:        str = ""   # pymtz_live_... for the US account
     PYMTZ_WEBHOOK_SECRET_US: str = ""   # whsec_... for the US account
 
+    # Shippo — shipping label purchase (admin dashboard "Shipping" tab). One
+    # API token (not per-region — Shippo is a single account with multiple
+    # sender addresses), but two separate ship-from addresses selected by
+    # order.currency (CAD→CA, USD→US), same selection rule already used for
+    # pymtz above. Domestic shipments only — no customs declaration is ever
+    # built, so no package-contents description is ever sent to Shippo or
+    # the carrier (see services/shippo.py for why).
+    SHIPPO_ENABLED:   bool = False
+    SHIPPO_API_TOKEN: str  = ""   # shippo_live_... — from the Shippo dashboard
+
+    SHIPPO_FROM_NAME_CA:     str = ""
+    SHIPPO_FROM_ADDRESS1_CA: str = ""
+    SHIPPO_FROM_ADDRESS2_CA: str = ""
+    SHIPPO_FROM_CITY_CA:     str = ""
+    SHIPPO_FROM_PROVINCE_CA: str = ""
+    SHIPPO_FROM_POSTAL_CA:   str = ""
+    SHIPPO_FROM_PHONE_CA:    str = ""
+
+    SHIPPO_FROM_NAME_US:     str = ""
+    SHIPPO_FROM_ADDRESS1_US: str = ""
+    SHIPPO_FROM_ADDRESS2_US: str = ""
+    SHIPPO_FROM_CITY_US:     str = ""
+    SHIPPO_FROM_STATE_US:    str = ""
+    SHIPPO_FROM_ZIP_US:      str = ""
+    SHIPPO_FROM_PHONE_US:    str = ""
+
     # Onramp via WordPress + 2530gateway plugin.
     # See services/onramp_wp.py for the architecture overview.
     ONRAMP_WP_ENABLED:         bool = False  # master kill-switch — flip to true to show the option

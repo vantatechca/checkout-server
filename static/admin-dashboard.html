@@ -118,7 +118,15 @@
             </div>
             <span id="pendingCount" class="tab-count" style="background: #b98900">0</span>
           </div>
-          
+
+          <div class="sidebar-item" onclick="switchTab('shipping')">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+              Shipping
+            </div>
+            <span id="shippingCount" class="tab-count" style="background: #7c3aed">0</span>
+          </div>
+
           <div class="sidebar-item" onclick="switchTab('awaiting')">
             <div style="display: flex; align-items: center; gap: 1rem;">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -975,7 +983,8 @@
             })();
 
             updateTabCount("pendingCount", s.pending);
-            updateTabCount("awaitingCount", s.pending + s.underpaid); 
+            updateTabCount("shippingCount", s.pending);
+            updateTabCount("awaitingCount", s.pending + s.underpaid);
             updateTabCount("allCount", s.all);
             updateTabCount("paidCount", s.paid);
             updateTabCount("failedCount", s.failed || 0);
@@ -1418,7 +1427,7 @@
         if (typeof clearSelection === "function") clearSelection();
 
         // Sidebar order MUST match the DOM order of nav items.
-        var TAB_ORDER = ["dashboard", "pending", "awaiting", "all", "paid", "failed", "revenue", "emails"];
+        var TAB_ORDER = ["dashboard", "pending", "shipping", "awaiting", "all", "paid", "failed", "revenue", "emails"];
         document.querySelectorAll(".sidebar-nav > .sidebar-item").forEach(function (t, i) {
           t.classList.toggle("active", TAB_ORDER[i] === tab);
         });
@@ -2277,6 +2286,40 @@
           html += "</div>";
         }
 
+        // Buy Shipping Label — any paid order, regardless of which mark-paid
+        // path was used. Viewers never see this (mutating section, matches
+        // the established convention of omitting rather than disabling).
+        if (!window.IS_VIEWER && o.paymentStatus === "paid") {
+          html += '<div class="modal-section">';
+          html += '<div class="modal-section-title">Shipping</div>';
+          if (o.trackingNumber) {
+            html +=
+              '<div class="detail-grid">' +
+              '<div class="detail-row"><div class="detail-label">Carrier</div><div class="detail-value">' + _escapeHtml(o.carrier || "—") + '</div></div>' +
+              '<div class="detail-row"><div class="detail-label">Tracking #</div><div class="detail-value mono">' +
+              (o.trackingUrl
+                ? '<a href="' + _escapeHtml(o.trackingUrl) + '" target="_blank" rel="noopener">' + _escapeHtml(o.trackingNumber) + '</a>'
+                : _escapeHtml(o.trackingNumber)) +
+              '</div></div>' +
+              '<div class="detail-row"><div class="detail-label">Shipped</div><div class="detail-value">' + fmtTime(o.shippedAt) + '</div></div>' +
+              '</div>';
+            if (o.labelUrl) {
+              html += '<a href="' + _escapeHtml(o.labelUrl) + '" target="_blank" rel="noopener" class="action-btn" style="display:inline-block;margin-top:1rem;height:4rem;line-height:4rem;padding:0 1.6rem;font-size:1.3rem;">View Label</a>';
+            }
+          } else {
+            html +=
+              '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
+              '<label style="font-size:1.2rem;color:#888;">Weight (oz)<input id="shipWeightOz" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
+              '<label style="font-size:1.2rem;color:#888;">Length (in)<input id="shipLengthIn" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
+              '<label style="font-size:1.2rem;color:#888;">Width (in)<input id="shipWidthIn" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
+              '<label style="font-size:1.2rem;color:#888;">Height (in)<input id="shipHeightIn" type="number" min="0" step="0.1" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>' +
+              '</div>' +
+              '<button id="shipGetRatesBtn" class="action-btn" style="width:100%;height:4rem;" onclick="fetchShippingRates(\'' + _escapeForInlineJs(o.id) + '\')">Get Rates</button>' +
+              '<div id="shippingRatesResult"></div>';
+          }
+          html += '</div>';
+        }
+
         html += '</div>'; // close modal-right-pane
         html += '</div>'; // close modal-split
 
@@ -2294,6 +2337,10 @@
             "<button style=\"height:4.8rem;padding:0 2rem;background:#fff0f0;color:#c8102e;border:1.5px solid #c8102e;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer;\" onclick=\"cancelOrder('" +
             o.id +
             "');closeModal()\">Cancel Order</button>";
+          html +=
+            "<button style=\"height:4.8rem;padding:0 1.6rem;background:#f3e8ff;color:#7c3aed;border:1.5px solid #7c3aed;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:600;cursor:pointer;\" title=\"Marks paid without creating a Shopify order \u2014 for the Shipping tab's fulfillment-first workflow\" onclick=\"markPaidShipping('" +
+            o.id +
+            "')\">\ud83d\udce6 Mark Paid (No Shopify)</button>";
           html +=
             '<button class="modal-confirm" id="modalConfirmBtn" onclick="confirmMarkPaid()">\u2713 Mark as Paid</button>';
           html += "</div>";
@@ -2487,6 +2534,161 @@
           })
           .catch(function () {
             showToast("error", "Network error");
+          });
+      }
+
+      /* ─── SHIPPING (Shippo) ──────────────────────── */
+
+      // Lightweight mark-paid for the Shipping tab — deliberately does NOT
+      // create a Shopify order (see routes/admin.py:/orders/{id}/shipping/mark-paid).
+      // Only the normal "Mark as Paid" button (confirmMarkPaid above) does that.
+      async function markPaidShipping(orderId) {
+        var ok = await showConfirm({
+          title: "Mark paid — no Shopify order",
+          body:
+            "This marks the order paid WITHOUT creating a Shopify order or " +
+            "affecting inventory. Use this only for the Shipping tab's " +
+            "fulfillment-first workflow. The affiliate payout still fires " +
+            "normally.\n\nContinue?",
+          okText: "Mark paid",
+        });
+        if (!ok) return;
+
+        fetch("/admin/orders/" + orderId + "/shipping/mark-paid", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notes: null }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (res.ok && res.data.success) {
+              showToast("success", "✓ Order " + orderId + " marked paid (no Shopify order)");
+              closeModal();
+              loadOrders();
+            } else {
+              showToast("error", res.data.detail || "Failed to mark paid");
+            }
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+          });
+      }
+
+      // Selected rate, kept between fetchShippingRates and confirmBuyShippingLabel.
+      var _selectedShippingRate = null;
+
+      function fetchShippingRates(orderId) {
+        var weight = parseFloat(document.getElementById("shipWeightOz").value);
+        var length = parseFloat(document.getElementById("shipLengthIn").value);
+        var width  = parseFloat(document.getElementById("shipWidthIn").value);
+        var height = parseFloat(document.getElementById("shipHeightIn").value);
+        if (!weight || !length || !width || !height) {
+          showToast("error", "Enter weight and all three dimensions first");
+          return;
+        }
+
+        _selectedShippingRate = null;
+        var btn = document.getElementById("shipGetRatesBtn");
+        var resultEl = document.getElementById("shippingRatesResult");
+        if (btn) { btn.disabled = true; btn.textContent = "Fetching rates…"; }
+        resultEl.innerHTML = "";
+
+        fetch("/admin/orders/" + orderId + "/shipping/rates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            weight_oz: weight, length_in: length, width_in: width, height_in: height,
+          }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (!res.ok || !res.data.success) {
+              showToast("error", res.data.detail || "Could not fetch rates");
+              return;
+            }
+            var rates = res.data.rates || [];
+            if (!rates.length) {
+              resultEl.innerHTML = '<div style="color:#aaa;font-size:1.3rem;">No rates available.</div>';
+              return;
+            }
+            var html = '<div style="display:flex;flex-direction:column;gap:0.6rem;margin-top:1rem;">';
+            rates.forEach(function (r, i) {
+              html +=
+                '<label style="display:flex;align-items:center;gap:1rem;padding:1rem;border:1.5px solid var(--border,#e2e0da);border-radius:8px;cursor:pointer;font-size:1.3rem;">' +
+                '<input type="radio" name="shipRateChoice" value="' + i + '" onchange="selectShippingRate(' + i + ')">' +
+                '<span style="flex:1">' + _escapeHtml(r.carrier) + ' — ' + _escapeHtml(r.servicelevel) +
+                (r.estimated_days ? ' (' + r.estimated_days + ' days)' : '') + '</span>' +
+                '<span style="font-weight:700;font-family:\'DM Mono\',monospace;">$' + r.amount.toFixed(2) + ' ' + _escapeHtml(r.currency) + '</span>' +
+                '</label>';
+            });
+            html += '</div>';
+            html += '<button id="shipBuyLabelBtn" class="modal-confirm" style="margin-top:1rem;width:100%;" disabled onclick="confirmBuyShippingLabel(\'' + _escapeForInlineJs(orderId) + '\')">Select a rate above</button>';
+            resultEl.innerHTML = html;
+            resultEl.dataset.rates = JSON.stringify(rates);
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+          })
+          .finally(function () {
+            if (btn) { btn.disabled = false; btn.textContent = "Get Rates"; }
+          });
+      }
+
+      function selectShippingRate(index) {
+        var resultEl = document.getElementById("shippingRatesResult");
+        var rates = JSON.parse(resultEl.dataset.rates || "[]");
+        _selectedShippingRate = rates[index];
+        var buyBtn = document.getElementById("shipBuyLabelBtn");
+        if (buyBtn && _selectedShippingRate) {
+          buyBtn.disabled = false;
+          buyBtn.textContent = "Buy Label — $" + _selectedShippingRate.amount.toFixed(2) + " " + _selectedShippingRate.currency;
+        }
+      }
+
+      async function confirmBuyShippingLabel(orderId) {
+        if (!_selectedShippingRate) return;
+        var rate = _selectedShippingRate;
+        var ok = await showConfirm({
+          title: "Purchase shipping label?",
+          body:
+            "Buy a " + rate.carrier + " " + rate.servicelevel + " label for $" +
+            rate.amount.toFixed(2) + " " + rate.currency + "?\n\n" +
+            "This charges your Shippo account for real — it cannot be undone from here.",
+          okText: "Buy label",
+          danger: true,
+        });
+        if (!ok) return;
+
+        var weight = parseFloat(document.getElementById("shipWeightOz").value);
+        var length = parseFloat(document.getElementById("shipLengthIn").value);
+        var width  = parseFloat(document.getElementById("shipWidthIn").value);
+        var height = parseFloat(document.getElementById("shipHeightIn").value);
+
+        var btn = document.getElementById("shipBuyLabelBtn");
+        if (btn) { btn.disabled = true; btn.textContent = "Purchasing…"; }
+
+        fetch("/admin/orders/" + orderId + "/shipping/buy-label", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rate_id: rate.rate_id, carrier: rate.carrier,
+            weight_oz: weight, length_in: length, width_in: width, height_in: height,
+          }),
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (res) {
+            if (res.ok && res.data.success) {
+              showToast("success", "✓ Label purchased — tracking " + res.data.tracking_number);
+              closeModal();
+              loadOrders();
+            } else {
+              showToast("error", res.data.detail || "Failed to purchase label");
+              if (btn) { btn.disabled = false; btn.textContent = "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+            }
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+            if (btn) { btn.disabled = false; btn.textContent = "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
           });
       }
 
@@ -3415,6 +3617,7 @@
       function buildOrdersUrl(limit) {
         var url = "/admin/orders?limit=" + (limit || 500);
         if (currentTab === "pending")      url += "&status=pending&not_emailed=yes";
+        else if (currentTab === "shipping") url += "&status=pending";
         else if (currentTab === "awaiting") url += "&awaiting=yes";
         else if (currentTab === "paid")     url += "&status=paid";
         else if (currentTab === "failed")   url += "&failed=yes";

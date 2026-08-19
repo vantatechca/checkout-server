@@ -26,6 +26,7 @@ async def finalize_paid_order(
     db,
     *,
     send_email: bool = True,
+    create_shopify: bool = True,
     label: str = "",
 ) -> Optional[str]:
     """
@@ -35,6 +36,12 @@ async def finalize_paid_order(
     send_email: some callers intentionally skip the email here because their
            flow doesn't send one on this path (e.g. WPay HPP never has —
            preserved as-is, not changed by this consolidation).
+    create_shopify: the admin dashboard's "Shipping" tab has a lightweight
+           mark-paid path that deliberately does NOT create a Shopify order
+           (fulfillment there is tracked entirely in this system) — every
+           other caller leaves this at the default True. The affiliate
+           webhook below is unaffected either way; it's unconditional
+           regardless of this flag, per the policy explained above.
     label: short tag for log lines, e.g. "stripe_direct", "admin-mark-paid".
 
     Returns the Shopify order_number (str) if created, else None.
@@ -42,14 +49,17 @@ async def finalize_paid_order(
     failure in one doesn't block the others.
     """
     shopify_order_number = None
-    try:
-        from services.shopify import create_shopify_order
-        shopify_order = await create_shopify_order(order)
-        if shopify_order:
-            shopify_order_number = str(shopify_order.get("order_number", ""))
-            logger.info(f"✅ Shopify order #{shopify_order_number} created for {order.id} ({label})")
-    except Exception as e:
-        logger.error(f"Shopify order creation error for {order.id} ({label}): {e}")
+    if create_shopify:
+        try:
+            from services.shopify import create_shopify_order
+            shopify_order = await create_shopify_order(order)
+            if shopify_order:
+                shopify_order_number = str(shopify_order.get("order_number", ""))
+                logger.info(f"✅ Shopify order #{shopify_order_number} created for {order.id} ({label})")
+        except Exception as e:
+            logger.error(f"Shopify order creation error for {order.id} ({label}): {e}")
+    else:
+        logger.info(f"Shopify order creation skipped for {order.id} ({label}) — create_shopify=False")
 
     # Unconditional — fires regardless of Shopify's outcome above. See module
     # docstring: this is a deliberate policy decision, not an oversight.

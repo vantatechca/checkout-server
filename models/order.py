@@ -178,6 +178,18 @@ class Order(Base):
     payment_notes   = Column(Text, nullable=True)
     paid_at         = Column(DateTime, nullable=True)
 
+    # --- Fulfillment (Shippo shipping label) ---
+    tracking_number      = Column(String(64), nullable=True)
+    tracking_url         = Column(String(255), nullable=True)
+    carrier               = Column(String(32), nullable=True)   # e.g. "usps", "ups", "canada_post"
+    label_url             = Column(String(255), nullable=True)  # Shippo-hosted PDF/PNG
+    shippo_transaction_id = Column(String(64), nullable=True)
+    shipped_at             = Column(DateTime, nullable=True)     # set when the label is purchased
+    package_weight_oz      = Column(Numeric(6, 2), nullable=True)
+    package_length_in      = Column(Numeric(5, 2), nullable=True)
+    package_width_in       = Column(Numeric(5, 2), nullable=True)
+    package_height_in      = Column(Numeric(5, 2), nullable=True)
+
     # --- Customer email tracking ---
     last_customer_email_at = Column(DateTime, nullable=True)
     customer_emails_sent   = Column(Integer, default=0)
@@ -251,6 +263,17 @@ class Order(Base):
             "paymentStatus":        self.payment_status,
             "paidAt":               self.paid_at.isoformat() if self.paid_at else None,
             "createdAt":            self.created_at.isoformat() if self.created_at else None,
+
+            # Fulfillment (Shippo shipping label)
+            "trackingNumber":       self.tracking_number,
+            "trackingUrl":          self.tracking_url,
+            "carrier":              self.carrier,
+            "labelUrl":             self.label_url,
+            "shippedAt":            self.shipped_at.isoformat() if self.shipped_at else None,
+            "packageWeightOz":      float(self.package_weight_oz) if self.package_weight_oz is not None else None,
+            "packageLengthIn":      float(self.package_length_in) if self.package_length_in is not None else None,
+            "packageWidthIn":       float(self.package_width_in) if self.package_width_in is not None else None,
+            "packageHeightIn":      float(self.package_height_in) if self.package_height_in is not None else None,
 
             # Email tracking
             "lastCustomerEmailAt":  self.last_customer_email_at.isoformat() if self.last_customer_email_at else None,
