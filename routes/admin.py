@@ -905,6 +905,8 @@ async def get_shipping_rates(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(404, "Order not found")
+    if (order.currency or "").upper() != "CAD":
+        raise HTTPException(400, "Shippo shipping labels are only available for CAD (Canada) orders")
 
     from services.shippo import ShippoClient, ShippoError
     try:
@@ -945,6 +947,13 @@ async def mark_paid_and_buy_label(
     via the Paid tab's Buy Shipping Label section as a fallback, so nothing
     about the purchase is lost, but it won't yet show on the Shipping tab.
     """
+    precheck = await db.execute(select(Order).where(Order.id == order_id))
+    precheck_order = precheck.scalar_one_or_none()
+    if not precheck_order:
+        raise HTTPException(404, "Order not found")
+    if (precheck_order.currency or "").upper() != "CAD":
+        raise HTTPException(400, "Shippo shipping labels are only available for CAD (Canada) orders")
+
     await _apply_paid_status(
         db, order_id, body.notes,
         "Marked paid + label bought via Shippo (no Shopify order)",
@@ -1023,6 +1032,8 @@ async def buy_shipping_label(
         raise HTTPException(404, "Order not found")
     if order.payment_status != PaymentStatus.paid:
         raise HTTPException(400, "Order must be paid before buying a shipping label")
+    if (order.currency or "").upper() != "CAD":
+        raise HTTPException(400, "Shippo shipping labels are only available for CAD (Canada) orders")
 
     from services.shippo import ShippoClient, ShippoError
     try:
