@@ -2630,16 +2630,20 @@
       // places since only one of the two branches is ever rendered for a
       // given order (an order is either pending or paid, never both).
       function _shippingFormFieldsHtml() {
-        // autocomplete="off" plus a bogus/unique autocomplete token — ids
-        // like "shipFromCity"/"shipFromZip" are strong signals to Chrome's
-        // address-autofill heuristics, which will happily overwrite these
-        // with a saved profile or nearby page text otherwise (that's what
-        // produced "Canada" in the Country field and a mangled Name value
-        // in practice — Shippo then rejects the invalid country and the
-        // rate request fails).
+        // autocomplete="off" alone doesn't stop Chrome here — it ignores
+        // that hint on fields it heuristically recognizes as an address
+        // form (matched off the visible <label> text — "Name"/"City"/
+        // "Postal/Zip" — not just id/name, so renaming ids wouldn't help
+        // either). It DOES respect readonly at render time though: start
+        // every field readonly and drop the attribute on focus, before the
+        // user can type — Chrome only autofills on load, never mid-edit,
+        // so this reliably blocks it without disabling manual editing.
+        // (Confirmed this was still live-corrupting data even after the
+        // autocomplete="off" attempt — "Hardy St, Maple Ridge, BC" is
+        // leftover browser-saved data, not anything either of us entered.)
         var addrField = function (id, label, span) {
           return '<label style="font-size:1.2rem;color:#888;grid-column:span ' + (span || 1) + ';">' + label +
-            '<input id="' + id + '" type="text" autocomplete="off" data-lpignore="true" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+            '<input id="' + id + '" type="text" autocomplete="off" data-lpignore="true" readonly onfocus="this.removeAttribute(\'readonly\')" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
         };
         var dimField = function (id, label) {
           return '<label style="font-size:1.2rem;color:#888;">' + label +
