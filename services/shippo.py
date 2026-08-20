@@ -106,9 +106,18 @@ class ShippoClient:
         if not self.api_token:
             raise ShippoError("SHIPPO_API_TOKEN not configured")
 
+        to_address = self._to_address(order)
+        required = {"name": "name", "street1": "address line 1", "city": "city", "state": "province/state", "zip": "postal/zip code"}
+        missing = [label for field, label in required.items() if not to_address.get(field)]
+        if missing:
+            raise ShippoError(
+                f"This order is missing shipping address details ({', '.join(missing)}) — "
+                "cannot buy a label for it. Check the order's shipping address."
+            )
+
         body = {
             "address_from": from_address or self._from_address(order),
-            "address_to":   self._to_address(order),
+            "address_to":   to_address,
             "parcels": [{
                 "length":      str(length_in),
                 "width":       str(width_in),
