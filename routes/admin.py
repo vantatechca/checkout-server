@@ -840,6 +840,17 @@ async def mark_order_paid(
 # creates a Shopify order exactly as before; this is a deliberately separate,
 # additive endpoint, not a change to the existing one.
 
+def _shippo_order_eligible(order) -> bool:
+    """Shippo is scoped to CAD Interac orders only for now (explicitly
+    excludes crypto/BTC even on the off chance one is CAD-denominated) —
+    a deliberate, narrower business restriction on top of the technical
+    CA/US ship-from support in services/shippo.py. Update here if that
+    scope changes."""
+    return (
+        (order.currency or "").upper() == "CAD"
+        and order.payment_method == PaymentMethod.interac
+    )
+
 class ShippingFromAddress(BaseModel):
     name:    str = ""
     street1: str = ""
@@ -905,8 +916,8 @@ async def get_shipping_rates(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(404, "Order not found")
-    if (order.currency or "").upper() != "CAD":
-        raise HTTPException(400, "Shippo shipping labels are only available for CAD (Canada) orders")
+    if not _shippo_order_eligible(order):
+        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
 
     from services.shippo import ShippoClient, ShippoError
     try:
@@ -951,8 +962,8 @@ async def mark_paid_and_buy_label(
     precheck_order = precheck.scalar_one_or_none()
     if not precheck_order:
         raise HTTPException(404, "Order not found")
-    if (precheck_order.currency or "").upper() != "CAD":
-        raise HTTPException(400, "Shippo shipping labels are only available for CAD (Canada) orders")
+    if not _shippo_order_eligible(precheck_order):
+        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
 
     await _apply_paid_status(
         db, order_id, body.notes,
@@ -1032,8 +1043,8 @@ async def buy_shipping_label(
         raise HTTPException(404, "Order not found")
     if order.payment_status != PaymentStatus.paid:
         raise HTTPException(400, "Order must be paid before buying a shipping label")
-    if (order.currency or "").upper() != "CAD":
-        raise HTTPException(400, "Shippo shipping labels are only available for CAD (Canada) orders")
+    if not _shippo_order_eligible(order):
+        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
 
     from services.shippo import ShippoClient, ShippoError
     try:

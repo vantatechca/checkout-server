@@ -2314,18 +2314,18 @@
           html += "</div>";
         }
 
-        // Shippo is CAD (Canada) orders only — deliberate business
-        // restriction, not a technical limitation. A USD order that
-        // somehow already has tracking (e.g. bought before this
-        // restriction existed) still shows its existing tracking/label;
-        // it just can't buy a NEW one.
-        var isCad = (o.currency || "").toUpperCase() === "CAD";
+        // Shippo is CAD Interac orders only, for now — deliberate business
+        // restriction, not a technical limitation (explicitly excludes
+        // crypto/BTC too). An order that somehow already has tracking
+        // (e.g. bought before this restriction existed/tightened) still
+        // shows its existing tracking/label; it just can't buy a NEW one.
+        var isShippoEligible = (o.currency || "").toUpperCase() === "CAD" && o.paymentMethod === "interac";
 
         // Buy Shipping Label — any paid CAD order, regardless of which
         // mark-paid path was used. Viewers never see this (mutating
         // section, matches the established convention of omitting rather
         // than disabling).
-        if (!window.IS_VIEWER && o.paymentStatus === "paid" && (isCad || o.trackingNumber)) {
+        if (!window.IS_VIEWER && o.paymentStatus === "paid" && (isShippoEligible || o.trackingNumber)) {
           html += '<div class="modal-section">';
           html += '<div class="modal-section-title">Shipping</div>';
           if (o.trackingNumber) {
@@ -2355,7 +2355,7 @@
         // require the order to be paid first (Shippo rate lookups don't
         // care), and the final action marks paid + buys the label in one
         // combined call.
-        if (!window.IS_VIEWER && isPending && isCad) {
+        if (!window.IS_VIEWER && isPending && isShippoEligible) {
           html += '<div class="modal-section" id="shippoMarkPaidSection" style="display:none;">';
           html += '<div class="modal-section-title">Mark Paid + Buy Shipping Label (Shippo)</div>';
           html += _shippingFormFieldsHtml();
@@ -2381,7 +2381,7 @@
             "<button style=\"height:4.8rem;padding:0 2rem;background:#fff0f0;color:#c8102e;border:1.5px solid #c8102e;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer;\" onclick=\"cancelOrder('" +
             o.id +
             "');closeModal()\">Cancel Order</button>";
-          if (isCad) {
+          if (isShippoEligible) {
             html +=
               "<button style=\"height:4.8rem;padding:0 1.6rem;background:#f3e8ff;color:#7c3aed;border:1.5px solid #7c3aed;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.4rem;font-weight:600;cursor:pointer;\" title=\"Reveals the parcel/address form below \u2014 marks paid WITHOUT creating a Shopify order and buys the shipping label in one action\" onclick=\"showShippoLabelForm('" +
               o.id +
