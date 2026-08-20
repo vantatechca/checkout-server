@@ -224,6 +224,16 @@ class Settings(BaseSettings):
     #   ""        → no countries auto-qualify (domain list above still applies)
     #   "US,CA"   → any store whose country is US or CA qualifies
     WPAY_WP_COUNTRIES:      str = ""
+    # Per WPay's compliance notice (2026-08-20, "Wpay Channels - Fully
+    # Restored"): only these BILLING countries are approved for 2D/3DS —
+    # anything else gets force-declined on WPay's end regardless, so this
+    # rejects it here first for a clearer customer-facing error instead of
+    # burning a WooCommerce order on a transaction that can't succeed.
+    # NOT the same list as WPAY_WP_COUNTRIES above (that's which STORES can
+    # show the option; this is which CUSTOMER billing countries are allowed
+    # per transaction). Comma-separated ISO-2 codes; update here if WPay
+    # revises the approved list.
+    WPAY_WP_ALLOWED_GEOS:   str = "US,GB,CA,IN,AU,FR,HK,DE,JP,MX,SG,TR"
 
     # Stripe direct card processor — its own rail, not a fallback.
     # Per team architecture: customer card → Stripe (settles to its own

@@ -1169,6 +1169,16 @@ async def checkout_wpay_2d(
             f"(this order converts to ${wc_amount:.2f} USD).",
         )
 
+    # Per WPay's compliance notice: currency must be USD — the CAD→USD
+    # conversion above already guarantees this for every currency this
+    # business actually uses, but this is the explicit, compliance-mapped
+    # check rather than relying on that as an implicit side effect.
+    if wc_currency != "USD":
+        order.payment_status = PaymentStatus.failed
+        order.payment_notes  = f"wpay_2d declined: currency {wc_currency} is not USD"
+        await db.commit()
+        raise HTTPException(400, "WPay 2D only supports USD transactions.")
+
     bill_same = (payload.bill_same or "1") == "1"
     b_addr1   = (payload.address1 if bill_same else payload.bill_address1) or ""
     b_addr2   = (payload.address2 if bill_same else payload.bill_address2) or ""
@@ -1176,6 +1186,20 @@ async def checkout_wpay_2d(
     b_state   = (payload.province if bill_same else payload.bill_province) or ""
     b_zip     = (payload.postal_code if bill_same else payload.bill_postal) or ""
     b_country = (payload.country  if bill_same else payload.bill_country)  or "US"
+
+    # Per WPay's compliance notice: only these billing GEOs are approved —
+    # anything else is force-declined on their end regardless, so reject it
+    # here before spending a WooCommerce order on it. Card scheme (VISA/
+    # Mastercard only) is NOT checkable here — the plugin's own Basis Theory
+    # tokenization means we never see the card brand; that restriction is
+    # enforced entirely on WPay's hosted card form, not in this backend.
+    _wpaywp_geos_raw = (getattr(settings, "WPAY_WP_ALLOWED_GEOS", "") or "").strip()
+    _wpaywp_allowed_geos = {g.strip().upper() for g in _wpaywp_geos_raw.split(",") if g.strip()}
+    if _wpaywp_allowed_geos and b_country.strip().upper() not in _wpaywp_allowed_geos:
+        order.payment_status = PaymentStatus.failed
+        order.payment_notes  = f"wpay_2d declined: billing country '{b_country}' outside WPay's approved GEO list"
+        await db.commit()
+        raise HTTPException(400, f"Card payments are not currently available for billing country '{b_country}'.")
 
     try:
         client  = WPayWPClient()
