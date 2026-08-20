@@ -180,9 +180,9 @@ class Order(Base):
 
     # --- Fulfillment (Shippo shipping label) ---
     tracking_number      = Column(String(64), nullable=True)
-    tracking_url         = Column(String(255), nullable=True)
+    tracking_url         = Column(Text, nullable=True)   # carrier tracking URLs can exceed 255 chars
     carrier               = Column(String(32), nullable=True)   # e.g. "usps", "ups", "canada_post"
-    label_url             = Column(String(255), nullable=True)  # Shippo-hosted PDF/PNG
+    label_url             = Column(Text, nullable=True)  # Shippo-hosted PDF/PNG — signed URLs routinely exceed 255 chars
     shippo_transaction_id = Column(String(64), nullable=True)
     shipped_at             = Column(DateTime, nullable=True)     # set when the label is purchased
     package_weight_oz      = Column(Numeric(6, 2), nullable=True)
