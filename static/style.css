@@ -1023,6 +1023,9 @@
       .email-modal {
         max-width: 64rem;
       }
+      .bulk-ship-modal {
+        max-width: 110rem;
+      }
       .email-field {
         margin-bottom: 1.6rem;
       }

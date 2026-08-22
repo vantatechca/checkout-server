@@ -95,6 +95,17 @@
       </div>
     </div>
 
+    <!-- Bulk Shipping Labels Modal -->
+    <div class="modal-overlay" id="bulkShipModalOverlay">
+      <div class="modal bulk-ship-modal">
+        <div class="modal-header">
+          <h2>Bulk Buy Shipping Labels</h2>
+          <button class="modal-close" onclick="closeBulkShipModal()">&#x2715;</button>
+        </div>
+        <div class="modal-body" id="bulkShipModalBody"></div>
+      </div>
+    </div>
+
     <header class="header">
       <h1>Payments Admin</h1>
       <span class="header-sub" id="lastRefresh">Loading...</span>
@@ -256,6 +267,10 @@
             <button class="refresh-btn" id="exportBtn" onclick="exportCSV()" title="Export the orders shown below to Excel">
               <svg class="export-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
               <span class="hide-mobile" id="exportBtnLabel">Export</span>
+            </button>
+            <button class="refresh-btn" id="bulkShipBtn" onclick="openBulkShipModal()" style="display:none;background:#7c3aed;color:#fff;border-color:#7c3aed;" title="Buy shipping labels for many orders at once, including unfulfilled Shopify orders">
+              <span>📦</span>
+              <span class="hide-mobile">Bulk Buy Labels</span>
             </button>
             <button class="refresh-btn" id="refreshBtn" onclick="loadOrders()">
               <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" /></svg>
@@ -1494,6 +1509,9 @@
           revenueEl.style.display = "none";
           emailsEl.style.display = "none";
 
+          var bulkShipBtn = document.getElementById("bulkShipBtn");
+          if (bulkShipBtn) bulkShipBtn.style.display = (tab === "shipping") ? "flex" : "none";
+
           if (!isSameTab) {
             document.getElementById("ordersLoading").classList.add("active");
             ordersPage = 1;
@@ -2688,6 +2706,7 @@
           .then(function (r) { return r.json(); })
           .then(function (data) {
             var a = (data && data.address) || {};
+            var p = (data && data.parcel) || {};
             var setVal = function (id, v) {
               var el = document.getElementById(id);
               if (el) el.value = v || "";
@@ -2700,6 +2719,10 @@
             setVal("shipFromZip", a.zip);
             setVal("shipFromCountry", a.country);
             setVal("shipFromPhone", a.phone);
+            setVal("shipWeightOz", p.weight_oz);
+            setVal("shipLengthIn", p.length_in);
+            setVal("shipWidthIn", p.width_in);
+            setVal("shipHeightIn", p.height_in);
           })
           .catch(function () {});
       }
@@ -2914,6 +2937,315 @@
           .catch(function () {
             showToast("error", "Network error. Try again.");
             if (btn) { btn.disabled = false; btn.textContent = "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+          });
+      }
+
+      /* ─── BULK SHIPPING LABELS ──────────────────────
+         One shared ship-from address + parcel size applied across a whole
+         batch — covers our own paid-but-unlabeled CAD Interac orders AND
+         orders sitting unfulfilled on Shopify (CA + US), side by side, so
+         prices can be compared before committing to a purchase. */
+
+      var _bulkShipCandidates = { local: [], shopify: [] };
+      var _bulkShipSelected = new Set();
+      var _bulkShipRates = {};
+
+      function openBulkShipModal() {
+        document.getElementById("bulkShipModalOverlay").classList.add("open");
+        _bulkShipSelected = new Set();
+        _bulkShipRates = {};
+        document.getElementById("bulkShipModalBody").innerHTML =
+          '<div style="padding:3rem;text-align:center;color:#888;">Loading candidates…</div>';
+        _loadBulkShipCandidates();
+      }
+
+      function closeBulkShipModal() {
+        document.getElementById("bulkShipModalOverlay").classList.remove("open");
+      }
+
+      function _loadBulkShipCandidates() {
+        fetch("/admin/shipping/bulk-candidates", { credentials: "include" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            _bulkShipCandidates = { local: data.local || [], shopify: data.shopify || [] };
+            _renderBulkShipModal(data.shopifyErrors || []);
+          })
+          .catch(function () {
+            document.getElementById("bulkShipModalBody").innerHTML =
+              '<div style="padding:3rem;color:#c8102e;">Failed to load candidates. Try again.</div>';
+          });
+      }
+
+      function _bulkShipTableHtml(rows, kind) {
+        if (!rows.length) return '<div style="color:#aaa;font-size:1.2rem;padding:0.6rem 0;">None.</div>';
+        var html = '<div style="max-height:22rem;overflow-y:auto;border:1px solid var(--border,#e2e0da);border-radius:8px;">';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:1.2rem;">';
+        html += '<thead><tr style="position:sticky;top:0;background:var(--bg,#fff);border-bottom:1px solid var(--border,#e2e0da);">' +
+          '<th style="padding:0.6rem;text-align:left;width:2.4rem;"><input type="checkbox" onclick="_bulkShipToggleGroup(this)"></th>' +
+          '<th style="padding:0.6rem;text-align:left;">Order</th>' +
+          '<th style="padding:0.6rem;text-align:left;">Customer</th>' +
+          '<th style="padding:0.6rem;text-align:left;">Address</th>' +
+          '<th style="padding:0.6rem;text-align:right;">Rate</th>' +
+          '</tr></thead><tbody>';
+        rows.forEach(function (o) {
+          var ref = o.ref;
+          var label = kind === "local" ? ref : o.orderNumber;
+          var addr = [o.address1, o.city, o.province, o.postalCode].filter(Boolean).join(", ");
+          html += '<tr style="border-bottom:1px solid #f0ede8;">';
+          html += '<td style="padding:0.6rem;"><input type="checkbox" class="bulk-ship-check" data-ref="' + _escapeHtml(ref) + '" onclick="_bulkShipToggle(\'' + _escapeForInlineJs(ref) + '\', this.checked)"></td>';
+          html += '<td style="padding:0.6rem;">' + _escapeHtml(label) + (kind === "shopify" ? ' <span style="color:#888;">(' + _escapeHtml(o.store) + ')</span>' : '') + '</td>';
+          html += '<td style="padding:0.6rem;">' + _escapeHtml(((o.firstName || "") + " " + (o.lastName || "")).trim() || "—") + '</td>';
+          html += '<td style="padding:0.6rem;">' + _escapeHtml(addr || "—") + '</td>';
+          html += '<td style="padding:0.6rem;text-align:right;" id="bulkRate_' + _escapeHtml(ref) + '">—</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+        return html;
+      }
+
+      function _renderBulkShipModal(shopifyErrors) {
+        var html = '';
+
+        html += '<div class="modal-section">';
+        html += '<div class="modal-section-title">Ship From + Parcel (applies to every selected label)</div>';
+        html += _shippingFormFieldsHtml();
+        html += '</div>';
+
+        if (shopifyErrors && shopifyErrors.length) {
+          html += '<div style="background:#fff3cd;color:#856404;padding:1rem;border-radius:8px;margin-bottom:1rem;font-size:1.2rem;">⚠ Could not load some Shopify orders: ' +
+            _escapeHtml(shopifyErrors.join('; ')) + '</div>';
+        }
+
+        var caShopify = _bulkShipCandidates.shopify.filter(function (o) { return o.store === "CA"; });
+        var usShopify = _bulkShipCandidates.shopify.filter(function (o) { return o.store === "US"; });
+
+        html += '<div class="modal-section-title" style="margin-top:1.6rem;">Our Orders — Needs Label (' + _bulkShipCandidates.local.length + ')</div>';
+        html += _bulkShipTableHtml(_bulkShipCandidates.local, "local");
+        html += '<div class="modal-section-title" style="margin-top:1.6rem;">Shopify Unfulfilled — CA (' + caShopify.length + ')</div>';
+        html += _bulkShipTableHtml(caShopify, "shopify");
+        html += '<div class="modal-section-title" style="margin-top:1.6rem;">Shopify Unfulfilled — US (' + usShopify.length + ')</div>';
+        html += _bulkShipTableHtml(usShopify, "shopify");
+
+        html += '<div style="position:sticky;bottom:0;background:var(--bg,#fff);padding:1rem 0;border-top:1.5px solid var(--border,#e2e0da);margin-top:1.6rem;">';
+        html += '<div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">';
+        html += '<span id="bulkShipCount" style="font-weight:600;">0 selected</span>';
+        html += '<button class="action-btn" onclick="getBulkShipRates()">Get Rates for Selected</button>';
+        html += '<span id="bulkShipTotal" style="font-weight:700;"></span>';
+        html += '<button class="modal-confirm" id="bulkShipBuyBtn" disabled onclick="confirmBulkBuyLabels()">Buy Selected Labels</button>';
+        html += '</div>';
+        html += '<div id="bulkShipResults" style="margin-top:1rem;"></div>';
+        html += '</div>';
+
+        document.getElementById("bulkShipModalBody").innerHTML = html;
+        _prefillBulkShipDefaults();
+      }
+
+      function _prefillBulkShipDefaults() {
+        fetch("/admin/shipping/default-address?currency=CAD", { credentials: "include" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var a = (data && data.address) || {};
+            var p = (data && data.parcel) || {};
+            var setVal = function (id, v) {
+              var el = document.getElementById(id);
+              if (el) el.value = v || "";
+            };
+            setVal("shipFromName", a.name);
+            setVal("shipFromStreet1", a.street1);
+            setVal("shipFromStreet2", a.street2);
+            setVal("shipFromCity", a.city);
+            setVal("shipFromState", a.state);
+            setVal("shipFromZip", a.zip);
+            setVal("shipFromCountry", a.country);
+            setVal("shipFromPhone", a.phone);
+            setVal("shipWeightOz", p.weight_oz);
+            setVal("shipLengthIn", p.length_in);
+            setVal("shipWidthIn", p.width_in);
+            setVal("shipHeightIn", p.height_in);
+          })
+          .catch(function () {});
+      }
+
+      function _bulkShipToggle(ref, checked) {
+        if (checked) _bulkShipSelected.add(ref); else _bulkShipSelected.delete(ref);
+        _updateBulkShipSummary();
+      }
+
+      function _bulkShipToggleGroup(checkboxEl) {
+        var checked = checkboxEl.checked;
+        var scope = checkboxEl.closest("table").querySelectorAll(".bulk-ship-check");
+        scope.forEach(function (cb) {
+          if (cb.disabled) return;
+          cb.checked = checked;
+          var ref = cb.getAttribute("data-ref");
+          if (checked) _bulkShipSelected.add(ref); else _bulkShipSelected.delete(ref);
+        });
+        _updateBulkShipSummary();
+      }
+
+      function _updateBulkShipSummary() {
+        var countEl = document.getElementById("bulkShipCount");
+        if (countEl) countEl.textContent = _bulkShipSelected.size + " selected";
+
+        var refs = Array.from(_bulkShipSelected);
+        var haveAllRates = refs.length > 0 && refs.every(function (ref) {
+          return _bulkShipRates[ref] && _bulkShipRates[ref].cheapest;
+        });
+        var buyBtn = document.getElementById("bulkShipBuyBtn");
+        if (buyBtn) buyBtn.disabled = !haveAllRates;
+
+        var totalEl = document.getElementById("bulkShipTotal");
+        if (totalEl) {
+          if (haveAllRates) {
+            var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].cheapest.amount; }, 0);
+            var currency = _bulkShipRates[refs[0]].cheapest.currency || "";
+            totalEl.textContent = "Estimated total: $" + total.toFixed(2) + " " + currency;
+          } else {
+            totalEl.textContent = "";
+          }
+        }
+      }
+
+      function getBulkShipRates() {
+        if (!_bulkShipSelected.size) { showToast("error", "Select at least one order first"); return; }
+
+        var fromAddress = {
+          name:    document.getElementById("shipFromName").value,
+          street1: document.getElementById("shipFromStreet1").value,
+          street2: document.getElementById("shipFromStreet2").value,
+          city:    document.getElementById("shipFromCity").value,
+          state:   document.getElementById("shipFromState").value,
+          zip:     document.getElementById("shipFromZip").value,
+          country: document.getElementById("shipFromCountry").value,
+          phone:   document.getElementById("shipFromPhone").value,
+        };
+        var weight = parseFloat(document.getElementById("shipWeightOz").value);
+        var length = parseFloat(document.getElementById("shipLengthIn").value);
+        var width  = parseFloat(document.getElementById("shipWidthIn").value);
+        var height = parseFloat(document.getElementById("shipHeightIn").value);
+        if (!fromAddress.name || !fromAddress.street1 || !fromAddress.city || !fromAddress.state || !fromAddress.zip || !fromAddress.country) {
+          showToast("error", "Fill in the Ship From address first");
+          return;
+        }
+        if (!weight || !length || !width || !height) {
+          showToast("error", "Enter weight and all three dimensions first");
+          return;
+        }
+
+        var refs = Array.from(_bulkShipSelected);
+        refs.forEach(function (ref) {
+          var cell = document.getElementById("bulkRate_" + ref);
+          if (cell) cell.textContent = "…";
+        });
+
+        fetch("/admin/shipping/bulk-rates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            refs: refs, from_address: fromAddress,
+            weight_oz: weight, length_in: length, width_in: width, height_in: height,
+          }),
+        })
+          .then(_safeJsonResponse)
+          .then(function (res) {
+            if (!res.ok || !res.data.success) {
+              showToast("error", res.data.detail || ("Could not fetch bulk rates (HTTP " + res.status + ")"));
+              return;
+            }
+            (res.data.results || []).forEach(function (r) {
+              _bulkShipRates[r.ref] = r;
+              var cell = document.getElementById("bulkRate_" + r.ref);
+              if (!cell) return;
+              if (r.error) {
+                cell.innerHTML = '<span style="color:#c8102e;" title="' + _escapeHtml(r.error) + '">Error</span>';
+              } else if (r.cheapest) {
+                cell.textContent = _escapeHtml(r.cheapest.carrier) + " $" + r.cheapest.amount.toFixed(2) + " " + r.cheapest.currency;
+              } else {
+                cell.textContent = "No rates";
+              }
+            });
+            _updateBulkShipSummary();
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+          });
+      }
+
+      async function confirmBulkBuyLabels() {
+        var refs = Array.from(_bulkShipSelected).filter(function (ref) {
+          return _bulkShipRates[ref] && _bulkShipRates[ref].cheapest;
+        });
+        if (!refs.length) return;
+
+        var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].cheapest.amount; }, 0);
+        var currency = _bulkShipRates[refs[0]].cheapest.currency || "";
+        var ok = await showConfirm({
+          title: "Buy " + refs.length + " shipping label" + (refs.length > 1 ? "s" : "") + "?",
+          body: "This charges your Shippo account for real — estimated total $" + total.toFixed(2) + " " + currency +
+            ". It cannot be undone from here.",
+          okText: "Buy " + refs.length + " label" + (refs.length > 1 ? "s" : ""),
+          danger: true,
+        });
+        if (!ok) return;
+
+        var weight = parseFloat(document.getElementById("shipWeightOz").value);
+        var length = parseFloat(document.getElementById("shipLengthIn").value);
+        var width  = parseFloat(document.getElementById("shipWidthIn").value);
+        var height = parseFloat(document.getElementById("shipHeightIn").value);
+
+        var buyBtn = document.getElementById("bulkShipBuyBtn");
+        if (buyBtn) { buyBtn.disabled = true; buyBtn.textContent = "Purchasing…"; }
+
+        var items = refs.map(function (ref) {
+          return { ref: ref, rate_id: _bulkShipRates[ref].cheapest.rate_id, carrier: _bulkShipRates[ref].cheapest.carrier };
+        });
+
+        fetch("/admin/shipping/bulk-buy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: items, weight_oz: weight, length_in: length, width_in: width, height_in: height }),
+        })
+          .then(_safeJsonResponse)
+          .then(function (res) {
+            if (!res.ok || !res.data.success) {
+              showToast("error", res.data.detail || ("Bulk purchase failed (HTTP " + res.status + ")"));
+              if (buyBtn) { buyBtn.disabled = false; buyBtn.textContent = "Buy Selected Labels"; }
+              return;
+            }
+            var results  = res.data.results || [];
+            var succeeded = results.filter(function (r) { return r.success; });
+            var failed    = results.filter(function (r) { return !r.success; });
+            var warned    = succeeded.filter(function (r) { return r.fulfillError; });
+
+            var resultsHtml = '<div style="font-size:1.2rem;">';
+            resultsHtml += '<div style="color:#1a7e2e;font-weight:600;">✓ ' + succeeded.length + ' label(s) purchased</div>';
+            if (failed.length) {
+              resultsHtml += '<div style="color:#c8102e;font-weight:600;margin-top:0.4rem;">✗ ' + failed.length + ' failed:</div><ul style="margin:0.4rem 0 0 1.6rem;color:#c8102e;">';
+              failed.forEach(function (r) { resultsHtml += '<li>' + _escapeHtml(r.ref) + ': ' + _escapeHtml(r.error || "unknown error") + '</li>'; });
+              resultsHtml += '</ul>';
+            }
+            if (warned.length) {
+              resultsHtml += '<div style="color:#b98900;font-weight:600;margin-top:0.4rem;">⚠ ' + warned.length + ' label(s) bought but Shopify fulfillment failed:</div><ul style="margin:0.4rem 0 0 1.6rem;color:#b98900;">';
+              warned.forEach(function (r) { resultsHtml += '<li>' + _escapeHtml(r.ref) + ': ' + _escapeHtml(r.fulfillError) + '</li>'; });
+              resultsHtml += '</ul>';
+            }
+            resultsHtml += '</div>';
+            var resultsEl = document.getElementById("bulkShipResults");
+            if (resultsEl) resultsEl.innerHTML = resultsHtml;
+
+            succeeded.forEach(function (r) {
+              var cell = document.getElementById("bulkRate_" + r.ref);
+              if (cell) cell.innerHTML = '✓ <a href="' + _escapeHtml(r.label_url || "#") + '" target="_blank" rel="noopener">' + _escapeHtml(r.tracking_number || "") + '</a>';
+              var checkbox = document.querySelector('.bulk-ship-check[data-ref="' + r.ref + '"]');
+              if (checkbox) checkbox.disabled = true;
+            });
+
+            loadOrders();
+            if (buyBtn) buyBtn.textContent = "Buy Selected Labels";
+          })
+          .catch(function () {
+            showToast("error", "Network error. Try again.");
+            if (buyBtn) { buyBtn.disabled = false; buyBtn.textContent = "Buy Selected Labels"; }
           });
       }
 

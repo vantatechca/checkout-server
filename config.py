@@ -187,6 +187,16 @@ class Settings(BaseSettings):
     SHIPPO_FROM_ZIP_US:      str = ""
     SHIPPO_FROM_PHONE_US:    str = ""
 
+    # Default parcel size — most shipments are the same product in the same
+    # packaging, so prefill these too (still fully editable per-order) same
+    # as the ship-from address above. Weight in oz to match the rest of the
+    # parcel fields (Shippo's API itself is unit-agnostic; oz was just this
+    # codebase's existing convention).
+    SHIPPO_DEFAULT_WEIGHT_OZ: str = ""
+    SHIPPO_DEFAULT_LENGTH_IN: str = ""
+    SHIPPO_DEFAULT_WIDTH_IN:  str = ""
+    SHIPPO_DEFAULT_HEIGHT_IN: str = ""
+
     # Onramp via WordPress + 2530gateway plugin.
     # See services/onramp_wp.py for the architecture overview.
     ONRAMP_WP_ENABLED:         bool = False  # master kill-switch — flip to true to show the option

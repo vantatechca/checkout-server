@@ -197,3 +197,150 @@ async def create_shopify_order(order) -> Optional[dict]:
     except Exception as e:
         logger.error(f"❌ Shopify API error: {e}")
         raise ShopifyOrderError(f"Could not reach Shopify {store_label} store: {e}")
+
+
+def _shopify_store_creds(store: str) -> tuple[str, str]:
+    is_us = store.upper() == "US"
+    store_domain = settings.SHOPIFY_STORE_DOMAIN_US if is_us else settings.SHOPIFY_STORE_DOMAIN
+    api_token    = settings.SHOPIFY_API_TOKEN_US if is_us else settings.SHOPIFY_API_TOKEN
+    return store_domain, api_token
+
+
+async def list_unfulfilled_orders(store: str = "CA") -> list[dict]:
+    """
+    Fetches paid-but-unfulfilled orders from the given Shopify store (CA or
+    US), for the admin dashboard's bulk shipping-label workflow. These
+    orders live only in Shopify, not our own `orders` table — the returned
+    dicts are a normalized read-only view, not an Order.to_dict() shape.
+
+    Returns [] if this store has no Shopify credentials configured (same
+    silent-skip convention as create_shopify_order — not every deployment
+    has both CA and US stores wired up).
+    """
+    store_domain, api_token = _shopify_store_creds(store)
+    if not store_domain or not api_token:
+        return []
+
+    base_url = f"https://{store_domain}/admin/api/{SHOPIFY_API_VERSION}"
+    headers = {"X-Shopify-Access-Token": api_token, "Content-Type": "application/json"}
+    params = {
+        "fulfillment_status": "unfulfilled",
+        "financial_status":   "paid",
+        "status":             "open",
+        "limit":              250,
+    }
+
+    orders: list[dict] = []
+    url = f"{base_url}/orders.json"
+    first = True
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        while url:
+            resp = await client.get(url, headers=headers, params=(params if first else None))
+            first = False
+            if resp.status_code != 200:
+                raise ShopifyOrderError(
+                    f"Shopify {store} store rejected the unfulfilled-orders "
+                    f"request ({resp.status_code}): {resp.text[:300]}"
+                )
+            data = resp.json()
+            for o in data.get("orders", []):
+                addr = o.get("shipping_address") or {}
+                total_weight_g = sum(
+                    (li.get("grams") or 0) * (li.get("quantity") or 1)
+                    for li in (o.get("line_items") or [])
+                )
+                orders.append({
+                    "ref":         f"shopify:{store.upper()}:{o['id']}",
+                    "shopifyId":   o["id"],
+                    "store":       store.upper(),
+                    "orderNumber": o.get("name") or f"#{o.get('order_number')}",
+                    "email":       o.get("email") or "",
+                    "firstName":   addr.get("first_name") or "",
+                    "lastName":    addr.get("last_name") or "",
+                    "address1":    addr.get("address1") or "",
+                    "address2":    addr.get("address2") or "",
+                    "city":        addr.get("city") or "",
+                    "province":    addr.get("province_code") or addr.get("province") or "",
+                    "postalCode":  addr.get("zip") or "",
+                    "country":     addr.get("country_code") or "",
+                    "phone":       addr.get("phone") or o.get("phone") or "",
+                    "currency":    o.get("currency") or "",
+                    "totalPrice":  o.get("total_price") or "0.00",
+                    "totalWeightG": total_weight_g,
+                    "createdAt":   o.get("created_at"),
+                })
+
+            # Shopify paginates via the Link header, not an offset param —
+            # the "next" URL already carries its own full querystring.
+            url = None
+            link = resp.headers.get("Link", "")
+            for part in link.split(","):
+                if 'rel="next"' in part:
+                    url = part.split(";")[0].strip().strip("<>")
+
+    return orders
+
+
+async def create_fulfillment(
+    shopify_order_id: int,
+    *,
+    store: str,
+    tracking_number: str,
+    tracking_url: str,
+    carrier: str,
+) -> None:
+    """
+    Marks a Shopify order fulfilled after we've bought its shipping label —
+    closes the loop so it drops out of the unfulfilled list on the next
+    refresh. Uses the modern Fulfillment Orders flow (the old
+    POST /orders/{id}/fulfillments.json endpoint this codebase's API version,
+    2024-07, no longer supports).
+
+    Best-effort: raises ShopifyOrderError on failure, but the label itself
+    is already bought and paid for either way — callers should surface this
+    as a warning, not roll anything back.
+    """
+    store_domain, api_token = _shopify_store_creds(store)
+    if not store_domain or not api_token:
+        raise ShopifyOrderError(f"Shopify {store} credentials not configured")
+
+    base_url = f"https://{store_domain}/admin/api/{SHOPIFY_API_VERSION}"
+    headers = {"X-Shopify-Access-Token": api_token, "Content-Type": "application/json"}
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        fo_resp = await client.get(
+            f"{base_url}/orders/{shopify_order_id}/fulfillment_orders.json",
+            headers=headers,
+        )
+        if fo_resp.status_code != 200:
+            raise ShopifyOrderError(
+                f"Could not look up fulfillment orders for Shopify order "
+                f"{shopify_order_id} ({fo_resp.status_code}): {fo_resp.text[:300]}"
+            )
+        fulfillment_orders = fo_resp.json().get("fulfillment_orders", [])
+        open_fo = [fo for fo in fulfillment_orders if fo.get("status") in ("open", "in_progress")]
+        if not open_fo:
+            raise ShopifyOrderError(
+                f"No open fulfillment orders for Shopify order {shopify_order_id} "
+                "(already fulfilled?)"
+            )
+
+        payload = {
+            "fulfillment": {
+                "notify_customer": True,
+                "tracking_info": {
+                    "number":  tracking_number,
+                    "url":     tracking_url,
+                    "company": carrier,
+                },
+                "line_items_by_fulfillment_order": [
+                    {"fulfillment_order_id": fo["id"]} for fo in open_fo
+                ],
+            }
+        }
+        resp = await client.post(f"{base_url}/fulfillments.json", json=payload, headers=headers)
+        if resp.status_code not in (200, 201):
+            raise ShopifyOrderError(
+                f"Could not mark Shopify order {shopify_order_id} fulfilled "
+                f"({resp.status_code}): {resp.text[:300]}"
+            )

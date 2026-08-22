@@ -46,7 +46,10 @@ class ShippoClient:
     def _from_address(self, order) -> dict:
         """Ship-from address — CA or US block, selected by order.currency
         (CAD→CA, USD→US), same rule already used for pymtz."""
-        us = (order.currency or "").upper() == "USD"
+        return self._from_address_for_currency(order.currency)
+
+    def _from_address_for_currency(self, currency: str) -> dict:
+        us = (currency or "").upper() == "USD"
         suffix = "US" if us else "CA"
         addr = {
             "name":    getattr(settings, f"SHIPPO_FROM_NAME_{suffix}", "") or "",
@@ -69,6 +72,22 @@ class ShippoClient:
         the configured CA/US default so it isn't typed from scratch every
         time, while still letting the admin edit it before purchase."""
         return self._from_address(order)
+
+    def default_from_address_for_currency(self, currency: str) -> dict:
+        """Same as default_from_address, but for callers with no specific
+        Order to derive currency from (the bulk-shipping workflow, which
+        applies one shared ship-from address across a whole batch)."""
+        return self._from_address_for_currency(currency)
+
+    def default_parcel(self) -> dict:
+        """Configured default parcel size (most shipments are the same
+        product/packaging) — prefills the form, still fully editable."""
+        return {
+            "weight_oz": getattr(settings, "SHIPPO_DEFAULT_WEIGHT_OZ", "") or "",
+            "length_in": getattr(settings, "SHIPPO_DEFAULT_LENGTH_IN", "") or "",
+            "width_in":  getattr(settings, "SHIPPO_DEFAULT_WIDTH_IN", "") or "",
+            "height_in": getattr(settings, "SHIPPO_DEFAULT_HEIGHT_IN", "") or "",
+        }
 
     def _to_address(self, order) -> dict:
         """Ship-to address — straight from the order's shipping fields,
@@ -93,6 +112,7 @@ class ShippoClient:
         width_in:     float,
         height_in:    float,
         from_address: Optional[dict] = None,
+        to_address:   Optional[dict] = None,
     ) -> list[dict]:
         """
         Creates a Shippo shipment (address_from + address_to + parcels) and
@@ -102,13 +122,17 @@ class ShippoClient:
         from_address: admin-edited override from the Buy Label form (prefilled
         with default_from_address() but editable). Falls back to the
         configured CA/US default when not supplied.
+        to_address: destination override for orders that don't live in our
+        own `orders` table (the bulk-shipping workflow's Shopify-sourced
+        rows) — when supplied, `order` itself may be None since neither
+        address needs to be derived from it.
         """
         if not self.api_token:
             raise ShippoError("SHIPPO_API_TOKEN not configured")
 
-        to_address = self._to_address(order)
+        to_addr = to_address or self._to_address(order)
         required = {"name": "name", "street1": "address line 1", "city": "city", "state": "province/state", "zip": "postal/zip code"}
-        missing = [label for field, label in required.items() if not to_address.get(field)]
+        missing = [label for field, label in required.items() if not to_addr.get(field)]
         if missing:
             raise ShippoError(
                 f"This order is missing shipping address details ({', '.join(missing)}) — "
@@ -117,7 +141,7 @@ class ShippoClient:
 
         body = {
             "address_from": from_address or self._from_address(order),
-            "address_to":   to_address,
+            "address_to":   to_addr,
             "parcels": [{
                 "length":      str(length_in),
                 "width":       str(width_in),

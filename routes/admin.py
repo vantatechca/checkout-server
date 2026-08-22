@@ -13,6 +13,7 @@ GET  /admin/brands              → list brands
 POST /admin/brands              → create brand
 PUT  /admin/brands/{id}         → update brand
 """
+import asyncio
 import json
 import logging
 import httpx
@@ -889,21 +890,40 @@ class ShippingMarkPaidBuyLabelRequest(BaseModel):
     height_in: float
 
 
+@router.get("/shipping/default-address", dependencies=[Depends(require_write_access)])
+async def get_shipping_default_address_generic(currency: str = "CAD"):
+    """Same shape as the per-order variant below, but for the bulk-shipping
+    workflow, which applies one shared ship-from address + parcel across a
+    whole batch instead of deriving it from a single order's currency."""
+    from services.shippo import ShippoClient
+    client = ShippoClient()
+    return {
+        "success": True,
+        "address": client.default_from_address_for_currency(currency),
+        "parcel":  client.default_parcel(),
+    }
+
+
 @router.get("/orders/{order_id}/shipping/default-address", dependencies=[Depends(require_write_access)])
 async def get_shipping_default_address(
     order_id: str,
     db: AsyncSession = Depends(get_db),
 ):
     """Returns the configured CA/US ship-from default for this order's
-    currency, so the Buy Label form can prefill it — the admin can still
-    edit every field before requesting rates."""
+    currency plus the default parcel size, so the Buy Label form can prefill
+    both — the admin can still edit every field before requesting rates."""
     result = await db.execute(select(Order).where(Order.id == order_id))
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(404, "Order not found")
 
     from services.shippo import ShippoClient
-    return {"success": True, "address": ShippoClient().default_from_address(order)}
+    client = ShippoClient()
+    return {
+        "success": True,
+        "address": client.default_from_address(order),
+        "parcel":  client.default_parcel(),
+    }
 
 
 @router.post("/orders/{order_id}/shipping/rates", dependencies=[Depends(require_write_access)])
@@ -1074,6 +1094,246 @@ async def buy_shipping_label(
         details=f"{label['carrier']} — {label['tracking_number']}"[:200],
     )
     return {"success": True, "orderId": order_id, **label}
+
+
+# ─── Bulk shipping labels ───────────────────────────────────────────────────
+#
+# Boss request: a single screen to buy many labels at once, covering both
+# our own paid-but-unlabeled CAD Interac orders AND orders sitting
+# unfulfilled on Shopify (100+ at a time there). One shared ship-from
+# address + parcel size is used across the whole batch — that's the point
+# of "bulk": same product, same packaging, same warehouse, not per-order
+# editing. Local orders still go through the same CAD-Interac-only gate as
+# the single-order flow (_shippo_order_eligible); Shopify orders have no
+# such restriction since they're a separate paid-elsewhere workflow.
+
+@router.get("/shipping/bulk-candidates", dependencies=[Depends(require_write_access)])
+async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
+    """
+    Everything eligible for bulk labeling right now: our own paid-but-
+    unlabeled CAD Interac orders, plus paid-but-unfulfilled orders pulled
+    live from Shopify (CA + US stores, whichever are configured). The
+    Shopify half is never persisted — read fresh every call, since
+    Shopify's own fulfillment status is the source of truth for it.
+    """
+    result = await db.execute(
+        select(Order)
+        .where(
+            Order.payment_status == PaymentStatus.paid,
+            Order.payment_method == PaymentMethod.interac,
+            Order.currency == "CAD",
+            Order.tracking_number.is_(None),
+        )
+        .order_by(desc(Order.paid_at))
+    )
+    local = [
+        {
+            "ref":        o.id,
+            "source":     "local",
+            "firstName":  o.first_name or "",
+            "lastName":   o.last_name or "",
+            "email":      o.email or "",
+            "address1":   o.address1 or "",
+            "address2":   o.address2 or "",
+            "city":       o.city or "",
+            "province":   o.province or "",
+            "postalCode": o.postal_code or "",
+            "country":    o.country or "",
+            "phone":      o.phone or "",
+            "currency":   o.currency,
+            "total":      float(o.total),
+            "paidAt":     o.paid_at.isoformat() if o.paid_at else None,
+        }
+        for o in result.scalars().all()
+    ]
+
+    from services.shopify import list_unfulfilled_orders, ShopifyOrderError
+    shopify: list[dict] = []
+    shopify_errors: list[str] = []
+    for store in ("CA", "US"):
+        try:
+            shopify.extend(await list_unfulfilled_orders(store))
+        except ShopifyOrderError as e:
+            shopify_errors.append(f"{store}: {e}")
+
+    return {"success": True, "local": local, "shopify": shopify, "shopifyErrors": shopify_errors}
+
+
+class BulkRatesRequest(BaseModel):
+    refs:         list[str]
+    from_address: ShippingFromAddress
+    weight_oz:    float
+    length_in:    float
+    width_in:     float
+    height_in:    float
+
+
+@router.post("/shipping/bulk-rates", dependencies=[Depends(require_write_access)])
+async def get_bulk_shipping_rates(
+    body: BulkRatesRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Cheapest live rate for each selected ref (a local order id, or
+    "shopify:CA:<id>" / "shopify:US:<id>"), using ONE shared ship-from
+    address + parcel size for every ref in the batch. Read-only and free
+    (Shippo doesn't charge for rate lookups) — safe to call as often as
+    needed while comparing prices before actually buying anything.
+    """
+    from services.shippo import ShippoClient, ShippoError
+    client = ShippoClient()
+    from_addr = body.from_address.dict()
+
+    local_refs    = [r for r in body.refs if not r.startswith("shopify:")]
+    shopify_refs  = [r for r in body.refs if r.startswith("shopify:")]
+
+    orders_by_id: dict = {}
+    if local_refs:
+        result = await db.execute(select(Order).where(Order.id.in_(local_refs)))
+        orders_by_id = {o.id: o for o in result.scalars().all()}
+
+    shopify_by_ref: dict = {}
+    if shopify_refs:
+        from services.shopify import list_unfulfilled_orders
+        for store in {"CA", "US"}:
+            for so in await list_unfulfilled_orders(store):
+                shopify_by_ref[so["ref"]] = so
+
+    async def rate_for(ref: str) -> dict:
+        to_addr = None
+        order = None
+        if ref.startswith("shopify:"):
+            so = shopify_by_ref.get(ref)
+            if not so:
+                return {"ref": ref, "error": "Shopify order not found (already fulfilled or removed since the list was loaded?)"}
+            to_addr = {
+                "name":    f"{so['firstName']} {so['lastName']}".strip(),
+                "street1": so["address1"], "street2": so["address2"],
+                "city":    so["city"],     "state":   so["province"],
+                "zip":     so["postalCode"], "country": so["country"],
+                "phone":   so["phone"],
+            }
+        else:
+            order = orders_by_id.get(ref)
+            if not order:
+                return {"ref": ref, "error": "Order not found"}
+
+        try:
+            rates = await client.get_rates(
+                order,
+                weight_oz=body.weight_oz, length_in=body.length_in,
+                width_in=body.width_in,   height_in=body.height_in,
+                from_address=from_addr,
+                to_address=to_addr,
+            )
+            return {"ref": ref, "cheapest": rates[0] if rates else None, "rateCount": len(rates)}
+        except ShippoError as e:
+            return {"ref": ref, "error": str(e)}
+
+    results = await asyncio.gather(*(rate_for(r) for r in body.refs))
+    return {"success": True, "results": results}
+
+
+class BulkBuyItem(BaseModel):
+    ref:      str
+    rate_id:  str
+    carrier:  str
+
+
+class BulkBuyRequest(BaseModel):
+    items:     list[BulkBuyItem]
+    weight_oz: float
+    length_in: float
+    width_in:  float
+    height_in: float
+
+
+@router.post("/shipping/bulk-buy", dependencies=[Depends(require_write_access)])
+async def bulk_buy_shipping_labels(
+    body: BulkBuyRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Buys one label per item, sequentially (not concurrent — these are real
+    purchases; isolating errors and staying under Shippo's rate limits
+    matters more than speed here). Local orders are validated as eligible
+    BEFORE any purchase happens, so an ineligible order never burns a real
+    label purchase. Shopify orders get marked fulfilled immediately after —
+    if that specific step fails, the label itself is still valid and paid
+    for, so it's reported as a warning on that item, not a failure.
+    """
+    from services.shippo import ShippoClient, ShippoError
+    from services.shopify import create_fulfillment, ShopifyOrderError
+    client = ShippoClient()
+
+    results = []
+    for item in body.items:
+        ref = item.ref
+        order = None
+
+        if not ref.startswith("shopify:"):
+            result = await db.execute(select(Order).where(Order.id == ref))
+            order = result.scalar_one_or_none()
+            if not order:
+                results.append({"ref": ref, "success": False, "error": "Order not found"})
+                continue
+            if not _shippo_order_eligible(order):
+                results.append({"ref": ref, "success": False, "error": "Order is not eligible for Shippo (must be paid, CAD, Interac)"})
+                continue
+            if order.tracking_number:
+                results.append({"ref": ref, "success": False, "error": "Order already has a label"})
+                continue
+
+        try:
+            label = await client.buy_label(rate_id=item.rate_id, order_id=ref, carrier=item.carrier)
+        except ShippoError as e:
+            results.append({"ref": ref, "success": False, "error": str(e)})
+            continue
+
+        if ref.startswith("shopify:"):
+            _, store, shopify_id = ref.split(":", 2)
+            fulfill_error = None
+            try:
+                await create_fulfillment(
+                    int(shopify_id), store=store,
+                    tracking_number=label["tracking_number"],
+                    tracking_url=label["tracking_url"],
+                    carrier=label["carrier"],
+                )
+            except ShopifyOrderError as e:
+                fulfill_error = str(e)
+            entry = {"ref": ref, "success": True, **label}
+            if fulfill_error:
+                entry["fulfillError"] = fulfill_error
+            results.append(entry)
+            await log_admin_activity(
+                db, request,
+                action="create_label", target_type="shopify_order", target_id=ref,
+                details=f"{label['carrier']} — {label['tracking_number']} (bulk)"[:200],
+            )
+        else:
+            order.tracking_number       = label["tracking_number"]
+            order.tracking_url          = label["tracking_url"]
+            order.carrier                = label["carrier"]
+            order.label_url              = label["label_url"]
+            order.shippo_transaction_id  = label["transaction_id"]
+            order.shipped_at             = datetime.now(timezone.utc)
+            order.package_weight_oz      = body.weight_oz
+            order.package_length_in      = body.length_in
+            order.package_width_in       = body.width_in
+            order.package_height_in      = body.height_in
+            order.paid_via_shippo        = True
+            await db.commit()
+            await log_admin_activity(
+                db, request,
+                action="create_label", target_type="order", target_id=ref,
+                details=f"{label['carrier']} — {label['tracking_number']} (bulk)"[:200],
+            )
+            results.append({"ref": ref, "success": True, **label})
+
+    return {"success": True, "results": results}
+
 
 # ─── Email preview ────────────────────────────────────────────────────────────
 
