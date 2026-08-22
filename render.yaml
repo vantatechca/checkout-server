@@ -1,0 +1,157 @@
+# Render Blueprint — standby deployment of checkout-server.
+#
+# Purpose: an independent copy of this app, usable if the VPS goes down.
+# Runs its OWN MariaDB (a private service on Render, not the VPS's database)
+# so it stays usable even during a full VPS outage — the VPS's data and this
+# deployment's data are separate; see RENDER_DEPLOY.md for what that means
+# and how to keep them in sync.
+#
+# Deploy: connect this repo in the Render dashboard → "New +" → "Blueprint".
+# Render reads this file automatically. After the first deploy, a few
+# envVars marked `sync: false` below need real values pasted in manually
+# (secrets are deliberately never written into this file, since it's
+# committed to git) — see RENDER_DEPLOY.md for the exact list and where to
+# get each value from the VPS's own .env.
+
+envVarGroups:
+  - name: checkout-shared
+    envVars:
+      - key: DB_NAME
+        value: checkout_db
+      - key: DB_USER
+        value: checkout_user
+      - key: DB_PASSWORD
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+
+services:
+  # ─── Database — MariaDB running as a private Render service ──────────────
+  # Not a Render-managed database product (Render only offers Postgres
+  # natively) — this pulls the official MariaDB image and gives it its own
+  # persistent disk. Private (pserv), so it's unreachable from the public
+  # internet — only checkout-web/checkout-worker can reach it, over Render's
+  # internal network.
+  - name: checkout-mariadb
+    type: pserv
+    runtime: image
+    plan: starter
+    image:
+      url: docker.io/library/mariadb:10.11
+    disk:
+      name: mariadb-data
+      mountPath: /var/lib/mysql
+      sizeGB: 10
+    envVarGroups:
+      - checkout-shared
+    envVars:
+      # Mirrors DB_NAME/DB_USER above under MariaDB's own image's expected
+      # variable names (its bootstrap script doesn't read DB_* at all).
+      - key: MYSQL_DATABASE
+        value: checkout_db
+      - key: MYSQL_USER
+        value: checkout_user
+      # MUST be set to the exact SAME value the checkout-shared group
+      # generated for DB_PASSWORD (Render can't alias one generated value
+      # under two different key names) — copy it from the group's value in
+      # the Render dashboard once, right after the first deploy. See
+      # RENDER_DEPLOY.md.
+      - key: MYSQL_PASSWORD
+        sync: false
+      # Root password for direct DB admin access (mysql -u root) if you
+      # ever need it — can be any value, doesn't need to match DB_PASSWORD.
+      - key: MYSQL_ROOT_PASSWORD
+        sync: false
+
+  # ─── Redis — Celery broker/result-backend + rate-limit cache ─────────────
+  # Not the source of truth for anything (MariaDB is) — losing this data on
+  # a restart just means in-flight background tasks and rate-limit counters
+  # reset, not real data loss. ipAllowList: [] = no public access, internal
+  # Render network only.
+  - name: checkout-redis
+    type: keyvalue
+    plan: starter
+    ipAllowList: []
+    maxmemoryPolicy: allkeys-lru
+
+  # ─── Web — the FastAPI app itself ─────────────────────────────────────────
+  - name: checkout-web
+    type: web
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVarGroups:
+      - checkout-shared
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: DB_HOST
+        fromService:
+          name: checkout-mariadb
+          type: pserv
+          property: host
+      - key: DB_PORT
+        value: "3306"
+      - key: REDIS_URL
+        fromService:
+          name: checkout-redis
+          type: keyvalue
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      # Update to this service's real onrender.com URL (or a custom domain)
+      # after the first deploy — used to build links in outgoing emails etc.
+      - key: BASE_URL
+        value: https://checkout-web.onrender.com
+      # Admin dashboard login — required for the app to be usable at all.
+      # Can differ from the VPS's admin credentials if you want that.
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: VIEWER_USERNAME
+        sync: false
+      - key: VIEWER_PASSWORD
+        sync: false
+      # Every payment-processor/integration credential (Shopify, Stripe,
+      # Helcim, Shippo, BTCPay, WPay, pymtz, NowPayments, Resend, Gmail,
+      # ...) is deliberately NOT declared here. Each one already defaults
+      # to blank/disabled in config.py exactly like an unconfigured .env
+      # on any other environment — the app runs fine without them, those
+      # specific features just stay off until you add real values in the
+      # Render dashboard. Add only the ones you actually need for standby
+      # use; see RENDER_DEPLOY.md for the full reference list.
+
+  # ─── Worker — Celery worker + embedded beat (scheduled tasks) ────────────
+  # `--beat` runs the scheduler inside the same worker process — simplest
+  # setup for a single, non-autoscaled standby instance. Do NOT scale this
+  # service beyond 1 instance without splitting beat into its own service
+  # first, or scheduled tasks (expire-old-orders) will fire once per
+  # instance instead of once total.
+  - name: checkout-worker
+    type: worker
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A tasks.celery_app worker --beat --loglevel=info
+    envVarGroups:
+      - checkout-shared
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: DB_HOST
+        fromService:
+          name: checkout-mariadb
+          type: pserv
+          property: host
+      - key: DB_PORT
+        value: "3306"
+      - key: REDIS_URL
+        fromService:
+          name: checkout-redis
+          type: keyvalue
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
