@@ -1,70 +1,36 @@
 # Render Blueprint — standby deployment of checkout-server.
 #
 # Purpose: an independent copy of this app, usable if the VPS goes down.
-# Runs its OWN MariaDB (a private service on Render, not the VPS's database)
-# so it stays usable even during a full VPS outage — the VPS's data and this
-# deployment's data are separate; see RENDER_DEPLOY.md for what that means
-# and how to keep them in sync.
+# Uses Render's native managed Postgres (Render has no managed MySQL/
+# MariaDB product) — the app supports both dialects via DB_DIALECT in
+# config.py; the VPS/staging keep running MySQL unchanged, only this
+# deployment sets DB_DIALECT=postgres.
+#
+# This is its OWN database, separate from the VPS's — see RENDER_DEPLOY.md
+# for exactly what that means and how to keep them in sync.
 #
 # Deploy: connect this repo in the Render dashboard → "New +" → "Blueprint".
-# Render reads this file automatically. After the first deploy, a few
-# envVars marked `sync: false` below need real values pasted in manually
-# (secrets are deliberately never written into this file, since it's
-# committed to git) — see RENDER_DEPLOY.md for the exact list and where to
-# get each value from the VPS's own .env.
+# Render reads this file automatically. A few envVars marked `sync: false`
+# below need real values pasted in manually after the first deploy (secrets
+# are deliberately never written into this file, since it's committed to
+# git) — see RENDER_DEPLOY.md for the exact list.
+
+databases:
+  - name: checkout-db
+    databaseName: checkout_db
+    user: checkout_user
+    plan: basic-256mb   # smallest paid Postgres plan (Render retired the free/"starter" tier)
+    diskSizeGB: 5
 
 envVarGroups:
   - name: checkout-shared
     envVars:
-      - key: DB_NAME
-        value: checkout_db
-      - key: DB_USER
-        value: checkout_user
-      - key: DB_PASSWORD
-        generateValue: true
       - key: SECRET_KEY
         generateValue: true
 
 services:
-  # ─── Database — MariaDB running as a private Render service ──────────────
-  # Not a Render-managed database product (Render only offers Postgres
-  # natively) — this pulls the official MariaDB image and gives it its own
-  # persistent disk. Private (pserv), so it's unreachable from the public
-  # internet — only checkout-web/checkout-worker can reach it, over Render's
-  # internal network.
-  - name: checkout-mariadb
-    type: pserv
-    runtime: image
-    plan: starter
-    image:
-      url: docker.io/library/mariadb:10.11
-    disk:
-      name: mariadb-data
-      mountPath: /var/lib/mysql
-      sizeGB: 10
-    envVarGroups:
-      - checkout-shared
-    envVars:
-      # Mirrors DB_NAME/DB_USER above under MariaDB's own image's expected
-      # variable names (its bootstrap script doesn't read DB_* at all).
-      - key: MYSQL_DATABASE
-        value: checkout_db
-      - key: MYSQL_USER
-        value: checkout_user
-      # MUST be set to the exact SAME value the checkout-shared group
-      # generated for DB_PASSWORD (Render can't alias one generated value
-      # under two different key names) — copy it from the group's value in
-      # the Render dashboard once, right after the first deploy. See
-      # RENDER_DEPLOY.md.
-      - key: MYSQL_PASSWORD
-        sync: false
-      # Root password for direct DB admin access (mysql -u root) if you
-      # ever need it — can be any value, doesn't need to match DB_PASSWORD.
-      - key: MYSQL_ROOT_PASSWORD
-        sync: false
-
   # ─── Redis — Celery broker/result-backend + rate-limit cache ─────────────
-  # Not the source of truth for anything (MariaDB is) — losing this data on
+  # Not the source of truth for anything (Postgres is) — losing this data on
   # a restart just means in-flight background tasks and rate-limit counters
   # reset, not real data loss. ipAllowList: [] = no public access, internal
   # Render network only.
@@ -72,7 +38,7 @@ services:
     type: keyvalue
     plan: starter
     ipAllowList: []
-    maxmemoryPolicy: allkeys-lru
+    maxmemoryPolicy: noeviction   # never silently drop a queued task
 
   # ─── Web — the FastAPI app itself ─────────────────────────────────────────
   - name: checkout-web
@@ -87,13 +53,18 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.10
+      - key: DB_DIALECT
+        value: postgres
       - key: DB_HOST
-        fromService:
-          name: checkout-mariadb
-          type: pserv
-          property: host
+        fromDatabase: { name: checkout-db, property: host }
       - key: DB_PORT
-        value: "3306"
+        fromDatabase: { name: checkout-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: checkout-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: checkout-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: checkout-db, property: password }
       - key: REDIS_URL
         fromService:
           name: checkout-redis
@@ -125,8 +96,8 @@ services:
       # use; see RENDER_DEPLOY.md for the full reference list.
 
   # ─── Worker — Celery worker + embedded beat (scheduled tasks) ────────────
-  # `--beat` runs the scheduler inside the same worker process — simplest
-  # setup for a single, non-autoscaled standby instance. Do NOT scale this
+  # `-B` runs the scheduler inside the same worker process — simplest setup
+  # for a single, non-autoscaled standby instance. Do NOT scale this
   # service beyond 1 instance without splitting beat into its own service
   # first, or scheduled tasks (expire-old-orders) will fire once per
   # instance instead of once total.
@@ -135,19 +106,24 @@ services:
     runtime: python
     plan: starter
     buildCommand: pip install -r requirements.txt
-    startCommand: celery -A tasks.celery_app worker --beat --loglevel=info
+    startCommand: celery -A tasks.celery_app worker -B --loglevel=info
     envVarGroups:
       - checkout-shared
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.10
+      - key: DB_DIALECT
+        value: postgres
       - key: DB_HOST
-        fromService:
-          name: checkout-mariadb
-          type: pserv
-          property: host
+        fromDatabase: { name: checkout-db, property: host }
       - key: DB_PORT
-        value: "3306"
+        fromDatabase: { name: checkout-db, property: port }
+      - key: DB_NAME
+        fromDatabase: { name: checkout-db, property: database }
+      - key: DB_USER
+        fromDatabase: { name: checkout-db, property: user }
+      - key: DB_PASSWORD
+        fromDatabase: { name: checkout-db, property: password }
       - key: REDIS_URL
         fromService:
           name: checkout-redis

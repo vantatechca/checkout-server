@@ -1,20 +1,22 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.dialects.mysql.aiomysql import MySQLDialect_aiomysql
 from config import settings
 
-# SQLAlchemy's pre_ping support for aiomysql infers whether to call
-# dbapi_connection.ping(reconnect=...) by inspecting pymysql.connections
-# .Connection.ping's default, but that default changed in pymysql 1.2.0 and
-# the aiomysql wrapper's ping() has no default at all — the guess comes out
-# wrong and pool_pre_ping crashes every connection checkout.
-# See https://github.com/sqlalchemy/sqlalchemy/issues/10492
-def _do_ping(self, dbapi_connection):
-    dbapi_connection.ping(False)
-    return True
+if settings.DB_DIALECT == "mysql":
+    # SQLAlchemy's pre_ping support for aiomysql infers whether to call
+    # dbapi_connection.ping(reconnect=...) by inspecting pymysql.connections
+    # .Connection.ping's default, but that default changed in pymysql 1.2.0
+    # and the aiomysql wrapper's ping() has no default at all — the guess
+    # comes out wrong and pool_pre_ping crashes every connection checkout.
+    # See https://github.com/sqlalchemy/sqlalchemy/issues/10492
+    # Postgres (asyncpg) has no equivalent issue, so this is mysql-only.
+    from sqlalchemy.dialects.mysql.aiomysql import MySQLDialect_aiomysql
 
+    def _do_ping(self, dbapi_connection):
+        dbapi_connection.ping(False)
+        return True
 
-MySQLDialect_aiomysql.do_ping = _do_ping
+    MySQLDialect_aiomysql.do_ping = _do_ping
 
 
 engine = create_async_engine(

@@ -4,6 +4,11 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database
+    # DB_DIALECT picks the driver DATABASE_URL builds — "mysql" (default,
+    # what the VPS/staging run — no .env change needed there) or "postgres"
+    # (Render's managed Postgres, which this app has no other dependency
+    # on; every column type used in models/ is dialect-agnostic SQLAlchemy).
+    DB_DIALECT: str = "mysql"
     DB_HOST: str = "127.0.0.1"
     DB_PORT: int = 3306
     DB_NAME: str = "checkout_db"
@@ -278,10 +283,36 @@ class Settings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
+        # DB_URL, if set, is a full connection string (Render/Neon convention)
+        # — normalize its scheme to the async driver for whichever dialect
+        # it declares, rather than assuming one.
+        url = (getattr(self, "DB_URL", "") or "").strip()
+        if url:
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+            if url.startswith("postgresql://"):
+                return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            if url.startswith("mysql://"):
+                return url.replace("mysql://", "mysql+aiomysql://", 1)
+            return url
+        if self.DB_DIALECT == "postgres":
+            return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         return f"mysql+aiomysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     @property
     def DATABASE_URL_SYNC(self) -> str:
+        # Sync driver — used by Alembic/any blocking tooling, not the app itself.
+        url = (getattr(self, "DB_URL", "") or "").strip()
+        if url:
+            if url.startswith("postgres://"):
+                url = url.replace("postgres://", "postgresql://", 1)
+            if url.startswith("postgresql://"):
+                return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            if url.startswith("mysql://"):
+                return url.replace("mysql://", "mysql+pymysql://", 1)
+            return url
+        if self.DB_DIALECT == "postgres":
+            return f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
         return f"mysql+pymysql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
     class Config:
