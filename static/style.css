@@ -237,6 +237,19 @@
       @keyframes adminSpin {
         to { transform: rotate(360deg); }
       }
+      /* Generic inline spinner for any text button mid-async-action — set
+         via _setBtnLoading()/_clearBtnLoading() in admin-dashboard.html. */
+      .btn-inline-spinner {
+        display: inline-block;
+        width: 1.2rem;
+        height: 1.2rem;
+        margin-right: 0.7rem;
+        vertical-align: -0.2rem;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: adminSpin 0.7s linear infinite;
+      }
       .app-layout {
         display: grid;
         grid-template-columns: 240px 1fr;

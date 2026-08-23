@@ -3000,10 +3000,7 @@
     async function confirmMarkPaid() {
       if (!pendingOrder) return;
       var btn = document.getElementById("modalConfirmBtn");
-      if (btn) {
-        btn.textContent = "Processing...";
-        btn.disabled = true;
-      }
+      _setBtnLoading(btn, "Processing...");
       if (pendingOrder.underpaidMethod) {
         var shortfall =
           parseFloat(pendingOrder.total || 0) -
@@ -3017,10 +3014,7 @@
           cancelText: "No, keep underpaid",
         });
         if (!ok) {
-          if (btn) {
-            btn.textContent = "✓ Mark as Paid";
-            btn.disabled = false;
-          }
+          _clearBtnLoading(btn, "✓ Mark as Paid");
           return;
         }
       }
@@ -3061,10 +3055,7 @@
           showToast("error", "Network error. Try again.");
         })
         .finally(function () {
-          if (btn) {
-            btn.textContent = "\u2713 Mark as Paid";
-            btn.disabled = false;
-          }
+          _clearBtnLoading(btn, "\u2713 Mark as Paid");
         });
     }
 
@@ -3253,7 +3244,7 @@
       _selectedShippingRate = null;
       var btn = document.getElementById("shipGetRatesBtn");
       var resultEl = document.getElementById("shippingRatesResult");
-      if (btn) { btn.disabled = true; btn.textContent = "Fetching rates…"; }
+      _setBtnLoading(btn, "Fetching rates…");
       resultEl.innerHTML = "";
 
       fetch("/admin/orders/" + orderId + "/shipping/rates", {
@@ -3295,7 +3286,7 @@
           showToast("error", "Network error. Try again.");
         })
         .finally(function () {
-          if (btn) { btn.disabled = false; btn.textContent = "Get Rates"; }
+          _clearBtnLoading(btn, "Get Rates");
         });
     }
 
@@ -3331,7 +3322,7 @@
       var height = parseFloat(document.getElementById("shipHeightIn").value);
 
       var btn = document.getElementById("shipBuyLabelBtn");
-      if (btn) { btn.disabled = true; btn.textContent = "Purchasing…"; }
+      _setBtnLoading(btn, "Purchasing…");
 
       fetch("/admin/orders/" + orderId + "/shipping/buy-label", {
         method: "POST",
@@ -3353,12 +3344,12 @@
             _refreshOrderAndReopen(orderId);
           } else {
             showToast("error", res.data.detail || ("Failed to purchase label (HTTP " + res.status + ")"));
-            if (btn) { btn.disabled = false; btn.textContent = "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+            _clearBtnLoading(btn, "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency);
           }
         })
         .catch(function () {
           showToast("error", "Network error. Try again.");
-          if (btn) { btn.disabled = false; btn.textContent = "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+          _clearBtnLoading(btn, "Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency);
         });
     }
 
@@ -3430,7 +3421,7 @@
       var height = parseFloat(document.getElementById("shipHeightIn").value);
 
       var btn = document.getElementById("shipBuyLabelBtn");
-      if (btn) { btn.disabled = true; btn.textContent = "Processing…"; }
+      _setBtnLoading(btn, "Processing…");
 
       fetch("/admin/orders/" + orderId + "/shipping/mark-paid-and-buy-label", {
         method: "POST",
@@ -3457,12 +3448,12 @@
             _refreshOrderAndReopen(orderId);
           } else {
             showToast("error", res.data.detail || ("Failed to mark paid / buy label (HTTP " + res.status + ")"));
-            if (btn) { btn.disabled = false; btn.textContent = "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+            _clearBtnLoading(btn, "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency);
           }
         })
         .catch(function () {
           showToast("error", "Network error. Try again.");
-          if (btn) { btn.disabled = false; btn.textContent = "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency; }
+          _clearBtnLoading(btn, "Mark Paid & Buy Label — $" + rate.amount.toFixed(2) + " " + rate.currency);
         });
     }
 
@@ -3600,7 +3591,7 @@
       html += '<div style="position:sticky;bottom:0;background:var(--bg,#fff);padding:1rem 0;border-top:1.5px solid var(--border,#e2e0da);margin-top:1.6rem;">';
       html += '<div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">';
       html += '<span id="bulkShipCount" style="font-weight:600;">0 selected</span>';
-      html += '<button class="action-btn" onclick="getBulkShipRates()">Get Rates for Selected</button>';
+      html += '<button class="action-btn" id="bulkGetRatesBtn" onclick="getBulkShipRates()">Get Rates for Selected</button>';
       html += '<span id="bulkShipTotal" style="font-weight:700;"></span>';
       html += '<button class="modal-confirm" id="bulkShipBuyBtn" disabled onclick="confirmBulkBuyLabels()">Buy Selected Labels</button>';
       html += '</div>';
@@ -3725,9 +3716,11 @@
       }
 
       var refs = Array.from(_bulkShipSelected);
+      var getRatesBtn = document.getElementById("bulkGetRatesBtn");
+      _setBtnLoading(getRatesBtn, "Fetching rates for " + refs.length + "…");
       refs.forEach(function (ref) {
         var cell = document.getElementById("bulkRate_" + ref);
-        if (cell) cell.textContent = "…";
+        if (cell) cell.innerHTML = '<span class="btn-inline-spinner" style="width:1rem;height:1rem;margin:0;"></span>';
       });
 
       fetch("/admin/shipping/bulk-rates", {
@@ -3767,6 +3760,9 @@
         })
         .catch(function () {
           showToast("error", "Network error. Try again.");
+        })
+        .finally(function () {
+          _clearBtnLoading(getRatesBtn, "Get Rates for Selected");
         });
     }
 
@@ -3797,7 +3793,7 @@
       var height = parseFloat(document.getElementById("shipHeightIn").value);
 
       var buyBtn = document.getElementById("bulkShipBuyBtn");
-      if (buyBtn) { buyBtn.disabled = true; buyBtn.textContent = "Purchasing…"; }
+      _setBtnLoading(buyBtn, "Purchasing " + refs.length + " label" + (refs.length > 1 ? "s" : "") + "…");
 
       var items = refs.map(function (ref) {
         return { ref: ref, rate_id: _bulkShipRates[ref].selected.rate_id, carrier: _bulkShipRates[ref].selected.carrier };
@@ -3812,7 +3808,7 @@
         .then(function (res) {
           if (!res.ok || !res.data.success) {
             showToast("error", res.data.detail || ("Bulk purchase failed (HTTP " + res.status + ")"));
-            if (buyBtn) { buyBtn.disabled = false; buyBtn.textContent = "Buy Selected Labels"; }
+            _clearBtnLoading(buyBtn, "Buy Selected Labels");
             return;
           }
           var results = res.data.results || [];
@@ -3844,11 +3840,11 @@
           });
 
           loadOrders();
-          if (buyBtn) buyBtn.textContent = "Buy Selected Labels";
+          _clearBtnLoading(buyBtn, "Buy Selected Labels");
         })
         .catch(function () {
           showToast("error", "Network error. Try again.");
-          if (buyBtn) { buyBtn.disabled = false; buyBtn.textContent = "Buy Selected Labels"; }
+          _clearBtnLoading(buyBtn, "Buy Selected Labels");
         });
     }
 
@@ -3974,6 +3970,24 @@
       setTimeout(function () {
         el.className = "toast " + type;
       }, duration);
+    }
+
+    // Puts a spinning indicator + label on any text button while an async
+    // action runs, and disables it so it can't be double-clicked mid-flight.
+    // Pair with _clearBtnLoading() once the request settles (success or
+    // error) — pass whatever label the button should show at rest, since
+    // several of these buttons show a different label depending on state
+    // (e.g. "Buy Label — $12.72 CAD" once a rate's picked), not always
+    // their original text.
+    function _setBtnLoading(btn, loadingLabel) {
+      if (!btn) return;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="btn-inline-spinner"></span>' + _escapeHtml(loadingLabel);
+    }
+    function _clearBtnLoading(btn, restoreLabel) {
+      if (!btn) return;
+      btn.disabled = false;
+      btn.textContent = restoreLabel;
     }
 
     /* ─── Styled async confirm / prompt (replaces native browser dialogs) ── */
@@ -4718,8 +4732,7 @@
     function submitReminder() {
       var btn = document.getElementById("emailSendBtn");
       var originalLabel = btn.textContent;
-      btn.disabled = true;
-      btn.textContent = "Sending...";
+      _setBtnLoading(btn, "Sending...");
 
       var payload = getEmailOverrides();
       payload.received_amount = emailContext.receivedAmount || 0;
@@ -4751,14 +4764,12 @@
             loadOrders();
           } else {
             showToast("error", res.data.detail || "Failed to send reminder");
-            btn.disabled = false;
-            btn.textContent = originalLabel;
+            _clearBtnLoading(btn, originalLabel);
           }
         })
         .catch(function () {
           showToast("error", "Network error. Try again.");
-          btn.disabled = false;
-          btn.textContent = originalLabel;
+          _clearBtnLoading(btn, originalLabel);
         });
     }
 
@@ -4937,7 +4948,7 @@
     function exportRevenueReport() {
       var btn = document.getElementById("revExportBtn");
       var label = document.getElementById("revExportBtnLabel");
-      if (btn) btn.disabled = true;
+      if (btn) { btn.disabled = true; btn.classList.add("spinning"); }
       if (label) label.textContent = "Exporting…";
 
       try {
@@ -5073,7 +5084,7 @@
         var filename = "revenue-report-" + periodLabel.replace(/[^a-z0-9]+/gi, "-").toLowerCase() + "-" + new Date().toISOString().slice(0, 10) + ".xlsx";
         XLSX.writeFile(wb, filename);
       } finally {
-        if (btn) btn.disabled = false;
+        if (btn) { btn.disabled = false; btn.classList.remove("spinning"); }
         if (label) label.textContent = "Export";
       }
     }
