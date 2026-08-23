@@ -958,6 +958,61 @@ async def get_shipping_rates(
     return {"success": True, "rates": rates}
 
 
+class ShippingMarkPaidOnlyRequest(BaseModel):
+    notes: Optional[str] = None
+
+
+@router.post("/orders/{order_id}/shipping/mark-paid", dependencies=[Depends(require_write_access)])
+async def mark_paid_shippo_only(
+    order_id: str,
+    body: ShippingMarkPaidOnlyRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    The "skip buying a label right now" escape hatch from the Mark Paid
+    (Shippo) form — marks paid WITHOUT creating a Shopify order, same as
+    mark_paid_and_buy_label below, just without picking a rate/buying a
+    label in the same action. The order then shows up in the bulk-buy
+    workspace's "Needs Label" list (or the single Buy Shipping Label
+    section once paid) whenever someone gets around to labeling it.
+    """
+    precheck = await db.execute(select(Order).where(Order.id == order_id))
+    precheck_order = precheck.scalar_one_or_none()
+    if not precheck_order:
+        raise HTTPException(404, "Order not found")
+    if not _shippo_order_eligible(precheck_order):
+        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
+
+    await _apply_paid_status(
+        db, order_id, body.notes,
+        "Marked paid via Shippo (no Shopify order)",
+    )
+
+    result = await db.execute(
+        select(Order).where(Order.id == order_id)
+        .options(selectinload(Order.items))
+    )
+    order = result.scalar_one_or_none()
+
+    from services.order_finalize import finalize_paid_order
+    finalize_info = await finalize_paid_order(order, db, label="shipping-mark-paid", create_shopify=False)
+
+    order.paid_via_shippo = True
+    await db.commit()
+
+    await log_admin_activity(
+        db, request,
+        action="shipping_mark_paid", target_type="order", target_id=order_id,
+        details=(body.notes or "no note")[:200],
+    )
+
+    resp = {"success": True, "orderId": order_id}
+    if finalize_info.get("affiliate_error"):
+        resp["affiliateError"] = finalize_info["affiliate_error"]
+    return resp
+
+
 @router.post("/orders/{order_id}/shipping/mark-paid-and-buy-label", dependencies=[Depends(require_write_access)])
 async def mark_paid_and_buy_label(
     order_id: str,
@@ -1343,7 +1398,14 @@ async def bulk_buy_shipping_labels(
             order.package_length_in      = body.length_in
             order.package_width_in       = body.width_in
             order.package_height_in      = body.height_in
-            order.paid_via_shippo        = True
+            # NOT setting paid_via_shippo here — that flag means "was
+            # marked paid via the no-Shopify Shippo path" (set once, at
+            # mark-paid time, by mark_paid_shippo_only/
+            # mark_paid_and_buy_label). Buying a label via bulk doesn't
+            # change how the order was originally marked paid — a normal
+            # Shopify-paid order that happens to get its label bought here
+            # (see the shopify_order_id sync below) must NOT start showing
+            # up as a "Shippo-native" order just because of that.
             await db.commit()
             await log_admin_activity(
                 db, request,
