@@ -3153,7 +3153,7 @@
 
         var refs = Array.from(_bulkShipSelected);
         var haveAllRates = refs.length > 0 && refs.every(function (ref) {
-          return _bulkShipRates[ref] && _bulkShipRates[ref].cheapest;
+          return _bulkShipRates[ref] && _bulkShipRates[ref].selected;
         });
         var buyBtn = document.getElementById("bulkShipBuyBtn");
         if (buyBtn) buyBtn.disabled = !haveAllRates;
@@ -3161,13 +3161,22 @@
         var totalEl = document.getElementById("bulkShipTotal");
         if (totalEl) {
           if (haveAllRates) {
-            var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].cheapest.amount; }, 0);
-            var currency = _bulkShipRates[refs[0]].cheapest.currency || "";
+            var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].selected.amount; }, 0);
+            var currency = _bulkShipRates[refs[0]].selected.currency || "";
             totalEl.textContent = "Estimated total: $" + total.toFixed(2) + " " + currency;
           } else {
             totalEl.textContent = "";
           }
         }
+      }
+
+      // Per-row rate dropdown changed — swap which quoted rate this order
+      // will actually be bought with, then refresh the running total.
+      function _bulkShipRateSelect(ref, selectEl) {
+        var r = _bulkShipRates[ref];
+        if (!r || !r.rates) return;
+        r.selected = r.rates[parseInt(selectEl.value, 10)] || null;
+        _updateBulkShipSummary();
       }
 
       function getBulkShipRates() {
@@ -3217,13 +3226,20 @@
               return;
             }
             (res.data.results || []).forEach(function (r) {
+              r.selected = r.cheapest || null;   // default pick — admin can change it below
               _bulkShipRates[r.ref] = r;
               var cell = document.getElementById("bulkRate_" + r.ref);
               if (!cell) return;
               if (r.error) {
                 cell.innerHTML = '<span style="color:#c8102e;" title="' + _escapeHtml(r.error) + '">Error</span>';
-              } else if (r.cheapest) {
-                cell.textContent = _escapeHtml(r.cheapest.carrier) + " $" + r.cheapest.amount.toFixed(2) + " " + r.cheapest.currency;
+              } else if (r.rates && r.rates.length) {
+                var sel = '<select style="font-size:1.15rem;padding:0.3rem;max-width:22rem;" onchange="_bulkShipRateSelect(\'' + _escapeForInlineJs(r.ref) + '\', this)">';
+                r.rates.forEach(function (rate, i) {
+                  sel += '<option value="' + i + '">' + _escapeHtml(rate.carrier) + ' — ' + _escapeHtml(rate.servicelevel) +
+                    ' — $' + rate.amount.toFixed(2) + ' ' + _escapeHtml(rate.currency) + '</option>';
+                });
+                sel += '</select>';
+                cell.innerHTML = sel;
               } else {
                 cell.textContent = "No rates";
               }
@@ -3237,12 +3253,12 @@
 
       async function confirmBulkBuyLabels() {
         var refs = Array.from(_bulkShipSelected).filter(function (ref) {
-          return _bulkShipRates[ref] && _bulkShipRates[ref].cheapest;
+          return _bulkShipRates[ref] && _bulkShipRates[ref].selected;
         });
         if (!refs.length) return;
 
-        var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].cheapest.amount; }, 0);
-        var currency = _bulkShipRates[refs[0]].cheapest.currency || "";
+        var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].selected.amount; }, 0);
+        var currency = _bulkShipRates[refs[0]].selected.currency || "";
         var ok = await showConfirm({
           title: "Buy " + refs.length + " shipping label" + (refs.length > 1 ? "s" : "") + "?",
           body: "This charges your Shippo account for real — estimated total $" + total.toFixed(2) + " " + currency +
@@ -3261,7 +3277,7 @@
         if (buyBtn) { buyBtn.disabled = true; buyBtn.textContent = "Purchasing…"; }
 
         var items = refs.map(function (ref) {
-          return { ref: ref, rate_id: _bulkShipRates[ref].cheapest.rate_id, carrier: _bulkShipRates[ref].cheapest.carrier };
+          return { ref: ref, rate_id: _bulkShipRates[ref].selected.rate_id, carrier: _bulkShipRates[ref].selected.carrier };
         });
 
         fetch("/admin/shipping/bulk-buy", {

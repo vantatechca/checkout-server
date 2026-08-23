@@ -1249,11 +1249,13 @@ async def get_bulk_shipping_rates(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Cheapest live rate for each selected ref (a local order id, or
+    All live rates for each selected ref (a local order id, or
     "shopify:CA:<id>" / "shopify:US:<id>"), using ONE shared ship-from
     address + parcel size for every ref in the batch. Read-only and free
     (Shippo doesn't charge for rate lookups) — safe to call as often as
     needed while comparing prices before actually buying anything.
+    `cheapest` is included alongside the full `rates` list as the default
+    selection; the admin can pick a different one per order in the UI.
     """
     from services.shippo import ShippoClient, ShippoError
     client = ShippoClient()
@@ -1301,7 +1303,7 @@ async def get_bulk_shipping_rates(
                 from_address=from_addr,
                 to_address=to_addr,
             )
-            return {"ref": ref, "cheapest": rates[0] if rates else None, "rateCount": len(rates)}
+            return {"ref": ref, "rates": rates, "cheapest": rates[0] if rates else None}
         except ShippoError as e:
             return {"ref": ref, "error": str(e)}
 
