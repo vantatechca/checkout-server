@@ -17,7 +17,7 @@ RESEND_URL = "https://api.resend.com/emails"
 
 # Verified domain in Resend — works in both dev and production
 FROM_ADDRESS = "Peps Checkout Support <support@pepscustomercare.com>"
-REPLY_TO     = "support@pepscustomercare.com"
+REPLY_TO = "support@pepscustomercare.com"
 
 
 # ─── Core sender ─────────────────────────────────────────────────────────────
@@ -93,13 +93,15 @@ def build_payment_reminder_template(
       - The store domain (e.g., eaststpaulpeps.com) where the order was placed
       - A full order summary table (items, qty, price, line total)
     """
-    pm_value = order.payment_method.value if hasattr(order.payment_method, "value") else str(order.payment_method)
+    pm_value = order.payment_method.value if hasattr(
+        order.payment_method, "value") else str(order.payment_method)
     method_lbl = "Interac e-Transfer" if pm_value == "interac" else "Zelle"
     contact_lbl = "email address" if pm_value == "interac" else "Zelle contact"
 
     # Display the ORIGINAL subtotal (pre-promo) when available, else fall back to stored subtotal
     post_promo_subtotal = float(order.subtotal or 0)
-    original_subtotal   = float(getattr(order, "original_subtotal", None) or post_promo_subtotal)
+    original_subtotal = float(
+        getattr(order, "original_subtotal", None) or post_promo_subtotal)
     subtotal = original_subtotal
 
     total = float(order.total)
@@ -110,12 +112,12 @@ def build_payment_reminder_template(
 
     # ─── Promo code discount (e.g. HANNAH10 -10%) ────────────────────────────
     promo_amount = float(getattr(order, "promo_discount_amount", 0) or 0)
-    promo_pct    = float(getattr(order, "promo_discount_pct", 0) or 0)
+    promo_pct = float(getattr(order, "promo_discount_pct", 0) or 0)
     discount_code = order.discount_code or ""
 
     # ─── Payment-method discount (Interac/Zelle 5%, Crypto 10%) ──────────────
     method_amount = float(order.discount_amount or 0)
-    method_pct    = float(order.discount_pct or 0)
+    method_pct = float(order.discount_pct or 0)
 
     # Build separate rows for each active discount layer
     discount_row_html = ""
@@ -144,8 +146,9 @@ def build_payment_reminder_template(
         )
 
     # Store identification — prefer source_domain, fallback to store_name
-    store_domain = (order.source_domain or "").replace("www.", "") if order.source_domain else ""
-    store_label  = store_domain or order.store_name or "our store"
+    store_domain = (order.source_domain or "").replace(
+        "www.", "") if order.source_domain else ""
+    store_label = store_domain or order.store_name or "our store"
 
     # ─── Build line-items section ────────────────────────────────────────
     items = list(order.items) if order.items else []
@@ -160,7 +163,7 @@ def build_payment_reminder_template(
             promo_factor = original_subtotal / post_promo_subtotal
 
         for it in items:
-            qty   = int(it.qty or 1)
+            qty = int(it.qty or 1)
             stored_price = float(it.price or 0)
             # Prefer original_price if stored on the item, else scale from promo factor
             stored_orig = getattr(it, "original_price", None)
@@ -168,7 +171,7 @@ def build_payment_reminder_template(
                 price = float(stored_orig)
             else:
                 price = round(stored_price * promo_factor, 2)
-            line  = round(price * qty, 2)
+            line = round(price * qty, 2)
             title_raw = it.title or ""
             title = html_lib.escape(title_raw)
             variant = f' <span style="color:#999">({html_lib.escape(it.variant)})</span>' if it.variant else ""
@@ -335,8 +338,14 @@ def build_underpaid_template(order, received_amount: float, payment_email: str, 
 # ("Questions? Use the chat widget on our website").
 
 def build_order_received_template(order, accent: str = "#dd1d1d") -> Dict[str, str]:
-    pm_value = order.payment_method.value if hasattr(order.payment_method, "value") else str(order.payment_method)
-    is_zelle = pm_value == "zelle"
+    pm_value = order.payment_method.value if hasattr(
+        order.payment_method, "value") else str(order.payment_method)
+    # ORDER_SUPPORT_EMAIL is a US-only inbox — gate on currency (not just
+    # payment method) so it can never surface for a CAD order even in an
+    # edge case where one somehow carries payment_method="zelle" (Zelle is
+    # meant to be US-only, but currency is the more direct, harder
+    # guarantee than trusting that invariant holds everywhere upstream).
+    is_zelle = pm_value == "zelle" and (order.currency or "").upper() != "CAD"
     support_email = getattr(settings, "ORDER_SUPPORT_EMAIL", "") or REPLY_TO
     follow_up_html = (
         f'please write to <a href="mailto:{support_email}" style="color:{accent};text-decoration:none">{support_email}</a>.'
@@ -347,15 +356,15 @@ def build_order_received_template(order, accent: str = "#dd1d1d") -> Dict[str, s
     subject = f"Order received — {order.id}"
     body_html = f"""
       <p>Hi {html_lib.escape(order.first_name) if order.first_name else 'there'},</p>
-      <p>Your order <strong>{order.id}</strong> has been received and you'll receive a payment
-      confirmation email within 24 hours.</p>
-      <p>If after 24 hours you haven't received anything, {follow_up_html}</p>
+      <p>Your order <strong>{order.id}</strong> has been received. You will receive a payment
+      confirmation email within 24–48 hours, depending on the number of orders we are currently processing.</p>
+      <p>If you haven't received a confirmation email after that time, {follow_up_html}</p>
     """
     text = (
         f"Hi {order.first_name or 'there'},\n\n"
-        f"Your order {order.id} has been received and you'll receive a payment "
-        f"confirmation email within 24 hours.\n\n"
-        f"If after 24 hours you haven't received anything, {follow_up_text}\n"
+        f"Your order {order.id} has been received. You will receive a payment "
+        f"confirmation email within 24–48 hours, depending on the number of orders we are currently processing.\n\n"
+        f"If you haven't received a confirmation email after that time, {follow_up_text}\n"
     )
     return {"subject": subject, "html": _wrap_html(body_html), "text": text}
 
@@ -372,12 +381,14 @@ def text_to_html(text: str) -> str:
 
 # ─── Template: order confirmation (sent when an order is marked paid) ────────
 
+
 def build_confirmation_template(
     order,
     shopify_order_number: Optional[str] = None,
     accent: str = "#dd1d1d",
 ) -> Dict[str, str]:
-    pm_value = order.payment_method.value if hasattr(order.payment_method, "value") else str(order.payment_method)
+    pm_value = order.payment_method.value if hasattr(
+        order.payment_method, "value") else str(order.payment_method)
     method_labels = {
         "interac": "Interac e-Transfer",
         "zelle":   "Zelle",
@@ -388,53 +399,58 @@ def build_confirmation_template(
         "altcoin": "Cryptocurrency (Altcoin)",
     }
     method_lbl = method_labels.get(pm_value, pm_value.title())
-    currency      = order.currency or "CAD"
-    total         = float(order.total)
-    promo_amount  = float(getattr(order, "promo_discount_amount", 0) or 0)
-    promo_pct     = float(getattr(order, "promo_discount_pct", 0) or 0)
+    currency = order.currency or "CAD"
+    total = float(order.total)
+    promo_amount = float(getattr(order, "promo_discount_amount", 0) or 0)
+    promo_pct = float(getattr(order, "promo_discount_pct", 0) or 0)
     discount_code = order.discount_code or ""
     method_amount = float(order.discount_amount or 0)
-    method_pct    = float(order.discount_pct or 0)
+    method_pct = float(order.discount_pct or 0)
     post_promo_subtotal = float(order.subtotal or 0)
-    original_subtotal   = float(getattr(order, "original_subtotal", None) or post_promo_subtotal)
-    subtotal    = original_subtotal
+    original_subtotal = float(
+        getattr(order, "original_subtotal", None) or post_promo_subtotal)
+    subtotal = original_subtotal
     # WPay (both the HPP flow and WPay 2D via WooCommerce) settles in USD —
     # CAD orders get converted server-side at charge time (see
     # USD_CONVERSION_RATE in routes/checkout.py), and the actual USD amount
     # charged is stored on order.settled_amount/settled_currency. Show that
     # alongside the CAD total the customer saw at checkout so the two numbers
     # aren't mistaken for a discrepancy.
-    settled_amount   = float(order.settled_amount) if getattr(order, "settled_amount", None) is not None else None
+    settled_amount = float(order.settled_amount) if getattr(
+        order, "settled_amount", None) is not None else None
     settled_currency = getattr(order, "settled_currency", None)
-    show_usd_charge  = (
+    show_usd_charge = (
         pm_value in ("wpay", "wpay_2d")
         and settled_currency
         and settled_amount is not None
         and settled_currency != currency
     )
-    store_domain = (order.source_domain or "").replace("www.", "") if order.source_domain else ""
-    store_label  = store_domain or order.store_name or "our store"
+    store_domain = (order.source_domain or "").replace(
+        "www.", "") if order.source_domain else ""
+    store_label = store_domain or order.store_name or "our store"
     # source_domain is client-submitted (checkout ?source= param, no
     # server-side whitelist) and lands in both an href attribute and link
     # text here — escaped for both contexts, same as the reminder template above.
-    store_html   = (
+    store_html = (
         f'<a href="https://{html_lib.escape(store_domain)}" style="color:{accent};text-decoration:none">{html_lib.escape(store_domain)}</a>'
         if store_domain else html_lib.escape(store_label)
     )
-    ref_label    = f"#{shopify_order_number}" if shopify_order_number else order.id
-    subject      = f"Order confirmed — {ref_label} | {store_label}"
+    ref_label = f"#{shopify_order_number}" if shopify_order_number else order.id
+    subject = f"Order confirmed — {ref_label} | {store_label}"
 
-    items        = list(order.items) if order.items else []
-    rows_html    = ""
+    items = list(order.items) if order.items else []
+    rows_html = ""
     items_text_lines = []
-    promo_factor = (original_subtotal / post_promo_subtotal) if (promo_amount > 0 and post_promo_subtotal > 0) else 1.0
+    promo_factor = (original_subtotal / post_promo_subtotal) if (
+        promo_amount > 0 and post_promo_subtotal > 0) else 1.0
 
     for it in items:
-        qty          = int(it.qty or 1)
-        stored_orig  = getattr(it, "original_price", None)
-        price        = float(stored_orig) if stored_orig else round(float(it.price or 0) * promo_factor, 2)
-        line         = round(price * qty, 2)
-        title        = html_lib.escape(it.title or "")
+        qty = int(it.qty or 1)
+        stored_orig = getattr(it, "original_price", None)
+        price = float(stored_orig) if stored_orig else round(
+            float(it.price or 0) * promo_factor, 2)
+        line = round(price * qty, 2)
+        title = html_lib.escape(it.title or "")
         variant_html = f' <span style="color:#999;font-size:13px">({html_lib.escape(it.variant)})</span>' if it.variant else ""
         variant_text = f" ({it.variant})" if it.variant else ""
         rows_html += (
@@ -445,7 +461,8 @@ def build_confirmation_template(
             f'<td style="padding:10px 0 10px 8px;text-align:right;border-bottom:1px solid #eee;font-weight:600">${line:.2f}</td>'
             f'</tr>'
         )
-        items_text_lines.append(f"  - {title}{variant_text}  x{qty}  ${line:.2f} {currency}")
+        items_text_lines.append(
+            f"  - {title}{variant_text}  x{qty}  ${line:.2f} {currency}")
 
     items_html = f"""
       <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin:24px 0 8px">Order Summary</h3>
@@ -462,15 +479,16 @@ def build_confirmation_template(
       </table>""" if items else ""
 
     discount_row_html = ""
-    discount_text     = ""
+    discount_text = ""
     if promo_amount > 0:
-        code_label  = f' (<strong>{html_lib.escape(discount_code)}</strong>)' if discount_code else ""
+        code_label = f' (<strong>{html_lib.escape(discount_code)}</strong>)' if discount_code else ""
         p_pct_label = f" &mdash; {promo_pct:.0f}%" if promo_pct > 0 else ""
         discount_row_html += (f'<tr><td style="padding:6px 0;color:#1a7e2e">Promo discount{code_label}{p_pct_label}</td>'
                               f'<td style="padding:6px 0;text-align:right;color:#1a7e2e">-${promo_amount:.2f} {currency}</td></tr>')
         discount_text += f"Promo discount{' (' + discount_code + ')' if discount_code else ''}{' - ' + str(int(promo_pct)) + '%' if promo_pct else ''}: -${promo_amount:.2f} {currency}\n"
     if method_amount > 0:
-        mlabel      = {"interac": "Interac e-Transfer discount", "zelle": "Zelle discount", "crypto": "Crypto discount", "altcoin": "Crypto discount"}.get(pm_value, "Discount")
+        mlabel = {"interac": "Interac e-Transfer discount", "zelle": "Zelle discount",
+                  "crypto": "Crypto discount", "altcoin": "Crypto discount"}.get(pm_value, "Discount")
         m_pct_label = f" &mdash; {method_pct:.0f}%" if method_pct > 0 else ""
         discount_row_html += (f'<tr><td style="padding:6px 0;color:#1a7e2e">{mlabel}{m_pct_label}</td>'
                               f'<td style="padding:6px 0;text-align:right;color:#1a7e2e">-${method_amount:.2f} {currency}</td></tr>')
@@ -479,14 +497,15 @@ def build_confirmation_template(
     addr_parts = [
         f"{order.first_name or ''} {order.last_name or ''}".strip(),
         order.address1 or "", order.address2 or "",
-        ", ".join(filter(None, [order.city, order.province, order.postal_code])),
+        ", ".join(
+            filter(None, [order.city, order.province, order.postal_code])),
         order.country or "",
     ]
     addr_lines = [p for p in addr_parts if p]
-    addr_text  = "\n    ".join(addr_lines)
+    addr_text = "\n    ".join(addr_lines)
     # HTML version escapes each line separately — addr_text above stays raw
     # since plain text doesn't need (or want) HTML entities.
-    addr_html  = "<br>".join(html_lib.escape(p) for p in addr_lines)
+    addr_html = "<br>".join(html_lib.escape(p) for p in addr_lines)
 
     body_html = f"""
       <div style="background:{accent};color:#fff;padding:14px 18px;border-radius:6px;margin-bottom:24px">
@@ -494,7 +513,7 @@ def build_confirmation_template(
         <span style="float:right;font-size:13px;opacity:0.85">{ref_label}</span>
       </div>
       <p>Hi {html_lib.escape(order.first_name) if order.first_name else 'there'},</p>
-      <p>Your payment has been received and your order is confirmed. We'll get it packed and on its way shortly.</p>
+      <p>Your payment has been received and your order is confirmed. We'll get it packed and on its way shortly. Please keep in mind that we are a medical facility, so it may take an additional 1–2 business days to process your order, especially if we have received a high volume of orders recently. Feel free to reach out to our customer service team through the website at any time, and they will be happy to assist you.</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
         <tr><td style="padding:6px 0;color:#666;width:40%">Order number</td><td style="padding:6px 0;font-weight:600">{order.id}</td></tr>
         <tr><td style="padding:6px 0;color:#666">Order reference</td><td style="padding:6px 0;font-weight:600">{ref_label}</td></tr>
@@ -516,7 +535,8 @@ def build_confirmation_template(
       <p style="font-size:14px;color:#555;margin-top:20px">Questions? Use the chat widget on our website.</p>
     """
 
-    items_block = ("Order summary:\n" + "\n".join(items_text_lines) + "\n\n") if items_text_lines else ""
+    items_block = ("Order summary:\n" + "\n".join(items_text_lines) +
+                   "\n\n") if items_text_lines else ""
     usd_charge_text = f"Charged as: ${settled_amount:.2f} {settled_currency} on your card\n" if show_usd_charge else ""
     text = (
         f"Hi {order.first_name or 'there'},\n\nYour order is confirmed and payment received.\n\n"
@@ -541,12 +561,15 @@ async def send_confirmation_email(
     success, so failed sends are visible too.
     """
     if not order.email:
-        logger.warning("send_confirmation_email: no email on order %s", order.id)
+        logger.warning(
+            "send_confirmation_email: no email on order %s", order.id)
         return None
-    tpl = build_confirmation_template(order, shopify_order_number, accent="#2a7a2a")
-    ok  = await send_email(to=order.email, subject=tpl["subject"], html=tpl["html"], text=tpl.get("text"))
+    tpl = build_confirmation_template(
+        order, shopify_order_number, accent="#2a7a2a")
+    ok = await send_email(to=order.email, subject=tpl["subject"], html=tpl["html"], text=tpl.get("text"))
     if ok:
-        logger.info("Confirmation email sent -> %s | order %s", order.email, order.id)
+        logger.info("Confirmation email sent -> %s | order %s",
+                    order.email, order.id)
     return {"success": ok, **tpl}
 
 
@@ -559,10 +582,12 @@ async def send_order_received_email(order, accent: str = "#dd1d1d") -> Optional[
     response.
     """
     if not order.email:
-        logger.warning("send_order_received_email: no email on order %s", order.id)
+        logger.warning(
+            "send_order_received_email: no email on order %s", order.id)
         return None
     tpl = build_order_received_template(order, accent)
-    ok  = await send_email(to=order.email, subject=tpl["subject"], html=tpl["html"], text=tpl.get("text"))
+    ok = await send_email(to=order.email, subject=tpl["subject"], html=tpl["html"], text=tpl.get("text"))
     if ok:
-        logger.info("Order-received email sent -> %s | order %s", order.email, order.id)
+        logger.info("Order-received email sent -> %s | order %s",
+                    order.email, order.id)
     return {"success": ok, **tpl}
