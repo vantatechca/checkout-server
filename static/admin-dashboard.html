@@ -71,6 +71,21 @@
       </div>
     </div>
 
+    <!-- Bulk Mark Paid — choose Shopify or Shippo -->
+    <div class="ui-dialog-overlay" id="bulkMarkPaidChoiceOverlay">
+      <div class="ui-dialog" role="dialog" aria-modal="true">
+        <div class="ui-dialog__head"><h3 class="ui-dialog__title" id="bulkMarkPaidChoiceTitle">Mark orders as paid</h3></div>
+        <div class="ui-dialog__body" id="bulkMarkPaidChoiceBody"></div>
+        <div class="ui-dialog__buttons" style="justify-content:space-between;">
+          <button class="ui-dialog__btn ui-dialog__btn--cancel" id="bulkMarkPaidChoiceCancel">Cancel</button>
+          <div style="display:flex;gap:0.8rem;">
+            <button class="ui-dialog__btn" id="bulkMarkPaidChoiceShippo" style="background:#f3e8ff;color:#7c3aed;">📦 Mark Paid (Shippo)</button>
+            <button class="ui-dialog__btn ui-dialog__btn--ok" id="bulkMarkPaidChoiceShopify">Mark Paid (Shopify)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Detail / Confirm Modal -->
     <div class="modal-overlay" id="modalOverlay">
       <div class="modal">
@@ -3483,6 +3498,48 @@
         )).then(function () { return undefined; });
       }
 
+      // Bulk "Mark Paid" choice — Shopify (creates a Shopify order, works
+      // for any order) or Shippo (no Shopify order, CAD Interac only —
+      // same two options already on individual pending orders). Resolves
+      // to "shopify" | "shippo" | null (cancelled).
+      function _bulkMarkPaidChoiceDialog(rows) {
+        return new Promise(function (resolve) {
+          var overlay   = document.getElementById("bulkMarkPaidChoiceOverlay");
+          var bodyEl    = document.getElementById("bulkMarkPaidChoiceBody");
+          var cancelBtn = document.getElementById("bulkMarkPaidChoiceCancel");
+          var shippoBtn = document.getElementById("bulkMarkPaidChoiceShippo");
+          var shopifyBtn = document.getElementById("bulkMarkPaidChoiceShopify");
+
+          var allShippoEligible = rows.length > 0 && rows.every(function (o) {
+            return (o.currency || "").toUpperCase() === "CAD" && o.paymentMethod === "interac";
+          });
+
+          bodyEl.textContent = "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") +
+            " as paid. Choose how — Shopify creates a real Shopify order for each; Shippo skips that entirely.";
+
+          shippoBtn.disabled = !allShippoEligible;
+          shippoBtn.title = allShippoEligible
+            ? "No Shopify order created — buy shipping labels later, single or bulk"
+            : "Not applicable — selection includes a non-CAD-Interac order (e.g. a US order). Shippo mark-paid isn't available for those yet.";
+          shippoBtn.style.opacity = allShippoEligible ? "1" : "0.4";
+          shippoBtn.style.cursor  = allShippoEligible ? "pointer" : "not-allowed";
+
+          overlay.classList.add("open");
+
+          function cleanup(result) {
+            overlay.classList.remove("open");
+            shopifyBtn.onclick = shippoBtn.onclick = cancelBtn.onclick = null;
+            document.removeEventListener("keydown", onKey);
+            resolve(result);
+          }
+          function onKey(e) { if (e.key === "Escape") { e.preventDefault(); cleanup(null); } }
+          shopifyBtn.onclick = function () { cleanup("shopify"); };
+          shippoBtn.onclick  = function () { if (!shippoBtn.disabled) cleanup("shippo"); };
+          cancelBtn.onclick  = function () { cleanup(null); };
+          document.addEventListener("keydown", onKey);
+        });
+      }
+
       /* ─── EMAIL HISTORY VIEWER ─────────────────── */
 
       function loadEmailHistory(orderId) {
@@ -4650,13 +4707,27 @@
       async function bulkMarkPaid() {
         var rows = _selectedOrderObjs();
         if (!rows.length || _bulkRunning) return;
-        var ok = await showConfirm({
-          title: "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " as PAID?",
-          body:  "This sends each customer a confirmation email and creates the Shopify order. It cannot be undone.",
-          okText: "Mark all paid",
-        });
-        if (!ok) return;
-        _bulkRun(rows, "/mark-paid", "Marked paid by admin (bulk)", "marked paid", "bulkPayBtn");
+
+        var choice = await _bulkMarkPaidChoiceDialog(rows);
+        if (!choice) return;
+
+        if (choice === "shippo") {
+          var okShippo = await showConfirm({
+            title: "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " paid via Shippo?",
+            body:  "This marks them paid WITHOUT creating Shopify orders. Buy shipping labels for them later, one at a time or in bulk. It cannot be undone.",
+            okText: "Mark all paid (Shippo)",
+          });
+          if (!okShippo) return;
+          _bulkRun(rows, "/shipping/mark-paid", null, "marked paid (Shippo)", "bulkPayBtn");
+        } else {
+          var okShopify = await showConfirm({
+            title: "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " as PAID?",
+            body:  "This sends each customer a confirmation email and creates the Shopify order. It cannot be undone.",
+            okText: "Mark all paid",
+          });
+          if (!okShopify) return;
+          _bulkRun(rows, "/mark-paid", "Marked paid by admin (bulk)", "marked paid", "bulkPayBtn");
+        }
       }
       async function bulkCancel() {
         var rows = _selectedOrderObjs();
