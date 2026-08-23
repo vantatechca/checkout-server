@@ -206,6 +206,14 @@ def _shopify_store_creds(store: str) -> tuple[str, str]:
     return store_domain, api_token
 
 
+def store_for_currency(currency: str) -> str:
+    """CAD -> CA store, everything else -> US store — same rule
+    create_shopify_order() itself uses to pick which store an order's
+    Shopify order was created in. Used to look up the right store's
+    credentials when later fulfilling that same Shopify order."""
+    return "US" if (currency or "CAD").upper() == "USD" else "CA"
+
+
 async def list_unfulfilled_orders(store: str = "CA") -> list[dict]:
     """
     Fetches paid-but-unfulfilled orders from the given Shopify store (CA or

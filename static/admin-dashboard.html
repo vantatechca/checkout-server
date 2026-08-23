@@ -2864,7 +2864,11 @@
           .then(_safeJsonResponse)
           .then(function (res) {
             if (res.ok && res.data.success) {
-              showToast("success", "✓ Label purchased — tracking " + res.data.tracking_number);
+              if (res.data.shopifyFulfillError) {
+                showToast("warning", "✓ Label purchased (tracking " + res.data.tracking_number + "), but: Shopify fulfillment sync failed: " + res.data.shopifyFulfillError);
+              } else {
+                showToast("success", "✓ Label purchased — tracking " + res.data.tracking_number);
+              }
               loadOrders();
               _refreshOrderAndReopen(orderId);
             } else {

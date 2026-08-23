@@ -178,6 +178,17 @@ class Order(Base):
     payment_notes   = Column(Text, nullable=True)
     paid_at         = Column(DateTime, nullable=True)
 
+    # Set when finalize_paid_order() successfully creates a Shopify order for
+    # this order (create_shopify=True path only — the Shipping tab's
+    # lightweight mark-paid path never sets these). shopify_order_id is
+    # Shopify's internal numeric order id (needed for the Fulfillment
+    # Orders API); shopify_order_number is the human-readable "#1001" shown
+    # in Shopify's own UI. Lets a later Shippo label purchase for this same
+    # order also mark ITS Shopify order fulfilled, instead of the two
+    # systems silently drifting out of sync.
+    shopify_order_id     = Column(String(64), nullable=True)
+    shopify_order_number = Column(String(32), nullable=True)
+
     # --- Fulfillment (Shippo shipping label) ---
     tracking_number      = Column(String(64), nullable=True)
     tracking_url         = Column(Text, nullable=True)   # carrier tracking URLs can exceed 255 chars
@@ -268,6 +279,8 @@ class Order(Base):
             "paymentStatus":        self.payment_status,
             "paidAt":               self.paid_at.isoformat() if self.paid_at else None,
             "createdAt":            self.created_at.isoformat() if self.created_at else None,
+            "shopifyOrderId":       self.shopify_order_id,
+            "shopifyOrderNumber":   self.shopify_order_number,
 
             # Fulfillment (Shippo shipping label)
             "trackingNumber":       self.tracking_number,

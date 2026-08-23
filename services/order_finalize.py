@@ -71,6 +71,16 @@ async def finalize_paid_order(
             shopify_order = await create_shopify_order(order)
             if shopify_order:
                 shopify_order_number = str(shopify_order.get("order_number", ""))
+                # Persist the link so a later Shippo label purchase for this
+                # order can also mark ITS Shopify order fulfilled instead of
+                # the two systems silently drifting out of sync — see
+                # routes/admin.py's Shippo buy-label endpoints.
+                order.shopify_order_id = str(shopify_order.get("id") or "") or None
+                order.shopify_order_number = shopify_order_number or None
+                try:
+                    await db.commit()
+                except Exception as ref_err:
+                    logger.error(f"Could not persist Shopify order ref for {order.id}: {ref_err}")
                 logger.info(f"✅ Shopify order #{shopify_order_number} created for {order.id} ({label})")
         except ShopifyOrderError as e:
             shopify_error = str(e)

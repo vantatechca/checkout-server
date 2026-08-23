@@ -1093,7 +1093,27 @@ async def buy_shipping_label(
         action="create_label", target_type="order", target_id=order_id,
         details=f"{label['carrier']} — {label['tracking_number']}"[:200],
     )
-    return {"success": True, "orderId": order_id, **label}
+
+    resp = {"success": True, "orderId": order_id, **label}
+    # This order already has a real Shopify order (created via the normal
+    # mark-paid path, not the Shipping tab's lightweight one) — keep that
+    # Shopify order's own fulfillment status in sync instead of letting the
+    # two systems silently drift apart. Best-effort: the label is already
+    # bought and paid for either way, so a failure here is a warning, not
+    # a reason to fail this request.
+    if order.shopify_order_id:
+        from services.shopify import create_fulfillment, store_for_currency, ShopifyOrderError
+        try:
+            await create_fulfillment(
+                int(order.shopify_order_id),
+                store=store_for_currency(order.currency),
+                tracking_number=label["tracking_number"],
+                tracking_url=label["tracking_url"],
+                carrier=label["carrier"],
+            )
+        except (ShopifyOrderError, ValueError) as e:
+            resp["shopifyFulfillError"] = str(e)
+    return resp
 
 
 # ─── Bulk shipping labels ───────────────────────────────────────────────────
@@ -1330,7 +1350,24 @@ async def bulk_buy_shipping_labels(
                 action="create_label", target_type="order", target_id=ref,
                 details=f"{label['carrier']} — {label['tracking_number']} (bulk)"[:200],
             )
-            results.append({"ref": ref, "success": True, **label})
+            entry = {"ref": ref, "success": True, **label}
+            # Same sync as the single-order Buy Label endpoint: if this
+            # order already has a real Shopify order (created via the
+            # normal mark-paid path), keep it in sync instead of letting
+            # the two systems drift apart.
+            if order.shopify_order_id:
+                from services.shopify import store_for_currency
+                try:
+                    await create_fulfillment(
+                        int(order.shopify_order_id),
+                        store=store_for_currency(order.currency),
+                        tracking_number=label["tracking_number"],
+                        tracking_url=label["tracking_url"],
+                        carrier=label["carrier"],
+                    )
+                except (ShopifyOrderError, ValueError) as e:
+                    entry["fulfillError"] = str(e)
+            results.append(entry)
 
     return {"success": True, "results": results}
 
