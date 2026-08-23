@@ -86,6 +86,21 @@
       </div>
     </div>
 
+    <!-- Bulk Mark Paid (Shippo) — buy labels now, or just mark paid -->
+    <div class="ui-dialog-overlay" id="bulkShippoLabelChoiceOverlay">
+      <div class="ui-dialog" role="dialog" aria-modal="true">
+        <div class="ui-dialog__head"><h3 class="ui-dialog__title">Buy labels now too?</h3></div>
+        <div class="ui-dialog__body" id="bulkShippoLabelChoiceBody"></div>
+        <div class="ui-dialog__buttons" style="justify-content:space-between;">
+          <button class="ui-dialog__btn ui-dialog__btn--cancel" id="bulkShippoLabelChoiceCancel">Cancel</button>
+          <div style="display:flex;gap:0.8rem;">
+            <button class="ui-dialog__btn" id="bulkShippoLabelChoiceMarkOnly" style="background:#f3f3f3;color:#333;">Mark Paid Only</button>
+            <button class="ui-dialog__btn ui-dialog__btn--ok" id="bulkShippoLabelChoiceLabelNow" style="background:#7c3aed;">📦 Mark Paid + Buy Labels</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Detail / Confirm Modal -->
     <div class="modal-overlay" id="modalOverlay">
       <div class="modal">
@@ -3013,11 +3028,16 @@
       var _bulkShipCandidates = { local: [], shopify: [] };
       var _bulkShipSelected = new Set();
       var _bulkShipRates = {};
+      // Set by openBulkShipModal(refs) when chained from bulk Mark Paid
+      // (Shippo) — _renderBulkShipModal checks/selects these once the
+      // freshly-loaded candidate list actually contains them, then clears it.
+      var _pendingBulkShipPreselect = null;
 
-      function openBulkShipModal() {
+      function openBulkShipModal(preselectRefs) {
         document.getElementById("bulkShipModalOverlay").classList.add("open");
         _bulkShipSelected = new Set();
         _bulkShipRates = {};
+        _pendingBulkShipPreselect = (preselectRefs && preselectRefs.length) ? preselectRefs : null;
         document.getElementById("bulkShipModalBody").innerHTML =
           '<div style="padding:3rem;text-align:center;color:#888;">Loading candidates…</div>';
         _loadBulkShipCandidates();
@@ -3102,6 +3122,18 @@
 
         document.getElementById("bulkShipModalBody").innerHTML = html;
         _prefillBulkShipDefaults();
+
+        if (_pendingBulkShipPreselect) {
+          _pendingBulkShipPreselect.forEach(function (ref) {
+            var cb = document.querySelector('.bulk-ship-check[data-ref="' + ref + '"]');
+            if (cb && !cb.disabled) {
+              cb.checked = true;
+              _bulkShipSelected.add(ref);
+            }
+          });
+          _pendingBulkShipPreselect = null;
+          _updateBulkShipSummary();
+        }
       }
 
       function _prefillBulkShipDefaults() {
@@ -3552,6 +3584,37 @@
           shopifyBtn.onclick = function () { cleanup("shopify"); };
           shippoBtn.onclick  = function () { if (!shippoBtn.disabled) cleanup("shippo"); };
           cancelBtn.onclick  = function () { cleanup(null); };
+          document.addEventListener("keydown", onKey);
+        });
+      }
+
+      // After choosing bulk Mark Paid (Shippo): buy labels for the same
+      // batch right away (opens the Bulk Buy Labels modal, pre-selected),
+      // or just mark them paid and label them later. Resolves to
+      // "labelNow" | "markOnly" | null (cancelled).
+      function _bulkShippoLabelChoiceDialog(rows) {
+        return new Promise(function (resolve) {
+          var overlay    = document.getElementById("bulkShippoLabelChoiceOverlay");
+          var bodyEl     = document.getElementById("bulkShippoLabelChoiceBody");
+          var cancelBtn  = document.getElementById("bulkShippoLabelChoiceCancel");
+          var markOnlyBtn = document.getElementById("bulkShippoLabelChoiceMarkOnly");
+          var labelNowBtn = document.getElementById("bulkShippoLabelChoiceLabelNow");
+
+          bodyEl.textContent = "After marking " + rows.length + " order" + (rows.length > 1 ? "s" : "") +
+            " paid, do you want to buy their shipping labels right now too?";
+
+          overlay.classList.add("open");
+
+          function cleanup(result) {
+            overlay.classList.remove("open");
+            markOnlyBtn.onclick = labelNowBtn.onclick = cancelBtn.onclick = null;
+            document.removeEventListener("keydown", onKey);
+            resolve(result);
+          }
+          function onKey(e) { if (e.key === "Escape") { e.preventDefault(); cleanup(null); } }
+          markOnlyBtn.onclick = function () { cleanup("markOnly"); };
+          labelNowBtn.onclick = function () { cleanup("labelNow"); };
+          cancelBtn.onclick   = function () { cleanup(null); };
           document.addEventListener("keydown", onKey);
         });
       }
@@ -4690,8 +4753,9 @@
         loadOrders();
         updateStats();
       }
-      function _bulkRun(rows, urlSuffix, notes, verb, activeBtnId) {
+      function _bulkRun(rows, urlSuffix, notes, verb, activeBtnId, onComplete) {
         var n = rows.length, done = 0, ok = 0, fail = 0;
+        var succeededIds = [];
         _bulkRunning = true;
         var countEl = document.getElementById("bulkCount");
         var sp = document.getElementById("bulkSelectPage"); if (sp) sp.disabled = true;
@@ -4709,13 +4773,14 @@
             body: JSON.stringify({ notes: notes }),
           })
             .then(function (r) { return r.json(); })
-            .then(function (d) { if (d && d.success) ok++; else fail++; })
+            .then(function (d) { if (d && d.success) { ok++; succeededIds.push(o.id); } else fail++; })
             .catch(function () { fail++; })
             .finally(function () {
               done++; progress();
               if (done === n) {
                 if (sp) sp.disabled = false;
                 _bulkDone(verb, ok, fail);
+                if (typeof onComplete === "function") onComplete(succeededIds, ok, fail);
               }
             });
         });
@@ -4728,13 +4793,22 @@
         if (!choice) return;
 
         if (choice === "shippo") {
+          var labelChoice = await _bulkShippoLabelChoiceDialog(rows);
+          if (!labelChoice) return;
+
           var okShippo = await showConfirm({
             title: "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " paid via Shippo?",
-            body:  "This marks them paid WITHOUT creating Shopify orders. Buy shipping labels for them later, one at a time or in bulk. It cannot be undone.",
+            body: labelChoice === "labelNow"
+              ? "This marks them paid WITHOUT creating Shopify orders, then opens the bulk label workspace with these orders ready to go. It cannot be undone."
+              : "This marks them paid WITHOUT creating Shopify orders. Buy shipping labels for them later, one at a time or in bulk. It cannot be undone.",
             okText: "Mark all paid (Shippo)",
           });
           if (!okShippo) return;
-          _bulkRun(rows, "/shipping/mark-paid", null, "marked paid (Shippo)", "bulkPayBtn");
+          _bulkRun(rows, "/shipping/mark-paid", null, "marked paid (Shippo)", "bulkPayBtn", function (succeededIds) {
+            if (labelChoice === "labelNow" && succeededIds.length) {
+              openBulkShipModal(succeededIds);
+            }
+          });
         } else {
           var okShopify = await showConfirm({
             title: "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") + " as PAID?",
