@@ -1339,6 +1339,15 @@ async def bulk_buy_shipping_labels(
     label purchase. Shopify orders get marked fulfilled immediately after —
     if that specific step fails, the label itself is still valid and paid
     for, so it's reported as a warning on that item, not a failure.
+
+    Local orders may be either already paid (the normal "Needs Label"
+    workspace) OR still pending — a still-pending, Shippo-eligible order
+    gets marked paid (no Shopify order) right here, immediately before its
+    label purchase, mirroring mark_paid_and_buy_label's single-order
+    behavior but for a whole batch. This is what lets the bulk workspace
+    show the ship-from/parcel form and rate picker for orders selected
+    straight from the Pending tab, instead of requiring a separate mark-
+    paid step first.
     """
     from services.shippo import ShippoClient, ShippoError
     from services.shopify import create_fulfillment, ShopifyOrderError
@@ -1348,6 +1357,7 @@ async def bulk_buy_shipping_labels(
     for item in body.items:
         ref = item.ref
         order = None
+        affiliate_error = None
 
         if not ref.startswith("shopify:"):
             result = await db.execute(select(Order).where(Order.id == ref))
@@ -1356,11 +1366,34 @@ async def bulk_buy_shipping_labels(
                 results.append({"ref": ref, "success": False, "error": "Order not found"})
                 continue
             if not _shippo_order_eligible(order):
-                results.append({"ref": ref, "success": False, "error": "Order is not eligible for Shippo (must be paid, CAD, Interac)"})
+                results.append({"ref": ref, "success": False, "error": "Order is not eligible for Shippo (must be CAD Interac)"})
                 continue
             if order.tracking_number:
                 results.append({"ref": ref, "success": False, "error": "Order already has a label"})
                 continue
+            if order.payment_status not in (PaymentStatus.pending, PaymentStatus.paid):
+                results.append({"ref": ref, "success": False, "error": f"Order status '{order.payment_status}' is not eligible"})
+                continue
+
+            if order.payment_status == PaymentStatus.pending:
+                await _apply_paid_status(
+                    db, ref, None,
+                    "Marked paid + label bought via Shippo (bulk, no Shopify order)",
+                )
+                result2 = await db.execute(
+                    select(Order).where(Order.id == ref).options(selectinload(Order.items))
+                )
+                order = result2.scalar_one_or_none()
+                from services.order_finalize import finalize_paid_order
+                finalize_info = await finalize_paid_order(order, db, label="shipping-bulk-mark-paid-buy-label", create_shopify=False)
+                order.paid_via_shippo = True
+                await db.commit()
+                affiliate_error = finalize_info.get("affiliate_error")
+                await log_admin_activity(
+                    db, request,
+                    action="shipping_mark_paid", target_type="order", target_id=ref,
+                    details="marked paid via bulk mark-paid-and-buy-label",
+                )
 
         try:
             label = await client.buy_label(rate_id=item.rate_id, order_id=ref, carrier=item.carrier)
@@ -1415,6 +1448,8 @@ async def bulk_buy_shipping_labels(
                 details=f"{label['carrier']} — {label['tracking_number']} (bulk)"[:200],
             )
             entry = {"ref": ref, "success": True, **label}
+            if affiliate_error:
+                entry["affiliateError"] = affiliate_error
             # Same sync as the single-order Buy Label endpoint: if this
             # order already has a real Shopify order (created via the
             # normal mark-paid path), keep it in sync instead of letting
