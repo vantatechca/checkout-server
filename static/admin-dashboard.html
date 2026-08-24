@@ -2839,11 +2839,22 @@
         (_curr === "CAD" && o.paymentMethod === "interac" && _country === "CA") ||
         (_curr === "USD" && o.paymentMethod === "zelle" && _country === "US");
 
-      // Buy Shipping Label — any paid, Shippo-eligible order, regardless
-      // of which mark-paid path was used. Viewers never see this (mutating
-      // section, matches the established convention of omitting rather
-      // than disabling).
-      if (!window.IS_VIEWER && o.paymentStatus === "paid" && (isShippoEligible || o.trackingNumber)) {
+      // Buy Shipping Label (paid orders) needs more than isShippoEligible
+      // — a normal mark-paid order is currency/method/country-eligible
+      // too, but it already has a real Shopify order and is fulfilled
+      // through Shopify instead. This section is only for orders paid via
+      // the no-Shopify Shippo-only path — offering it for a Shopify-order
+      // order risks a real, separate, duplicate label purchase.
+      // !shopifyOrderId is redundant with paidViaShippo (mutually
+      // exclusive by construction) but kept as an explicit, defensive
+      // check. isShippoEligible itself is still exactly right for the
+      // PENDING "Mark Paid (Shippo)" section below, since paidViaShippo
+      // doesn't exist yet for an order that isn't paid.
+      var canBuyLabelDirect = o.paidViaShippo && !o.shopifyOrderId;
+
+      // Viewers never see this (mutating section, matches the established
+      // convention of omitting rather than disabling).
+      if (!window.IS_VIEWER && o.paymentStatus === "paid" && (canBuyLabelDirect || o.trackingNumber)) {
         html += '<div class="modal-section">';
         html += '<div class="modal-section-title">Shipping</div>';
         if (o.trackingNumber) {

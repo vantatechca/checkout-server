@@ -1132,6 +1132,17 @@ async def buy_shipping_label(
         raise HTTPException(400, "Order must be paid before buying a shipping label")
     if not _shippo_order_eligible(order):
         raise HTTPException(400, "Shippo shipping labels are only available for CAD Interac or USD Zelle orders shipping to their own region")
+    # A normal mark-paid order already has a real Shopify order and gets
+    # fulfilled through Shopify instead — this direct-purchase flow is
+    # only for orders marked paid via the no-Shopify Shippo-only path.
+    # Buying a label here for a Shopify-order order would risk a real,
+    # separate, duplicate fulfillment on the same order.
+    if order.shopify_order_id:
+        raise HTTPException(400, "This order already has a Shopify order — buy its shipping label through Shopify's own fulfillment instead")
+    if not order.paid_via_shippo:
+        raise HTTPException(400, "This order wasn't marked paid via the no-Shopify Shippo-only path, so a direct label purchase isn't available for it here")
+    if order.tracking_number:
+        raise HTTPException(400, "This order already has a shipping label")
 
     from services.shippo import ShippoClient, ShippoError
     try:
