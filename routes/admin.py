@@ -1186,25 +1186,26 @@ async def buy_shipping_label(
 # ─── Bulk shipping labels ───────────────────────────────────────────────────
 #
 # Boss request: a single screen to buy many labels at once, covering both
-# our own paid-but-unlabeled CAD Interac orders AND orders sitting
-# unfulfilled on Shopify (100+ at a time there). One shared ship-from
-# address + parcel size is used across the whole batch — that's the point
-# of "bulk": same product, same packaging, same warehouse, not per-order
-# editing. Local orders still go through the same CAD-Interac-only gate as
-# the single-order flow used to (_shippo_order_eligible now also allows
-# USD Zelle, but THIS endpoint's own query below is still CAD/Interac-only
-# — deliberately not extended yet, since "Needs Label" mixes results into
-# one flat list with no per-region grouping, and a mixed-currency batch
-# can't share one ship-from address; see the "Mark Paid + Buy" flow's
-# _bulkMarkPaidChoiceDialog for how that's guarded once currencies mix).
+# our own paid-but-unlabeled Shippo-eligible orders (CAD Interac -> CA, or
+# USD Zelle -> US) AND orders sitting unfulfilled on Shopify (100+ at a
+# time there, CA + US stores). A batch CAN mix CA and US orders — rates
+# are fetched using a shared ship-from address PER REGION
+# (from_address_ca / from_address_us on BulkRatesRequest below), each ref
+# picking whichever one matches its own region, rather than one single
+# address for the whole batch. Local orders go through the same
+# eligibility gate as the single-order flow (_shippo_order_eligible);
 # Shopify orders have no such restriction since they're a separate
-# paid-elsewhere workflow (and are already split into CA/US sections).
+# paid-elsewhere workflow. The frontend groups everything into CA/US
+# sub-sections (local and Shopify alike) so the region split is visible,
+# and only renders/requires the ship-from block(s) actually needed by
+# what's currently selected.
 
 @router.get("/shipping/bulk-candidates", dependencies=[Depends(require_write_access)])
 async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
     """
     Everything eligible for bulk labeling right now: our own paid-but-
-    unlabeled CAD Interac orders, plus paid-but-unfulfilled orders pulled
+    unlabeled Shippo-eligible orders (CAD Interac or USD Zelle — same rule
+    as _shippo_order_eligible), plus paid-but-unfulfilled orders pulled
     live from Shopify (CA + US stores, whichever are configured). The
     Shopify half is never persisted — read fresh every call, since
     Shopify's own fulfillment status is the source of truth for it.
@@ -1213,9 +1214,11 @@ async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
         select(Order)
         .where(
             Order.payment_status == PaymentStatus.paid,
-            Order.payment_method == PaymentMethod.interac,
-            Order.currency == "CAD",
             Order.tracking_number.is_(None),
+            _sa_or(
+                _sa_and(Order.payment_method == PaymentMethod.interac, Order.currency == "CAD", Order.country == "CA"),
+                _sa_and(Order.payment_method == PaymentMethod.zelle,   Order.currency == "USD", Order.country == "US"),
+            ),
         )
         .order_by(desc(Order.paid_at))
     )
@@ -1253,12 +1256,13 @@ async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
 
 
 class BulkRatesRequest(BaseModel):
-    refs:         list[str]
-    from_address: ShippingFromAddress
-    weight_oz:    float
-    length_in:    float
-    width_in:     float
-    height_in:    float
+    refs:            list[str]
+    from_address_ca: Optional[ShippingFromAddress] = None
+    from_address_us: Optional[ShippingFromAddress] = None
+    weight_oz:       float
+    length_in:       float
+    width_in:        float
+    height_in:       float
 
 
 @router.post("/shipping/bulk-rates", dependencies=[Depends(require_write_access)])
@@ -1268,16 +1272,24 @@ async def get_bulk_shipping_rates(
 ):
     """
     All live rates for each selected ref (a local order id, or
-    "shopify:CA:<id>" / "shopify:US:<id>"), using ONE shared ship-from
-    address + parcel size for every ref in the batch. Read-only and free
-    (Shippo doesn't charge for rate lookups) — safe to call as often as
-    needed while comparing prices before actually buying anything.
-    `cheapest` is included alongside the full `rates` list as the default
-    selection; the admin can pick a different one per order in the UI.
+    "shopify:CA:<id>" / "shopify:US:<id>"), using a shared ship-from
+    address PER REGION — a batch can mix CA and US orders; each ref picks
+    from_address_ca or from_address_us depending on its own region
+    (Shopify refs carry the region in the ref itself; local orders use
+    CAD→CA / USD→US, same rule as _shippo_order_eligible, which is also
+    re-checked here per local ref as defense-in-depth — the candidates
+    list is supposed to already be pre-filtered, but this endpoint
+    shouldn't trust that alone given what's at stake if it's ever wrong
+    (an undeclared cross-border shipment). Read-only and free (Shippo
+    doesn't charge for rate lookups) — safe to call as often as needed
+    while comparing prices before actually buying anything. `cheapest` is
+    included alongside the full `rates` list as the default selection;
+    the admin can pick a different one per order in the UI.
     """
     from services.shippo import ShippoClient, ShippoError
     client = ShippoClient()
-    from_addr = body.from_address.dict()
+    from_addr_ca = body.from_address_ca.dict() if body.from_address_ca else None
+    from_addr_us = body.from_address_us.dict() if body.from_address_us else None
 
     local_refs    = [r for r in body.refs if not r.startswith("shopify:")]
     shopify_refs  = [r for r in body.refs if r.startswith("shopify:")]
@@ -1301,6 +1313,7 @@ async def get_bulk_shipping_rates(
             so = shopify_by_ref.get(ref)
             if not so:
                 return {"ref": ref, "error": "Shopify order not found (already fulfilled or removed since the list was loaded?)"}
+            region = so.get("store")
             to_addr = {
                 "name":    f"{so['firstName']} {so['lastName']}".strip(),
                 "street1": so["address1"], "street2": so["address2"],
@@ -1312,6 +1325,13 @@ async def get_bulk_shipping_rates(
             order = orders_by_id.get(ref)
             if not order:
                 return {"ref": ref, "error": "Order not found"}
+            if not _shippo_order_eligible(order):
+                return {"ref": ref, "error": "Order is not eligible for Shippo (must be CAD Interac shipping to CA, or USD Zelle shipping to US)"}
+            region = "US" if (order.currency or "").upper() == "USD" else "CA"
+
+        from_addr = from_addr_us if region == "US" else from_addr_ca
+        if not from_addr or not from_addr.get("name"):
+            return {"ref": ref, "error": f"No {region} ship-from address was provided for this batch"}
 
         try:
             rates = await client.get_rates(

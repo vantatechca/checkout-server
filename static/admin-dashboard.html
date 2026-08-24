@@ -3144,12 +3144,15 @@
       });
     }
 
-    // Shared Ship From + Parcel field block — used by both the paid-order
-    // "Buy Shipping Label" section and the pending-order "Mark Paid
-    // (Shippo)" section. Safe to reuse the same element ids in both
-    // places since only one of the two branches is ever rendered for a
-    // given order (an order is either pending or paid, never both).
-    function _shippingFormFieldsHtml() {
+    // Ship From address block — used by the paid-order "Buy Shipping
+    // Label" section, the pending-order "Mark Paid (Shippo)" section
+    // (both via _shippingFormFieldsHtml() below, always suffix ""), and
+    // the bulk workspace's per-region blocks (suffix "_CA"/"_US", so two
+    // copies can coexist on one page without id collisions). Safe for the
+    // two single-order sections to share unsuffixed ids since only one of
+    // them is ever rendered for a given order (pending or paid, never both).
+    function _shipFromAddressHtml(suffix, heading) {
+      suffix = suffix || "";
       // autocomplete="off" alone doesn't stop Chrome here — it ignores
       // that hint on fields it heuristically recognizes as an address
       // form (matched off the visible <label> text — "Name"/"City"/
@@ -3163,24 +3166,20 @@
       // leftover browser-saved data, not anything either of us entered.)
       var addrField = function (id, label, span) {
         return '<label style="font-size:1.2rem;color:#888;grid-column:span ' + (span || 1) + ';">' + label +
-          '<input id="' + id + '" type="text" autocomplete="off" data-lpignore="true" readonly onfocus="this.removeAttribute(\'readonly\')" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
-      };
-      var dimField = function (id, label) {
-        return '<label style="font-size:1.2rem;color:#888;">' + label +
-          '<input id="' + id + '" type="number" min="0" step="0.1" autocomplete="off" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+          '<input id="' + id + suffix + '" type="text" autocomplete="off" data-lpignore="true" readonly onfocus="this.removeAttribute(\'readonly\')" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
       };
       // Country is a fixed CA/US dropdown, not free text — Shippo requires
       // a strict 2-letter ISO code, and this also can't be autofilled with
       // a full country name the way a text input can.
       var countryField =
         '<label style="font-size:1.2rem;color:#888;">Country' +
-        '<select id="shipFromCountry" autocomplete="off" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;">' +
+        '<select id="shipFromCountry' + suffix + '" autocomplete="off" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;">' +
         '<option value="">Select…</option>' +
         '<option value="CA">CA — Canada</option>' +
         '<option value="US">US — United States</option>' +
         '</select></label>';
       return (
-        '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Ship From (prefilled — edit if needed)</div>' +
+        '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">' + _escapeHtml(heading || "Ship From (prefilled — edit if needed)") + '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
         addrField("shipFromName", "Name", 2) +
         addrField("shipFromPhone", "Phone", 2) +
@@ -3190,7 +3189,19 @@
         addrField("shipFromState", "Province/State", 1) +
         addrField("shipFromZip", "Postal/Zip", 1) +
         countryField +
-        '</div>' +
+        '</div>'
+      );
+    }
+
+    // Parcel size block — always a single shared set of fields (same
+    // product/packaging regardless of which region a batch ships from),
+    // so unlike the address block it never needs a suffix.
+    function _parcelFieldsHtml() {
+      var dimField = function (id, label) {
+        return '<label style="font-size:1.2rem;color:#888;">' + label +
+          '<input id="' + id + '" type="number" min="0" step="0.1" autocomplete="off" style="width:100%;margin-top:0.3rem;padding:0.6rem;border:1px solid var(--border,#e2e0da);border-radius:6px;"></label>';
+      };
+      return (
         '<div style="font-size:1.2rem;color:#888;font-weight:600;margin-bottom:0.4rem;">Parcel</div>' +
         '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem;">' +
         dimField("shipWeightOz", "Weight (oz)") +
@@ -3199,6 +3210,12 @@
         dimField("shipHeightIn", "Height (in)") +
         '</div>'
       );
+    }
+
+    // Single-region form (single-order flows) — one Ship From block plus
+    // Parcel, exactly as before.
+    function _shippingFormFieldsHtml() {
+      return _shipFromAddressHtml("", "Ship From (prefilled — edit if needed)") + _parcelFieldsHtml();
     }
 
     // Prefills the Ship From fields from the configured CA/US default for
@@ -3591,12 +3608,24 @@
     function _renderBulkShipModal(shopifyErrors) {
       var html = '';
 
-      html += '<div class="modal-section">';
-      html += '<div class="modal-section-title">Ship From + Parcel (applies to every selected label)</div>';
-      html += _shippingFormFieldsHtml();
-      html += '</div>';
-
       var isMarkPaidMode = _bulkShipMode === "markPaidAndBuy";
+
+      // Split into CA/US so a batch can mix both regions — each region
+      // gets its own ship-from address applied only to its own orders
+      // (see getBulkShipRates()), not one shared address for everything.
+      var localCA = _bulkShipCandidates.local.filter(function (o) { return (o.currency || "").toUpperCase() !== "USD"; });
+      var localUS = _bulkShipCandidates.local.filter(function (o) { return (o.currency || "").toUpperCase() === "USD"; });
+      var caShopify = isMarkPaidMode ? [] : _bulkShipCandidates.shopify.filter(function (o) { return o.store === "CA"; });
+      var usShopify = isMarkPaidMode ? [] : _bulkShipCandidates.shopify.filter(function (o) { return o.store === "US"; });
+      var hasCA = localCA.length > 0 || caShopify.length > 0;
+      var hasUS = localUS.length > 0 || usShopify.length > 0;
+
+      html += '<div class="modal-section">';
+      html += '<div class="modal-section-title">Ship From (per region — only the region(s) below are needed for what\'s currently selected)</div>';
+      if (hasCA) html += _shipFromAddressHtml("_CA", "Ship From — Canada");
+      if (hasUS) html += _shipFromAddressHtml("_US", "Ship From — United States");
+      html += _parcelFieldsHtml();
+      html += '</div>';
 
       if (shopifyErrors && shopifyErrors.length) {
         html += '<div style="background:#fff3cd;color:#856404;padding:1rem;border-radius:8px;margin-bottom:1rem;font-size:1.2rem;">⚠ Could not load some Shopify orders: ' +
@@ -3604,15 +3633,15 @@
       }
 
       html += '<div class="modal-section-title" style="margin-top:1.6rem;">' +
-        (isMarkPaidMode
-          ? 'Orders to Mark Paid + Label (' + _bulkShipCandidates.local.length + ')'
-          : 'Our Orders — Needs Label (' + _bulkShipCandidates.local.length + ')') +
-        '</div>';
-      html += _bulkShipTableHtml(_bulkShipCandidates.local, "local");
+        (isMarkPaidMode ? 'Orders to Mark Paid + Label — CA (' : 'Our Orders — Needs Label — CA (') +
+        localCA.length + ')</div>';
+      html += _bulkShipTableHtml(localCA, "local");
+      html += '<div class="modal-section-title" style="margin-top:1.6rem;">' +
+        (isMarkPaidMode ? 'Orders to Mark Paid + Label — US (' : 'Our Orders — Needs Label — US (') +
+        localUS.length + ')</div>';
+      html += _bulkShipTableHtml(localUS, "local");
 
       if (!isMarkPaidMode) {
-        var caShopify = _bulkShipCandidates.shopify.filter(function (o) { return o.store === "CA"; });
-        var usShopify = _bulkShipCandidates.shopify.filter(function (o) { return o.store === "US"; });
         html += '<div class="modal-section-title" style="margin-top:1.6rem;">Shopify Unfulfilled — CA (' + caShopify.length + ')</div>';
         html += _bulkShipTableHtml(caShopify, "shopify");
         html += '<div class="modal-section-title" style="margin-top:1.6rem;">Shopify Unfulfilled — US (' + usShopify.length + ')</div>';
@@ -3645,34 +3674,44 @@
       }
     }
 
+    // Prefills whichever region block(s) _renderBulkShipModal actually
+    // rendered (elements with that suffix only exist in the DOM if that
+    // region has candidates) from that region's configured default, plus
+    // the single shared Parcel block. Each fetch is independent, so a
+    // slow/failed one doesn't block the other.
     function _prefillBulkShipDefaults() {
-      // "Needs Label" mode mixes CA + US Shopify-unfulfilled sections in one
-      // workspace (pre-existing, unrelated to Shippo mark-paid eligibility)
-      // so CAD stays the default there. "Mark Paid + Buy" batches are now
-      // guaranteed single-currency (see _bulkMarkPaidChoiceDialog) — prefill
-      // from whichever currency that batch actually is, so a USD/Zelle
-      // batch doesn't silently default to the CA ship-from address.
-      var currency = "CAD";
-      if (_bulkShipMode === "markPaidAndBuy" && _bulkShipCandidates.local.length) {
-        currency = (_bulkShipCandidates.local[0].currency || "CAD").toUpperCase();
-      }
-      fetch("/admin/shipping/default-address?currency=" + encodeURIComponent(currency), { credentials: "include" })
+      var prefillAddress = function (suffix, currency) {
+        if (!document.getElementById("shipFromName" + suffix)) return;
+        fetch("/admin/shipping/default-address?currency=" + encodeURIComponent(currency), { credentials: "include" })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var a = (data && data.address) || {};
+            var setVal = function (id, v) {
+              var el = document.getElementById(id + suffix);
+              if (el) el.value = v || "";
+            };
+            setVal("shipFromName", a.name);
+            setVal("shipFromStreet1", a.street1);
+            setVal("shipFromStreet2", a.street2);
+            setVal("shipFromCity", a.city);
+            setVal("shipFromState", a.state);
+            setVal("shipFromZip", a.zip);
+            setVal("shipFromCountry", a.country);
+            setVal("shipFromPhone", a.phone);
+          })
+          .catch(function () { });
+      };
+      prefillAddress("_CA", "CAD");
+      prefillAddress("_US", "USD");
+
+      fetch("/admin/shipping/default-address?currency=CAD", { credentials: "include" })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          var a = (data && data.address) || {};
           var p = (data && data.parcel) || {};
           var setVal = function (id, v) {
             var el = document.getElementById(id);
             if (el) el.value = v || "";
           };
-          setVal("shipFromName", a.name);
-          setVal("shipFromStreet1", a.street1);
-          setVal("shipFromStreet2", a.street2);
-          setVal("shipFromCity", a.city);
-          setVal("shipFromState", a.state);
-          setVal("shipFromZip", a.zip);
-          setVal("shipFromCountry", a.country);
-          setVal("shipFromPhone", a.phone);
           setVal("shipWeightOz", p.weight_oz);
           setVal("shipLengthIn", p.length_in);
           setVal("shipWidthIn", p.width_in);
@@ -3698,6 +3737,23 @@
       _updateBulkShipSummary();
     }
 
+    // Sums each selected ref's chosen rate, grouped by currency — a batch
+    // can mix CAD and USD orders now, so a single combined number would be
+    // meaningless (or wrong) once more than one currency is present.
+    // Returns e.g. "$30.00 CAD" or "$30.00 CAD + $15.20 USD".
+    function _bulkShipFormatTotals(refs) {
+      var byCurrency = {};
+      refs.forEach(function (ref) {
+        var sel = _bulkShipRates[ref] && _bulkShipRates[ref].selected;
+        if (!sel) return;
+        var cur = sel.currency || "";
+        byCurrency[cur] = (byCurrency[cur] || 0) + sel.amount;
+      });
+      return Object.keys(byCurrency).sort().map(function (cur) {
+        return "$" + byCurrency[cur].toFixed(2) + " " + cur;
+      }).join(" + ") || "$0.00";
+    }
+
     function _updateBulkShipSummary() {
       var countEl = document.getElementById("bulkShipCount");
       if (countEl) countEl.textContent = _bulkShipSelected.size + " selected";
@@ -3712,9 +3768,7 @@
       var totalEl = document.getElementById("bulkShipTotal");
       if (totalEl) {
         if (haveAllRates) {
-          var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].selected.amount; }, 0);
-          var currency = _bulkShipRates[refs[0]].selected.currency || "";
-          totalEl.textContent = "Estimated total: $" + total.toFixed(2) + " " + currency;
+          totalEl.textContent = "Estimated total: " + _bulkShipFormatTotals(refs);
         } else {
           totalEl.textContent = "";
         }
@@ -3730,33 +3784,64 @@
       _updateBulkShipSummary();
     }
 
+    // "CA" or "US" for a given ref, from whichever candidate list it came
+    // from — Shopify refs carry the region directly (o.store); local refs
+    // derive it from currency, same rule as the backend's
+    // _shippo_order_eligible (CAD→CA, USD→US). Returns null for a ref
+    // that isn't in either candidate list (shouldn't happen in practice).
+    function _bulkShipRegionOf(ref) {
+      var o = _bulkShipCandidates.local.concat(_bulkShipCandidates.shopify)
+        .find(function (x) { return x.ref === ref; });
+      if (!o) return null;
+      if (o.store) return o.store;
+      return (o.currency || "").toUpperCase() === "USD" ? "US" : "CA";
+    }
+
     function getBulkShipRates() {
       if (!_bulkShipSelected.size) { showToast("error", "Select at least one order first"); return; }
 
-      var fromAddress = {
-        name: document.getElementById("shipFromName").value,
-        street1: document.getElementById("shipFromStreet1").value,
-        street2: document.getElementById("shipFromStreet2").value,
-        city: document.getElementById("shipFromCity").value,
-        state: document.getElementById("shipFromState").value,
-        zip: document.getElementById("shipFromZip").value,
-        country: document.getElementById("shipFromCountry").value,
-        phone: document.getElementById("shipFromPhone").value,
+      var refs = Array.from(_bulkShipSelected);
+      // Only require/send the ship-from block(s) actually used by what's
+      // selected right now — a batch selecting only CA orders shouldn't
+      // be blocked on filling in a US address that's irrelevant to it.
+      var neededCA = refs.some(function (ref) { return _bulkShipRegionOf(ref) === "CA"; });
+      var neededUS = refs.some(function (ref) { return _bulkShipRegionOf(ref) === "US"; });
+
+      var readAddress = function (suffix) {
+        var val = function (id) {
+          var el = document.getElementById(id + suffix);
+          return el ? el.value : "";
+        };
+        return {
+          name: val("shipFromName"), street1: val("shipFromStreet1"), street2: val("shipFromStreet2"),
+          city: val("shipFromCity"), state: val("shipFromState"), zip: val("shipFromZip"),
+          country: val("shipFromCountry"), phone: val("shipFromPhone"),
+        };
       };
+      var addressComplete = function (a) {
+        return !!(a.name && a.street1 && a.city && a.state && a.zip && a.country);
+      };
+
+      var fromAddressCA = neededCA ? readAddress("_CA") : null;
+      var fromAddressUS = neededUS ? readAddress("_US") : null;
+      if (neededCA && !addressComplete(fromAddressCA)) {
+        showToast("error", "Fill in the Ship From — Canada address first");
+        return;
+      }
+      if (neededUS && !addressComplete(fromAddressUS)) {
+        showToast("error", "Fill in the Ship From — United States address first");
+        return;
+      }
+
       var weight = parseFloat(document.getElementById("shipWeightOz").value);
       var length = parseFloat(document.getElementById("shipLengthIn").value);
       var width = parseFloat(document.getElementById("shipWidthIn").value);
       var height = parseFloat(document.getElementById("shipHeightIn").value);
-      if (!fromAddress.name || !fromAddress.street1 || !fromAddress.city || !fromAddress.state || !fromAddress.zip || !fromAddress.country) {
-        showToast("error", "Fill in the Ship From address first");
-        return;
-      }
       if (!weight || !length || !width || !height) {
         showToast("error", "Enter weight and all three dimensions first");
         return;
       }
 
-      var refs = Array.from(_bulkShipSelected);
       var getRatesBtn = document.getElementById("bulkGetRatesBtn");
       _setBtnLoading(getRatesBtn, "Fetching rates for " + refs.length + "…");
       refs.forEach(function (ref) {
@@ -3768,7 +3853,7 @@
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          refs: refs, from_address: fromAddress,
+          refs: refs, from_address_ca: fromAddressCA, from_address_us: fromAddressUS,
           weight_oz: weight, length_in: length, width_in: width, height_in: height,
         }),
       })
@@ -3813,15 +3898,13 @@
       });
       if (!refs.length) return;
 
-      var total = refs.reduce(function (sum, ref) { return sum + _bulkShipRates[ref].selected.amount; }, 0);
-      var currency = _bulkShipRates[refs[0]].selected.currency || "";
       var isMarkPaidMode = _bulkShipMode === "markPaidAndBuy";
       var ok = await showConfirm({
         title: (isMarkPaidMode ? "Mark paid & buy " : "Buy ") + refs.length + " shipping label" + (refs.length > 1 ? "s" : "") + "?",
         body: (isMarkPaidMode
           ? "This marks " + refs.length + " order" + (refs.length > 1 ? "s" : "") + " paid WITHOUT creating Shopify orders, then buys their labels. "
           : "") +
-          "This charges your Shippo account for real — estimated total $" + total.toFixed(2) + " " + currency +
+          "This charges your Shippo account for real — estimated total " + _bulkShipFormatTotals(refs) +
           ". It cannot be undone from here.",
         okText: (isMarkPaidMode ? "Mark paid & buy " : "Buy ") + refs.length + " label" + (refs.length > 1 ? "s" : ""),
         danger: true,
@@ -4104,17 +4187,14 @@
         var shippoBtn = document.getElementById("bulkMarkPaidChoiceShippo");
         var shopifyBtn = document.getElementById("bulkMarkPaidChoiceShopify");
 
-        // The bulk ship workspace applies ONE shared ship-from address to
-        // every order in the batch (see getBulkShipRates()/confirmBulkBuyLabels())
-        // — it doesn't switch per-order. So a batch mixing CAD-CA and
-        // USD-US orders can't be handled correctly even though each row
-        // individually is Shippo-eligible; require a single shared
-        // currency across the whole selection too.
-        var _firstCurrency = rows.length ? (rows[0].currency || "").toUpperCase() : "";
+        // A batch CAN mix CAD-CA and USD-US orders now — the bulk ship
+        // workspace applies a separate ship-from address per region (see
+        // openBulkShipModalForPendingOrders()/getBulkShipRates()), so no
+        // same-currency restriction is needed here anymore; each row just
+        // needs to individually match one of the two eligible combos.
         var allShippoEligible = rows.length > 0 && rows.every(function (o) {
           var curr = (o.currency || "").toUpperCase();
           var country = (o.country || "").toUpperCase();
-          if (curr !== _firstCurrency) return false;
           return (curr === "CAD" && o.paymentMethod === "interac" && country === "CA") ||
                  (curr === "USD" && o.paymentMethod === "zelle" && country === "US");
         });
@@ -4125,7 +4205,7 @@
         shippoBtn.disabled = !allShippoEligible;
         shippoBtn.title = allShippoEligible
           ? "No Shopify order created — buy shipping labels later, single or bulk"
-          : "Not applicable — Shippo mark-paid only works for CAD Interac orders shipping to CA or USD Zelle orders shipping to US, and a single batch can't mix both (one shared ship-from address applies to the whole batch).";
+          : "Not applicable — Shippo mark-paid only works for CAD Interac orders shipping to CA or USD Zelle orders shipping to US.";
         shippoBtn.style.opacity = allShippoEligible ? "1" : "0.4";
         shippoBtn.style.cursor = allShippoEligible ? "pointer" : "not-allowed";
 
