@@ -1788,9 +1788,20 @@
                 : '') +
               '</div>';
           } else {
-            // Shippo is CAD-only \u2014 a USD paid order without tracking has
-            // no label action available, so it's just "Paid" like before.
-            var canShippo = (o.currency || "").toUpperCase() === "CAD";
+            // Match the real Shippo eligibility rule (same as
+            // _shippo_order_eligible server-side) \u2014 CAD Interac shipping
+            // to CA, or USD Zelle shipping to US. Previously this only
+            // checked currency === "CAD", so ANY paid CAD order without a
+            // tracking number showed "Needs Label" even when it was paid
+            // via Bitcoin/card/other methods that were never eligible for
+            // Shippo in the first place \u2014 misleading, not just for new
+            // orders but for every old CAD order from before this feature
+            // existed too.
+            var curr = (o.currency || "").toUpperCase();
+            var country = (o.country || "").toUpperCase();
+            var canShippo =
+              (curr === "CAD" && o.paymentMethod === "interac" && country === "CA") ||
+              (curr === "USD" && o.paymentMethod === "zelle" && country === "US");
             action = (o.trackingNumber || !canShippo)
               ? '<span class="action-btn btn-paid">\u2713 Paid</span>'
               : '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>';
