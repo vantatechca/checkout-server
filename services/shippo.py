@@ -33,6 +33,44 @@ class ShippoError(Exception):
     pass
 
 
+def _summarize_shippo_messages(messages: list) -> str:
+    """
+    Shippo's `messages` array has one entry per carrier account it tried,
+    including generic "doesn't support one or more shipment options"
+    rejections from every unrelated demo carrier on the account (DHL
+    Express, Deutsche Post, Correos, ...) — dumping the raw list is
+    unreadable and buries the one or two messages an admin can actually
+    act on (an account/auth problem, a real service-area restriction, a
+    rate-limit hit). Keep only the non-generic ones when any exist, dedupe,
+    and cap the length so it's still a reasonable tooltip.
+    """
+    if not messages:
+        return "no carrier returned a rate or a reason why"
+
+    seen = set()
+    entries = []
+    for m in messages:
+        source = (m.get("source") or "").strip()
+        text = (m.get("text") or "").strip()
+        if not text:
+            continue
+        key = (source, text)
+        if key in seen:
+            continue
+        seen.add(key)
+        entries.append(f"{source}: {text}" if source else text)
+
+    actionable = [e for e in entries if "doesn't support one or more shipment options" not in e]
+    shown = actionable or entries
+    if not shown:
+        return "no carrier returned a rate or a reason why"
+
+    summary = "; ".join(shown[:3])
+    if len(shown) > 3:
+        summary += f" (+{len(shown) - 3} more)"
+    return summary
+
+
 class ShippoClient:
     def __init__(self):
         self.api_token = getattr(settings, "SHIPPO_API_TOKEN", "") or ""
@@ -165,8 +203,7 @@ class ShippoClient:
         data = resp.json()
         rates = data.get("rates") or []
         if not rates:
-            messages = data.get("messages") or []
-            raise ShippoError(f"Shippo returned no rates: {messages or data}")
+            raise ShippoError(f"No carrier could quote this shipment — {_summarize_shippo_messages(data.get('messages') or [])}")
 
         normalized = [
             {
@@ -214,8 +251,7 @@ class ShippoClient:
 
         data = resp.json()
         if data.get("status") != "SUCCESS":
-            messages = data.get("messages") or []
-            raise ShippoError(f"Shippo label purchase not successful: {messages or data}")
+            raise ShippoError(f"Label purchase was not successful — {_summarize_shippo_messages(data.get('messages') or [])}")
 
         return {
             "tracking_number": data.get("tracking_number", ""),

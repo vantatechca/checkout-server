@@ -54,11 +54,19 @@ async def create_session(role: str = "admin") -> str:
     return token
 
 async def get_session_role(token: Optional[str]) -> Optional[str]:
-    """Returns the session's role ("admin"/"viewer") or None if not logged in."""
+    """Returns the session's role ("admin"/"viewer") or None if not logged in.
+    Sliding TTL: any authenticated request (every call site here routes
+    through this) pushes expiry SESSION_TTL_SEC back out, so an admin who
+    stays active never gets logged out mid-task — only genuine inactivity
+    for the full window ends the session."""
     if not token:
         return None
     r = await get_redis()
-    return await r.get(SESSION_PREFIX + token)
+    key = SESSION_PREFIX + token
+    role = await r.get(key)
+    if role is not None:
+        await r.expire(key, SESSION_TTL_SEC)
+    return role
 
 async def validate_session(token: Optional[str]) -> bool:
     return await get_session_role(token) is not None

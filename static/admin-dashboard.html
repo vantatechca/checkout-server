@@ -3107,6 +3107,28 @@
     // passing the origin's JSON through — a plain r.json() there throws,
     // which surfaced as a misleading "Network error" for a real, specific
     // Shippo failure. Catch that and fall back to the HTTP status instead.
+    // Sessions now slide-renew on every authenticated request (server side),
+    // so a 401 here means real inactivity, not routine mid-task expiry —
+    // still, when it happens, send the admin to login with an explanation
+    // instead of leaving whatever raw "Not authenticated" error the action
+    // surfaced. Guarded so concurrent requests (loadOrders + updateStats +
+    // health-check, etc.) don't stack redirects/toasts.
+    var _sessionExpiredHandling = false;
+    (function () {
+      var _origFetch = window.fetch;
+      window.fetch = function (input, init) {
+        return _origFetch.call(this, input, init).then(function (r) {
+          var url = typeof input === "string" ? input : (input && input.url) || "";
+          if (r.status === 401 && url.indexOf("/auth/login") === -1 && !_sessionExpiredHandling) {
+            _sessionExpiredHandling = true;
+            showToast("error", "Your session has expired — redirecting to login…");
+            setTimeout(function () { window.location.href = "/peps-admin-2026/login"; }, 1500);
+          }
+          return r;
+        });
+      };
+    })();
+
     function _safeJsonResponse(r) {
       return r.json().catch(function () { return {}; }).then(function (d) {
         return { ok: r.ok, status: r.status, data: d || {} };
