@@ -878,7 +878,16 @@ def _shippo_fallback_eligible(order) -> bool:
     fulfillment path either way, so payment method shouldn't gate the
     recovery action here. Still requires the shipping country to match a
     configured Shippo region (CAD→CA, USD→US) — same domestic-only
-    reasoning as _shippo_order_eligible; see services/shippo.py."""
+    reasoning as _shippo_order_eligible; see services/shippo.py.
+
+    Also requires _shopify_id_gap_is_meaningful (see below) — a missing
+    shopify_order_id only means something for orders paid via the
+    dedicated Shippo-only path, or paid after that column started being
+    persisted on success. Otherwise this would treat every pre-existing
+    order (which likely DID get a real Shopify order at the time, just
+    never had it recorded) as if Shopify had failed for it."""
+    if not _shopify_id_gap_is_meaningful(order):
+        return False
     currency = (order.currency or "").upper()
     country = (order.country or "").upper()
     if currency == "CAD":
@@ -886,6 +895,30 @@ def _shippo_fallback_eligible(order) -> bool:
     if currency == "USD":
         return country == "US"
     return False
+
+
+# shopify_order_id/shopify_order_number only started being persisted on a
+# successful Shopify order creation as of this commit (2026-08-23,
+# "Sync Shopify fulfillment status when a Shippo label is bought for the
+# same order") — every order paid before this has shopify_order_id = NULL
+# regardless of whether a real Shopify order was actually created for it,
+# since nothing captured that reference at the time. Treating a missing
+# shopify_order_id as "Shopify creation failed" for those older orders
+# would incorrectly flag a large batch of already-fulfilled historical
+# orders as "Needs Label". paid_via_shippo has been reliably tracked
+# since 2026-08-19 and has always meant "genuinely no Shopify order, by
+# design" — it's exempt from this cutoff.
+SHOPIFY_ORDER_ID_TRACKING_SINCE = datetime(2026, 8, 23)  # naive UTC, matches how paid_at is stored
+
+
+def _shopify_id_gap_is_meaningful(order) -> bool:
+    """True if this order's missing shopify_order_id can actually be
+    trusted as a signal (dedicated no-Shopify path, or paid after
+    shopify_order_id tracking went live) rather than just a historical
+    gap in what we recorded."""
+    if order.paid_via_shippo:
+        return True
+    return bool(order.paid_at) and order.paid_at >= SHOPIFY_ORDER_ID_TRACKING_SINCE
 
 class ShippingFromAddress(BaseModel):
     name:    str = ""
@@ -1261,6 +1294,16 @@ async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
             _sa_or(
                 _sa_and(Order.currency == "CAD", Order.country == "CA"),
                 _sa_and(Order.currency == "USD", Order.country == "US"),
+            ),
+            # See _shopify_id_gap_is_meaningful — a missing shopify_order_id
+            # only means something for the dedicated Shippo-only path, or
+            # orders paid after that column started being persisted on
+            # success (2026-08-23). Otherwise this would list a huge batch
+            # of already-Shopify-fulfilled historical orders that just
+            # never had the reference recorded.
+            _sa_or(
+                Order.paid_via_shippo.is_(True),
+                Order.paid_at >= SHOPIFY_ORDER_ID_TRACKING_SINCE,
             ),
         )
         .order_by(desc(Order.paid_at))

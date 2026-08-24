@@ -1593,6 +1593,29 @@
       applyFilters();
       loadOrders();
     }
+    // shopify_order_id/shopify_order_number only started being persisted on
+    // a successful Shopify order creation as of 2026-08-23 ("Sync Shopify
+    // fulfillment status when a Shippo label is bought for the same
+    // order") — every order paid before this has shopifyOrderId = null
+    // regardless of whether a real Shopify order was actually created for
+    // it, since nothing captured that reference at the time. Treating a
+    // missing shopifyOrderId as "Shopify creation failed" for those older
+    // orders would flag a large batch of already-fulfilled historical
+    // orders as "Needs Label". paidViaShippo has been reliably tracked
+    // since 2026-08-19 and has always meant "genuinely no Shopify order,
+    // by design" — it's exempt from this cutoff. Mirrors
+    // _shopify_id_gap_is_meaningful in routes/admin.py — keep both in sync.
+    var SHOPIFY_ORDER_ID_TRACKING_SINCE = "2026-08-23T00:00:00Z";
+    function _shopifyIdGapIsMeaningful(o) {
+      if (o.paidViaShippo) return true;
+      if (!o.paidAt) return false;
+      // o.paidAt has no timezone suffix (naive-but-UTC from the backend) —
+      // append "Z" so the browser parses it as UTC instead of local time,
+      // same workaround used elsewhere in this file for the same reason.
+      var iso = /[+\-]\d\d:?\d\d$|Z$/.test(o.paidAt) ? o.paidAt : o.paidAt + "Z";
+      return new Date(iso) >= new Date(SHOPIFY_ORDER_ID_TRACKING_SINCE);
+    }
+
     // Escapes text for safe insertion into HTML TEXT content (e.g. innerHTML
     // of a <div>). Order fields (email, name, address, source domain, etc.)
     // are customer-submitted from the public checkout form and stored
@@ -1809,7 +1832,7 @@
             var shippoRegionConfigured =
               (curr === "CAD" && country === "CA") ||
               (curr === "USD" && country === "US");
-            var needsLabel = shippoRegionConfigured && !o.shopifyOrderId;
+            var needsLabel = shippoRegionConfigured && !o.shopifyOrderId && _shopifyIdGapIsMeaningful(o);
             action = needsLabel
               ? '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>'
               : '<span class="action-btn btn-paid">\u2713 Paid</span>';
@@ -2858,7 +2881,7 @@
       var shippoRegionConfigured =
         (_curr === "CAD" && _country === "CA") ||
         (_curr === "USD" && _country === "US");
-      var canBuyLabelDirect = shippoRegionConfigured && !o.shopifyOrderId;
+      var canBuyLabelDirect = shippoRegionConfigured && !o.shopifyOrderId && _shopifyIdGapIsMeaningful(o);
 
       // Viewers never see this (mutating section, matches the established
       // convention of omitting rather than disabling).
