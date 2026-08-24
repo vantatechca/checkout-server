@@ -1132,15 +1132,14 @@ async def buy_shipping_label(
         raise HTTPException(400, "Order must be paid before buying a shipping label")
     if not _shippo_order_eligible(order):
         raise HTTPException(400, "Shippo shipping labels are only available for CAD Interac or USD Zelle orders shipping to their own region")
-    # A normal mark-paid order already has a real Shopify order and gets
-    # fulfilled through Shopify instead — this direct-purchase flow is
-    # only for orders marked paid via the no-Shopify Shippo-only path.
-    # Buying a label here for a Shopify-order order would risk a real,
-    # separate, duplicate fulfillment on the same order.
+    # A normal mark-paid order whose Shopify order was created successfully
+    # is fulfilled through Shopify instead — buying a label here too would
+    # risk a real, separate, duplicate fulfillment on the same order. This
+    # does NOT require paid_via_shippo specifically: an order whose Shopify
+    # creation FAILED also has no shopify_order_id and genuinely still
+    # needs a label, so it must stay eligible here too.
     if order.shopify_order_id:
         raise HTTPException(400, "This order already has a Shopify order — buy its shipping label through Shopify's own fulfillment instead")
-    if not order.paid_via_shippo:
-        raise HTTPException(400, "This order wasn't marked paid via the no-Shopify Shippo-only path, so a direct label purchase isn't available for it here")
     if order.tracking_number:
         raise HTTPException(400, "This order already has a shipping label")
 
@@ -1215,15 +1214,19 @@ async def buy_shipping_label(
 async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
     """
     Everything eligible for bulk labeling right now: our own paid-but-
-    unlabeled orders that were marked paid via the no-Shopify Shippo-only
-    path (paid_via_shippo) — those have no Shopify order to fall back on
-    for fulfillment, unlike a normal mark-paid order, which already has a
-    real Shopify order and gets fulfilled through Shopify instead (see
-    the separate "Shopify Unfulfilled" half below). paid_via_shippo is
-    only ever set after _shippo_order_eligible already passed at mark-paid
-    time, so filtering on it alone is sufficient — no need to re-derive
-    currency/method/country here. The Shopify half is never persisted —
-    read fresh every call, since Shopify's own fulfillment status is the
+    unlabeled, Shippo-eligible orders (CAD Interac -> CA, or USD Zelle ->
+    US) that have no Shopify order — covers both the dedicated no-Shopify
+    Shippo-only mark-paid path AND a normal mark-paid order whose Shopify
+    order creation failed (still no fulfillment path either way). A
+    normal mark-paid order whose Shopify order was created successfully
+    is fulfilled through Shopify instead (see the separate "Shopify
+    Unfulfilled" half below) and is correctly excluded here since
+    shopify_order_id gets set as soon as creation succeeds. Filtering on
+    paid_via_shippo alone (an earlier version of this) missed the failed-
+    Shopify-creation case — those orders have no Shopify order AND
+    paid_via_shippo=False, so they'd silently never appear here despite
+    genuinely needing a label. The Shopify half is never persisted — read
+    fresh every call, since Shopify's own fulfillment status is the
     source of truth for it.
     """
     result = await db.execute(
@@ -1231,7 +1234,11 @@ async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
         .where(
             Order.payment_status == PaymentStatus.paid,
             Order.tracking_number.is_(None),
-            Order.paid_via_shippo.is_(True),
+            Order.shopify_order_id.is_(None),
+            _sa_or(
+                _sa_and(Order.payment_method == PaymentMethod.interac, Order.currency == "CAD", Order.country == "CA"),
+                _sa_and(Order.payment_method == PaymentMethod.zelle,   Order.currency == "USD", Order.country == "US"),
+            ),
         )
         .order_by(desc(Order.paid_at))
     )

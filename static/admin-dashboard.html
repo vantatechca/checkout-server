@@ -1772,9 +1772,12 @@
               + '</div>';
           }
         } else if (o.paymentStatus === "paid") {
-          if (o.paidViaShippo && o.trackingNumber) {
-            // Shipping tab rows are exactly this condition \u2014 show the
-            // tracking/label right in the list instead of a plain badge.
+          if (o.trackingNumber) {
+            // Any order with a real tracking number gets the tracking/
+            // label view, regardless of paidViaShippo \u2014 that flag only
+            // says which mark-paid path was used, not whether a label
+            // was actually bought since (an order could theoretically
+            // have both a Shopify order AND a directly-bought label).
             action =
               '<div style="font-size:1.2rem;line-height:1.5;">' +
               '<div><strong>' + _escapeHtml(o.carrier || "\u2014") + '</strong></div>' +
@@ -1788,23 +1791,26 @@
                 : '') +
               '</div>';
           } else {
-            // "Needs Label" only means anything for orders marked paid via
-            // the no-Shopify Shippo-only path (paid_via_shippo) \u2014 those
-            // have no Shopify order to fall back on for fulfillment, so an
-            // admin has to buy a label directly here. Every other paid
-            // order (the normal mark-paid path, which DOES create a real
-            // Shopify order) is fulfilled through Shopify instead \u2014 that's
-            // what the separate "Shopify Unfulfilled" bulk section is for,
-            // not this badge. Checking currency/method/country alone (an
-            // earlier version of this fix) was still wrong: it doesn't
-            // distinguish "eligible for Shippo" from "was actually paid
-            // through the Shippo-only path" \u2014 a normal CAD Interac order
-            // that already has a real Shopify order would still show
-            // "Needs Label" even though Shopify already handles it.
-            // !shopifyOrderId is redundant with paidViaShippo (the two are
-            // mutually exclusive by construction) but kept as an explicit,
-            // defensive check.
-            var needsLabel = !!(o.paidViaShippo && !o.shopifyOrderId && !o.trackingNumber);
+            // "Needs Label" means: this order is Shippo-eligible (CAD
+            // Interac shipping to CA, or USD Zelle shipping to US) AND has
+            // no Shopify order \u2014 covers both the dedicated no-Shopify
+            // Shippo-only mark-paid path, and a normal mark-paid order
+            // whose Shopify order creation FAILED (still no fulfillment
+            // path, so still needs a label bought directly). Checking
+            // paid_via_shippo alone (an earlier version of this fix)
+            // missed that second case entirely \u2014 a Shopify-creation
+            // failure would silently show "Paid" with no indicator at
+            // all, since paid_via_shippo is only ever set for the
+            // dedicated path, never for a normal mark-paid whose Shopify
+            // step happened to fail. A successfully-created Shopify order
+            // is still correctly excluded either way, since shopifyOrderId
+            // is set as soon as creation succeeds.
+            var curr = (o.currency || "").toUpperCase();
+            var country = (o.country || "").toUpperCase();
+            var isShippoEligible =
+              (curr === "CAD" && o.paymentMethod === "interac" && country === "CA") ||
+              (curr === "USD" && o.paymentMethod === "zelle" && country === "US");
+            var needsLabel = isShippoEligible && !o.shopifyOrderId;
             action = needsLabel
               ? '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>'
               : '<span class="action-btn btn-paid">\u2713 Paid</span>';
@@ -2839,18 +2845,15 @@
         (_curr === "CAD" && o.paymentMethod === "interac" && _country === "CA") ||
         (_curr === "USD" && o.paymentMethod === "zelle" && _country === "US");
 
-      // Buy Shipping Label (paid orders) needs more than isShippoEligible
-      // — a normal mark-paid order is currency/method/country-eligible
-      // too, but it already has a real Shopify order and is fulfilled
-      // through Shopify instead. This section is only for orders paid via
-      // the no-Shopify Shippo-only path — offering it for a Shopify-order
-      // order risks a real, separate, duplicate label purchase.
-      // !shopifyOrderId is redundant with paidViaShippo (mutually
-      // exclusive by construction) but kept as an explicit, defensive
-      // check. isShippoEligible itself is still exactly right for the
-      // PENDING "Mark Paid (Shippo)" section below, since paidViaShippo
-      // doesn't exist yet for an order that isn't paid.
-      var canBuyLabelDirect = o.paidViaShippo && !o.shopifyOrderId;
+      // Buy Shipping Label (paid orders) — Shippo-eligible AND no Shopify
+      // order. A normal mark-paid order whose Shopify order was created
+      // successfully is fulfilled through Shopify instead, so offering a
+      // direct label purchase there risks a real, separate, duplicate
+      // fulfillment. This deliberately does NOT require paidViaShippo:
+      // an order whose Shopify creation FAILED also has no shopifyOrderId
+      // and genuinely still needs a label bought directly, so it must
+      // stay eligible here too — same rule as the Orders list badge.
+      var canBuyLabelDirect = isShippoEligible && !o.shopifyOrderId;
 
       // Viewers never see this (mutating section, matches the established
       // convention of omitting rather than disabling).
