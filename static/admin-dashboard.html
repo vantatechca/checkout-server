@@ -1788,23 +1788,26 @@
                 : '') +
               '</div>';
           } else {
-            // Match the real Shippo eligibility rule (same as
-            // _shippo_order_eligible server-side) \u2014 CAD Interac shipping
-            // to CA, or USD Zelle shipping to US. Previously this only
-            // checked currency === "CAD", so ANY paid CAD order without a
-            // tracking number showed "Needs Label" even when it was paid
-            // via Bitcoin/card/other methods that were never eligible for
-            // Shippo in the first place \u2014 misleading, not just for new
-            // orders but for every old CAD order from before this feature
-            // existed too.
-            var curr = (o.currency || "").toUpperCase();
-            var country = (o.country || "").toUpperCase();
-            var canShippo =
-              (curr === "CAD" && o.paymentMethod === "interac" && country === "CA") ||
-              (curr === "USD" && o.paymentMethod === "zelle" && country === "US");
-            action = (o.trackingNumber || !canShippo)
-              ? '<span class="action-btn btn-paid">\u2713 Paid</span>'
-              : '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>';
+            // "Needs Label" only means anything for orders marked paid via
+            // the no-Shopify Shippo-only path (paid_via_shippo) \u2014 those
+            // have no Shopify order to fall back on for fulfillment, so an
+            // admin has to buy a label directly here. Every other paid
+            // order (the normal mark-paid path, which DOES create a real
+            // Shopify order) is fulfilled through Shopify instead \u2014 that's
+            // what the separate "Shopify Unfulfilled" bulk section is for,
+            // not this badge. Checking currency/method/country alone (an
+            // earlier version of this fix) was still wrong: it doesn't
+            // distinguish "eligible for Shippo" from "was actually paid
+            // through the Shippo-only path" \u2014 a normal CAD Interac order
+            // that already has a real Shopify order would still show
+            // "Needs Label" even though Shopify already handles it.
+            // !shopifyOrderId is redundant with paidViaShippo (the two are
+            // mutually exclusive by construction) but kept as an explicit,
+            // defensive check.
+            var needsLabel = !!(o.paidViaShippo && !o.shopifyOrderId && !o.trackingNumber);
+            action = needsLabel
+              ? '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>'
+              : '<span class="action-btn btn-paid">\u2713 Paid</span>';
           }
         } else if (
           o.paymentStatus === "failed" ||

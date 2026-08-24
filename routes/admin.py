@@ -1204,21 +1204,23 @@ async def buy_shipping_label(
 async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
     """
     Everything eligible for bulk labeling right now: our own paid-but-
-    unlabeled Shippo-eligible orders (CAD Interac or USD Zelle — same rule
-    as _shippo_order_eligible), plus paid-but-unfulfilled orders pulled
-    live from Shopify (CA + US stores, whichever are configured). The
-    Shopify half is never persisted — read fresh every call, since
-    Shopify's own fulfillment status is the source of truth for it.
+    unlabeled orders that were marked paid via the no-Shopify Shippo-only
+    path (paid_via_shippo) — those have no Shopify order to fall back on
+    for fulfillment, unlike a normal mark-paid order, which already has a
+    real Shopify order and gets fulfilled through Shopify instead (see
+    the separate "Shopify Unfulfilled" half below). paid_via_shippo is
+    only ever set after _shippo_order_eligible already passed at mark-paid
+    time, so filtering on it alone is sufficient — no need to re-derive
+    currency/method/country here. The Shopify half is never persisted —
+    read fresh every call, since Shopify's own fulfillment status is the
+    source of truth for it.
     """
     result = await db.execute(
         select(Order)
         .where(
             Order.payment_status == PaymentStatus.paid,
             Order.tracking_number.is_(None),
-            _sa_or(
-                _sa_and(Order.payment_method == PaymentMethod.interac, Order.currency == "CAD", Order.country == "CA"),
-                _sa_and(Order.payment_method == PaymentMethod.zelle,   Order.currency == "USD", Order.country == "US"),
-            ),
+            Order.paid_via_shippo.is_(True),
         )
         .order_by(desc(Order.paid_at))
     )
