@@ -22,12 +22,6 @@ databases:
     plan: basic-256mb   # smallest paid Postgres plan (Render retired the free/"starter" tier)
     diskSizeGB: 5
 
-envVarGroups:
-  - name: checkout-shared
-    envVars:
-      - key: SECRET_KEY
-        generateValue: true
-
 services:
   # ─── Redis — Celery broker/result-backend + rate-limit cache ─────────────
   # Not the source of truth for anything (Postgres is) — losing this data on
@@ -48,9 +42,9 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    envVarGroups:
-      - checkout-shared
     envVars:
+      - key: SECRET_KEY
+        generateValue: true
       - key: PYTHON_VERSION
         value: 3.12.10
       - key: DB_DIALECT
@@ -107,9 +101,9 @@ services:
     plan: starter
     buildCommand: pip install -r requirements.txt
     startCommand: celery -A tasks.celery_app worker -B --loglevel=info
-    envVarGroups:
-      - checkout-shared
     envVars:
+      - key: SECRET_KEY
+        generateValue: true
       - key: PYTHON_VERSION
         value: 3.12.10
       - key: DB_DIALECT
