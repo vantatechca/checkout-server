@@ -1791,26 +1791,25 @@
                 : '') +
               '</div>';
           } else {
-            // "Needs Label" means: this order is Shippo-eligible (CAD
-            // Interac shipping to CA, or USD Zelle shipping to US) AND has
-            // no Shopify order \u2014 covers both the dedicated no-Shopify
-            // Shippo-only mark-paid path, and a normal mark-paid order
-            // whose Shopify order creation FAILED (still no fulfillment
-            // path, so still needs a label bought directly). Checking
-            // paid_via_shippo alone (an earlier version of this fix)
-            // missed that second case entirely \u2014 a Shopify-creation
-            // failure would silently show "Paid" with no indicator at
-            // all, since paid_via_shippo is only ever set for the
-            // dedicated path, never for a normal mark-paid whose Shopify
-            // step happened to fail. A successfully-created Shopify order
-            // is still correctly excluded either way, since shopifyOrderId
-            // is set as soon as creation succeeds.
+            // "Needs Label" means: this order's shipping region has a
+            // configured Shippo ship-from address (CAD\u2192CA, USD\u2192US) AND it
+            // has no Shopify order \u2014 covers the dedicated no-Shopify
+            // Shippo-only mark-paid path (Interac/Zelle) AND ANY normal
+            // mark-paid order whose Shopify order creation FAILED,
+            // regardless of payment method (card, Bitcoin/crypto,
+            // altcoin, ...) \u2014 a failed-Shopify order has no fulfillment
+            // path either way, so payment method doesn't gate this the
+            // way it gates the separate PENDING "deliberately skip
+            // Shopify" choice (still Interac/Zelle-only there). A
+            // successfully-created Shopify order is correctly excluded
+            // either way, since shopifyOrderId is set as soon as creation
+            // succeeds.
             var curr = (o.currency || "").toUpperCase();
             var country = (o.country || "").toUpperCase();
-            var isShippoEligible =
-              (curr === "CAD" && o.paymentMethod === "interac" && country === "CA") ||
-              (curr === "USD" && o.paymentMethod === "zelle" && country === "US");
-            var needsLabel = isShippoEligible && !o.shopifyOrderId;
+            var shippoRegionConfigured =
+              (curr === "CAD" && country === "CA") ||
+              (curr === "USD" && country === "US");
+            var needsLabel = shippoRegionConfigured && !o.shopifyOrderId;
             action = needsLabel
               ? '<span class="action-btn" style="background:#f3e8ff;color:#7c3aed;">\ud83d\udce6 Needs Label</span>'
               : '<span class="action-btn btn-paid">\u2713 Paid</span>';
@@ -2845,15 +2844,21 @@
         (_curr === "CAD" && o.paymentMethod === "interac" && _country === "CA") ||
         (_curr === "USD" && o.paymentMethod === "zelle" && _country === "US");
 
-      // Buy Shipping Label (paid orders) — Shippo-eligible AND no Shopify
-      // order. A normal mark-paid order whose Shopify order was created
-      // successfully is fulfilled through Shopify instead, so offering a
-      // direct label purchase there risks a real, separate, duplicate
-      // fulfillment. This deliberately does NOT require paidViaShippo:
-      // an order whose Shopify creation FAILED also has no shopifyOrderId
-      // and genuinely still needs a label bought directly, so it must
-      // stay eligible here too — same rule as the Orders list badge.
-      var canBuyLabelDirect = isShippoEligible && !o.shopifyOrderId;
+      // Buy Shipping Label (paid orders) — broader than isShippoEligible
+      // above (which stays Interac/Zelle-only for the PENDING "deliberately
+      // skip Shopify" section below): once an order is already paid, ANY
+      // payment method (card, Bitcoin/crypto, altcoin, ...) whose Shopify
+      // order creation failed genuinely has no fulfillment path, so
+      // payment method shouldn't gate this recovery action the way it
+      // gates the upfront pending-order choice. A normal mark-paid order
+      // whose Shopify order WAS created successfully is fulfilled through
+      // Shopify instead, so offering a direct label purchase there risks
+      // a real, separate, duplicate fulfillment — that's what
+      // !o.shopifyOrderId excludes, same rule as the Orders list badge.
+      var shippoRegionConfigured =
+        (_curr === "CAD" && _country === "CA") ||
+        (_curr === "USD" && _country === "US");
+      var canBuyLabelDirect = shippoRegionConfigured && !o.shopifyOrderId;
 
       // Viewers never see this (mutating section, matches the established
       // convention of omitting rather than disabling).

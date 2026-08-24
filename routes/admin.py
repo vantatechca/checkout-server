@@ -864,6 +864,29 @@ def _shippo_order_eligible(order) -> bool:
         return country == "US"
     return False
 
+
+def _shippo_fallback_eligible(order) -> bool:
+    """Broader than _shippo_order_eligible — used only for an ALREADY-PAID
+    order that has no Shopify order (buy_shipping_label, the bulk "Needs
+    Label" workspace) to decide whether it can have a label bought
+    directly as a fallback, regardless of payment method. Unlike the
+    PENDING-order "deliberately skip Shopify" flow (which stays Interac/
+    Zelle-only via _shippo_order_eligible above — an upfront admin choice,
+    unrelated to this), a paid card/crypto/altcoin/etc. order can still
+    end up with no Shopify order simply because Shopify order creation
+    failed (see services/order_finalize.py) — that order genuinely has no
+    fulfillment path either way, so payment method shouldn't gate the
+    recovery action here. Still requires the shipping country to match a
+    configured Shippo region (CAD→CA, USD→US) — same domestic-only
+    reasoning as _shippo_order_eligible; see services/shippo.py."""
+    currency = (order.currency or "").upper()
+    country = (order.country or "").upper()
+    if currency == "CAD":
+        return country == "CA"
+    if currency == "USD":
+        return country == "US"
+    return False
+
 class ShippingFromAddress(BaseModel):
     name:    str = ""
     street1: str = ""
@@ -1130,8 +1153,8 @@ async def buy_shipping_label(
         raise HTTPException(404, "Order not found")
     if order.payment_status != PaymentStatus.paid:
         raise HTTPException(400, "Order must be paid before buying a shipping label")
-    if not _shippo_order_eligible(order):
-        raise HTTPException(400, "Shippo shipping labels are only available for CAD Interac or USD Zelle orders shipping to their own region")
+    if not _shippo_fallback_eligible(order):
+        raise HTTPException(400, "Shippo shipping labels are only available for orders shipping to a region with a configured ship-from address (CAD orders to CA, USD orders to US)")
     # A normal mark-paid order whose Shopify order was created successfully
     # is fulfilled through Shopify instead — buying a label here too would
     # risk a real, separate, duplicate fulfillment on the same order. This
@@ -1214,20 +1237,20 @@ async def buy_shipping_label(
 async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
     """
     Everything eligible for bulk labeling right now: our own paid-but-
-    unlabeled, Shippo-eligible orders (CAD Interac -> CA, or USD Zelle ->
-    US) that have no Shopify order — covers both the dedicated no-Shopify
-    Shippo-only mark-paid path AND a normal mark-paid order whose Shopify
-    order creation failed (still no fulfillment path either way). A
-    normal mark-paid order whose Shopify order was created successfully
+    unlabeled orders with no Shopify order, in a region with a configured
+    Shippo ship-from address (CAD->CA, USD->US) — covers the dedicated
+    no-Shopify Shippo-only mark-paid path (Interac/Zelle) AND ANY normal
+    mark-paid order whose Shopify order creation failed, regardless of
+    payment method (card, crypto, altcoin, ...). A failed-Shopify order
+    genuinely has no fulfillment path either way, so payment method
+    doesn't gate this the way _shippo_order_eligible gates the PENDING-
+    order "deliberately skip Shopify" flow — see _shippo_fallback_eligible.
+    A normal mark-paid order whose Shopify order was created successfully
     is fulfilled through Shopify instead (see the separate "Shopify
     Unfulfilled" half below) and is correctly excluded here since
-    shopify_order_id gets set as soon as creation succeeds. Filtering on
-    paid_via_shippo alone (an earlier version of this) missed the failed-
-    Shopify-creation case — those orders have no Shopify order AND
-    paid_via_shippo=False, so they'd silently never appear here despite
-    genuinely needing a label. The Shopify half is never persisted — read
-    fresh every call, since Shopify's own fulfillment status is the
-    source of truth for it.
+    shopify_order_id gets set as soon as creation succeeds. The Shopify
+    half is never persisted — read fresh every call, since Shopify's own
+    fulfillment status is the source of truth for it.
     """
     result = await db.execute(
         select(Order)
@@ -1236,8 +1259,8 @@ async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
             Order.tracking_number.is_(None),
             Order.shopify_order_id.is_(None),
             _sa_or(
-                _sa_and(Order.payment_method == PaymentMethod.interac, Order.currency == "CAD", Order.country == "CA"),
-                _sa_and(Order.payment_method == PaymentMethod.zelle,   Order.currency == "USD", Order.country == "US"),
+                _sa_and(Order.currency == "CAD", Order.country == "CA"),
+                _sa_and(Order.currency == "USD", Order.country == "US"),
             ),
         )
         .order_by(desc(Order.paid_at))
@@ -1345,8 +1368,19 @@ async def get_bulk_shipping_rates(
             order = orders_by_id.get(ref)
             if not order:
                 return {"ref": ref, "error": "Order not found"}
-            if not _shippo_order_eligible(order):
-                return {"ref": ref, "error": "Order is not eligible for Shippo (must be CAD Interac shipping to CA, or USD Zelle shipping to US)"}
+            # A still-pending order is about to be deliberately marked
+            # paid WITHOUT a Shopify order (the "Mark Paid + Buy" flow) —
+            # that upfront choice stays Interac/Zelle-only. An already-paid
+            # order here has no Shopify order for a different reason
+            # (either that same deliberate path, or a failed Shopify
+            # creation on the normal path) — payment method doesn't matter
+            # for that recovery case, see _shippo_fallback_eligible.
+            if order.payment_status == PaymentStatus.pending:
+                if not _shippo_order_eligible(order):
+                    return {"ref": ref, "error": "Order is not eligible for Shippo (must be CAD Interac shipping to CA, or USD Zelle shipping to US)"}
+            else:
+                if not _shippo_fallback_eligible(order):
+                    return {"ref": ref, "error": "Order's shipping region has no configured Shippo ship-from address"}
             region = "US" if (order.currency or "").upper() == "USD" else "CA"
 
         from_addr = from_addr_us if region == "US" else from_addr_ca
@@ -1423,15 +1457,29 @@ async def bulk_buy_shipping_labels(
             if not order:
                 results.append({"ref": ref, "success": False, "error": "Order not found"})
                 continue
-            if not _shippo_order_eligible(order):
-                results.append({"ref": ref, "success": False, "error": "Order is not eligible for Shippo (must be CAD Interac shipping to CA, or USD Zelle shipping to US)"})
-                continue
             if order.tracking_number:
                 results.append({"ref": ref, "success": False, "error": "Order already has a label"})
                 continue
             if order.payment_status not in (PaymentStatus.pending, PaymentStatus.paid):
                 results.append({"ref": ref, "success": False, "error": f"Order status '{order.payment_status}' is not eligible"})
                 continue
+            # A still-pending order is about to be deliberately marked paid
+            # WITHOUT a Shopify order — that upfront choice stays Interac/
+            # Zelle-only. An already-paid order has no Shopify order for a
+            # different reason (that same deliberate path, or a failed
+            # Shopify creation on the normal path) — payment method doesn't
+            # gate that recovery case, see _shippo_fallback_eligible.
+            if order.payment_status == PaymentStatus.pending:
+                if not _shippo_order_eligible(order):
+                    results.append({"ref": ref, "success": False, "error": "Order is not eligible for Shippo (must be CAD Interac shipping to CA, or USD Zelle shipping to US)"})
+                    continue
+            else:
+                if order.shopify_order_id:
+                    results.append({"ref": ref, "success": False, "error": "This order already has a Shopify order"})
+                    continue
+                if not _shippo_fallback_eligible(order):
+                    results.append({"ref": ref, "success": False, "error": "Order's shipping region has no configured Shippo ship-from address"})
+                    continue
 
             if order.payment_status == PaymentStatus.pending:
                 await _apply_paid_status(
