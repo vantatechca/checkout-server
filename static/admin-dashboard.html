@@ -2809,15 +2809,24 @@
         html += "</div>";
       }
 
-      // Shippo is CAD Interac orders only, for now — deliberate business
-      // restriction, not a technical limitation (explicitly excludes
-      // crypto/BTC too). An order that somehow already has tracking
-      // (e.g. bought before this restriction existed/tightened) still
-      // shows its existing tracking/label; it just can't buy a NEW one.
-      var isShippoEligible = (o.currency || "").toUpperCase() === "CAD" && o.paymentMethod === "interac";
+      // Shippo is CAD Interac (shipping to CA) or USD Zelle (shipping to
+      // US) only — deliberate business restriction, not a technical
+      // limitation (explicitly excludes crypto/BTC too). The country check
+      // guards against an order whose typed shipping address doesn't
+      // match its currency's region — both warehouses only ship
+      // domestically, so that combination must be rejected rather than
+      // attempted as an undeclared cross-border shipment. An order that
+      // somehow already has tracking (e.g. bought before this restriction
+      // existed/tightened) still shows its existing tracking/label; it
+      // just can't buy a NEW one.
+      var _curr = (o.currency || "").toUpperCase();
+      var _country = (o.country || "").toUpperCase();
+      var isShippoEligible =
+        (_curr === "CAD" && o.paymentMethod === "interac" && _country === "CA") ||
+        (_curr === "USD" && o.paymentMethod === "zelle" && _country === "US");
 
-      // Buy Shipping Label — any paid CAD order, regardless of which
-      // mark-paid path was used. Viewers never see this (mutating
+      // Buy Shipping Label — any paid, Shippo-eligible order, regardless
+      // of which mark-paid path was used. Viewers never see this (mutating
       // section, matches the established convention of omitting rather
       // than disabling).
       if (!window.IS_VIEWER && o.paymentStatus === "paid" && (isShippoEligible || o.trackingNumber)) {
@@ -3637,7 +3646,17 @@
     }
 
     function _prefillBulkShipDefaults() {
-      fetch("/admin/shipping/default-address?currency=CAD", { credentials: "include" })
+      // "Needs Label" mode mixes CA + US Shopify-unfulfilled sections in one
+      // workspace (pre-existing, unrelated to Shippo mark-paid eligibility)
+      // so CAD stays the default there. "Mark Paid + Buy" batches are now
+      // guaranteed single-currency (see _bulkMarkPaidChoiceDialog) — prefill
+      // from whichever currency that batch actually is, so a USD/Zelle
+      // batch doesn't silently default to the CA ship-from address.
+      var currency = "CAD";
+      if (_bulkShipMode === "markPaidAndBuy" && _bulkShipCandidates.local.length) {
+        currency = (_bulkShipCandidates.local[0].currency || "CAD").toUpperCase();
+      }
+      fetch("/admin/shipping/default-address?currency=" + encodeURIComponent(currency), { credentials: "include" })
         .then(function (r) { return r.json(); })
         .then(function (data) {
           var a = (data && data.address) || {};
@@ -4085,8 +4104,19 @@
         var shippoBtn = document.getElementById("bulkMarkPaidChoiceShippo");
         var shopifyBtn = document.getElementById("bulkMarkPaidChoiceShopify");
 
+        // The bulk ship workspace applies ONE shared ship-from address to
+        // every order in the batch (see getBulkShipRates()/confirmBulkBuyLabels())
+        // — it doesn't switch per-order. So a batch mixing CAD-CA and
+        // USD-US orders can't be handled correctly even though each row
+        // individually is Shippo-eligible; require a single shared
+        // currency across the whole selection too.
+        var _firstCurrency = rows.length ? (rows[0].currency || "").toUpperCase() : "";
         var allShippoEligible = rows.length > 0 && rows.every(function (o) {
-          return (o.currency || "").toUpperCase() === "CAD" && o.paymentMethod === "interac";
+          var curr = (o.currency || "").toUpperCase();
+          var country = (o.country || "").toUpperCase();
+          if (curr !== _firstCurrency) return false;
+          return (curr === "CAD" && o.paymentMethod === "interac" && country === "CA") ||
+                 (curr === "USD" && o.paymentMethod === "zelle" && country === "US");
         });
 
         bodyEl.textContent = "Mark " + rows.length + " order" + (rows.length > 1 ? "s" : "") +
@@ -4095,7 +4125,7 @@
         shippoBtn.disabled = !allShippoEligible;
         shippoBtn.title = allShippoEligible
           ? "No Shopify order created — buy shipping labels later, single or bulk"
-          : "Not applicable — selection includes a non-CAD-Interac order (e.g. a US order). Shippo mark-paid isn't available for those yet.";
+          : "Not applicable — Shippo mark-paid only works for CAD Interac orders shipping to CA or USD Zelle orders shipping to US, and a single batch can't mix both (one shared ship-from address applies to the whole batch).";
         shippoBtn.style.opacity = allShippoEligible ? "1" : "0.4";
         shippoBtn.style.cursor = allShippoEligible ? "pointer" : "not-allowed";
 

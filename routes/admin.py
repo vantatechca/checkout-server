@@ -842,15 +842,27 @@ async def mark_order_paid(
 # additive endpoint, not a change to the existing one.
 
 def _shippo_order_eligible(order) -> bool:
-    """Shippo is scoped to CAD Interac orders only for now (explicitly
-    excludes crypto/BTC even on the off chance one is CAD-denominated) —
-    a deliberate, narrower business restriction on top of the technical
-    CA/US ship-from support in services/shippo.py. Update here if that
-    scope changes."""
-    return (
-        (order.currency or "").upper() == "CAD"
-        and order.payment_method == PaymentMethod.interac
-    )
+    """Shippo is scoped to CAD Interac and USD Zelle orders — the two
+    "no native Shopify order" manual-match payment methods, one per region
+    (explicitly excludes crypto/BTC even on the off chance one is
+    CAD/USD-denominated). A deliberate, narrower business restriction on
+    top of the technical CA/US ship-from support in services/shippo.py.
+
+    Also requires the order's shipping country to actually match the
+    currency's home region (CAD→CA, USD→US) — both warehouses only ship
+    domestically (no customs_declaration is ever sent, see
+    services/shippo.py's module docstring), so an order whose typed
+    shipping address lands outside its currency's region must be rejected
+    here rather than silently attempted as an undeclared cross-border
+    shipment. `order.country` is a free-typed checkout field, not derived
+    from currency, so this isn't guaranteed upstream."""
+    currency = (order.currency or "").upper()
+    country = (order.country or "").upper()
+    if currency == "CAD" and order.payment_method == PaymentMethod.interac:
+        return country == "CA"
+    if currency == "USD" and order.payment_method == PaymentMethod.zelle:
+        return country == "US"
+    return False
 
 class ShippingFromAddress(BaseModel):
     name:    str = ""
@@ -937,7 +949,7 @@ async def get_shipping_rates(
     if not order:
         raise HTTPException(404, "Order not found")
     if not _shippo_order_eligible(order):
-        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
+        raise HTTPException(400, "Shippo shipping labels are only available for CAD Interac or USD Zelle orders shipping to their own region")
 
     from services.shippo import ShippoClient, ShippoError
     try:
@@ -982,7 +994,7 @@ async def mark_paid_shippo_only(
     if not precheck_order:
         raise HTTPException(404, "Order not found")
     if not _shippo_order_eligible(precheck_order):
-        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
+        raise HTTPException(400, "Shippo shipping labels are only available for CAD Interac or USD Zelle orders shipping to their own region")
 
     await _apply_paid_status(
         db, order_id, body.notes,
@@ -1038,7 +1050,7 @@ async def mark_paid_and_buy_label(
     if not precheck_order:
         raise HTTPException(404, "Order not found")
     if not _shippo_order_eligible(precheck_order):
-        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
+        raise HTTPException(400, "Shippo shipping labels are only available for CAD Interac or USD Zelle orders shipping to their own region")
 
     await _apply_paid_status(
         db, order_id, body.notes,
@@ -1119,7 +1131,7 @@ async def buy_shipping_label(
     if order.payment_status != PaymentStatus.paid:
         raise HTTPException(400, "Order must be paid before buying a shipping label")
     if not _shippo_order_eligible(order):
-        raise HTTPException(400, "Shippo shipping labels are currently only available for CAD Interac orders")
+        raise HTTPException(400, "Shippo shipping labels are only available for CAD Interac or USD Zelle orders shipping to their own region")
 
     from services.shippo import ShippoClient, ShippoError
     try:
@@ -1179,8 +1191,14 @@ async def buy_shipping_label(
 # address + parcel size is used across the whole batch — that's the point
 # of "bulk": same product, same packaging, same warehouse, not per-order
 # editing. Local orders still go through the same CAD-Interac-only gate as
-# the single-order flow (_shippo_order_eligible); Shopify orders have no
-# such restriction since they're a separate paid-elsewhere workflow.
+# the single-order flow used to (_shippo_order_eligible now also allows
+# USD Zelle, but THIS endpoint's own query below is still CAD/Interac-only
+# — deliberately not extended yet, since "Needs Label" mixes results into
+# one flat list with no per-region grouping, and a mixed-currency batch
+# can't share one ship-from address; see the "Mark Paid + Buy" flow's
+# _bulkMarkPaidChoiceDialog for how that's guarded once currencies mix).
+# Shopify orders have no such restriction since they're a separate
+# paid-elsewhere workflow (and are already split into CA/US sections).
 
 @router.get("/shipping/bulk-candidates", dependencies=[Depends(require_write_access)])
 async def get_bulk_shipping_candidates(db: AsyncSession = Depends(get_db)):
@@ -1366,7 +1384,7 @@ async def bulk_buy_shipping_labels(
                 results.append({"ref": ref, "success": False, "error": "Order not found"})
                 continue
             if not _shippo_order_eligible(order):
-                results.append({"ref": ref, "success": False, "error": "Order is not eligible for Shippo (must be CAD Interac)"})
+                results.append({"ref": ref, "success": False, "error": "Order is not eligible for Shippo (must be CAD Interac shipping to CA, or USD Zelle shipping to US)"})
                 continue
             if order.tracking_number:
                 results.append({"ref": ref, "success": False, "error": "Order already has a label"})
