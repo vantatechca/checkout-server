@@ -1115,6 +1115,75 @@
             <div class="loading-text">Loading visits...</div>
           </div>
 
+          <div class="stats" id="visitsOverviewStats">
+            <div class="stat">
+              <div class="stat-label">Today's Visits</div>
+              <div class="stat-value" id="visitStatToday">—</div>
+              <div style="font-size:1.1rem;color:#888;margin-top:0.3rem;" id="visitStatTodaySub">&nbsp;</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">This Week</div>
+              <div class="stat-value" id="visitStatWeek">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Last 30 Days</div>
+              <div class="stat-value" id="visitStatMonth">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">All Time</div>
+              <div class="stat-value" id="visitStatAllTime">—</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Started Checkout Today</div>
+              <div class="stat-value" id="visitStatStarted">—</div>
+              <div style="font-size:1.1rem;color:#888;margin-top:0.3rem;">entered name/email but may not have finished</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Completed Today</div>
+              <div class="stat-value paid" id="visitStatCompleted">—</div>
+              <div style="font-size:1.1rem;color:#888;margin-top:0.3rem;">order actually placed</div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1.6rem;margin-bottom:1.6rem;" class="visits-overview-grid">
+            <div class="orders-table">
+              <div class="table-header" style="grid-template-columns: 1.3fr 0.8fr 0.8fr 0.8fr">
+                <span>Date</span>
+                <span>Visits</span>
+                <span>Started</span>
+                <span>Completed</span>
+              </div>
+              <div id="visitsDailyBody" style="max-height:32rem;overflow-y:auto;">
+                <div class="loading-row">Loading...</div>
+              </div>
+            </div>
+            <div class="orders-table">
+              <div class="table-header" style="grid-template-columns: 1.6fr 0.8fr">
+                <span>Top Referring Store</span>
+                <span>Visits</span>
+              </div>
+              <div id="visitsTopStoresBody" style="max-height:32rem;overflow-y:auto;">
+                <div class="loading-row">Loading...</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-section-title" style="margin-bottom:0.8rem;">Started Checkout, Not Completed (last 100)</div>
+          <div class="orders-table" style="margin-bottom:1.6rem;">
+            <div class="table-header" style="grid-template-columns: 1.1fr 1.3fr 1.6fr 1.1fr 1.3fr 1fr">
+              <span>Time</span>
+              <span>Name</span>
+              <span>Email</span>
+              <span>Phone</span>
+              <span>Location</span>
+              <span>Store</span>
+            </div>
+            <div id="abandonedCheckoutsBody">
+              <div class="loading-row">Loading...</div>
+            </div>
+          </div>
+
+          <div class="modal-section-title" style="margin-bottom:0.8rem;">Recent Visits</div>
           <div class="filters-container">
             <div class="filters-primary">
               <input type="text" class="filter-input" id="visitSearchInput"
@@ -1138,11 +1207,11 @@
           </div>
           <div class="results-count" id="visitsResultsCount"></div>
           <div class="orders-table">
-            <div class="table-header" style="grid-template-columns: 1.1fr 1.2fr 1.7fr 0.6fr 0.8fr 1.3fr 1.1fr">
+            <div class="table-header" style="grid-template-columns: 1.1fr 1.1fr 1.4fr 1.3fr 0.7fr 1.1fr 1.1fr">
               <span>Time</span>
               <span>Store</span>
               <span>IP</span>
-              <span>Country</span>
+              <span>Location</span>
               <span>Device</span>
               <span>Referrer</span>
               <span>Outcome</span>
@@ -2089,6 +2158,8 @@
         emailsEl.style.display = "none";
         visitsEl.style.display = "block";
         if (!isSameTab) visitsPage = 1;
+        loadVisitsOverview();
+        loadAbandonedCheckouts();
         loadVisits();
       } else {
         ordersEl.style.display = "block";
@@ -4595,6 +4666,104 @@
       detail.style.display = detail.style.display === "block" ? "none" : "block";
     }
 
+    // ─── Visits tab: Overview — aggregate stats, daily trend, top stores ──
+    function loadVisitsOverview() {
+      fetch("/admin/visits/overview", { credentials: "include" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(renderVisitsOverview)
+        .catch(function () {
+          document.getElementById("visitsDailyBody").innerHTML =
+            '<div class="loading-row">Failed to load.</div>';
+          document.getElementById("visitsTopStoresBody").innerHTML =
+            '<div class="loading-row">Failed to load.</div>';
+        });
+    }
+
+    function renderVisitsOverview(d) {
+      document.getElementById("visitStatToday").textContent = d.todayVisits;
+      document.getElementById("visitStatTodaySub").textContent = d.uniqueIpsToday + " unique IPs";
+      document.getElementById("visitStatWeek").textContent = d.thisWeekVisits;
+      document.getElementById("visitStatMonth").textContent = d.last30DaysVisits;
+      document.getElementById("visitStatAllTime").textContent = d.allTimeVisits;
+      document.getElementById("visitStatStarted").textContent = d.startedCheckoutToday;
+      document.getElementById("visitStatCompleted").textContent = d.completedToday;
+
+      var dailyBody = document.getElementById("visitsDailyBody");
+      if (!d.dailyBreakdown.length) {
+        dailyBody.innerHTML = '<div class="empty"><p>No data yet</p></div>';
+      } else {
+        var dailyHtml = "";
+        d.dailyBreakdown.forEach(function (row) {
+          dailyHtml +=
+            '<div class="order-row" style="grid-template-columns: 1.3fr 0.8fr 0.8fr 0.8fr">' +
+            '<div>' + _escapeHtml(row.date) + '</div>' +
+            '<div>' + row.visits + '</div>' +
+            '<div>' + row.started + '</div>' +
+            '<div style="color:var(--green,#1a7e2e);font-weight:600">' + row.completed + '</div>' +
+            '</div>';
+        });
+        dailyBody.innerHTML = dailyHtml;
+      }
+
+      var storesBody = document.getElementById("visitsTopStoresBody");
+      if (!d.topReferringStores.length) {
+        storesBody.innerHTML = '<div class="empty"><p>No data yet</p></div>';
+      } else {
+        var storesHtml = "";
+        d.topReferringStores.forEach(function (row) {
+          storesHtml +=
+            '<div class="order-row" style="grid-template-columns: 1.6fr 0.8fr">' +
+            '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(row.store) + '</div>' +
+            '<div>' + row.visits + '</div>' +
+            '</div>';
+        });
+        storesBody.innerHTML = storesHtml;
+      }
+    }
+
+    // ─── Visits tab: Started Checkout, Not Completed ──────────────────────
+    // Surfaces existing data — no new instrumentation. checkout_reserve()
+    // already creates a pending order on page load, and the checkout
+    // form's existing autosave (POST /api/checkout/update) already fills
+    // in email/name/phone as the customer types, before they ever click
+    // Pay. This just lists the pending orders where that happened.
+    function loadAbandonedCheckouts() {
+      fetch("/admin/visits/abandoned?limit=100", { credentials: "include" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(renderAbandonedCheckouts)
+        .catch(function () {
+          document.getElementById("abandonedCheckoutsBody").innerHTML =
+            '<div class="loading-row">Failed to load.</div>';
+        });
+    }
+
+    function renderAbandonedCheckouts(rows) {
+      var body = document.getElementById("abandonedCheckoutsBody");
+      if (!rows.length) {
+        body.innerHTML = '<div class="empty"><p>None — every started checkout either finished or hasn\'t entered contact info yet</p></div>';
+        return;
+      }
+      var html = "";
+      rows.forEach(function (o) {
+        html +=
+          '<div class="order-row" style="grid-template-columns: 1.1fr 1.3fr 1.6fr 1.1fr 1.3fr 1fr">' +
+          '<div>' + fmtTime(o.createdAt) + '</div>' +
+          '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(o.name || '—') + '</div>' +
+          '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(o.email || '—') + '</div>' +
+          '<div>' + _escapeHtml(o.phone || '—') + '</div>' +
+          '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(_formatLocation(o)) + '</div>' +
+          '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(o.storeName || '—') + '</div>' +
+          '</div>';
+      });
+      body.innerHTML = html;
+    }
+
     // ─── Visits tab — every checkout-page visit, converted or not ────────
     var allVisits = [];
     var filteredVisits = [];
@@ -4668,6 +4837,16 @@
       none:    '<span class="status-badge" style="background:#f0f0f0;color:#888">— Never started</span>',
     };
 
+    // Shared by renderVisits() and renderAbandonedCheckouts() — joins
+    // whatever geo fields are actually present. city/region only come
+    // through once the MaxMind GeoLite2 database is set up
+    // (services/geoip.py); until then this gracefully falls back to
+    // country alone (from Cloudflare's CF-IPCountry header).
+    function _formatLocation(v) {
+      var parts = [v.city, v.region, v.country].filter(Boolean);
+      return parts.length ? parts.join(", ") : "—";
+    }
+
     function renderVisits(rows) {
       var body = document.getElementById("visitsBody");
       if (!rows.length) {
@@ -4686,11 +4865,11 @@
         var outcomeBadge = _VISIT_OUTCOME_BADGE[v.outcome] ||
           '<span class="status-badge status-failed">' + _escapeHtml(v.outcome) + '</span>';
         html +=
-          '<div class="order-row" style="grid-template-columns: 1.1fr 1.2fr 1.7fr 0.6fr 0.8fr 1.3fr 1.1fr">';
+          '<div class="order-row" style="grid-template-columns: 1.1fr 1.1fr 1.4fr 1.3fr 0.7fr 1.1fr 1.1fr">';
         html += '<div>' + fmtTime(v.createdAt) + '</div>';
         html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(v.storeName || v.sourceDomain || '—') + '</div>';
         html += '<div class="mono" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(v.ipAddress || '') + '">' + _escapeHtml(v.ipAddress || '—') + '</div>';
-        html += '<div>' + _escapeHtml(v.country || '—') + '</div>';
+        html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(_formatLocation(v)) + '">' + _escapeHtml(_formatLocation(v)) + '</div>';
         html += '<div>' + _escapeHtml(v.device || '—') + '</div>';
         html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(v.referrer || '') + '">' + _escapeHtml(v.referrer || '—') + '</div>';
         html += '<div>' + outcomeBadge + '</div>';

@@ -17,7 +17,7 @@ import asyncio
 import json
 import logging
 import httpx
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
@@ -458,7 +458,7 @@ async def order_stats(
         return cached
 
     from sqlalchemy import func as sa_func, and_, or_, case
-    from datetime import datetime, timezone
+    from datetime import datetime, timedelta, timezone
 
     base_filter = []
     if currency:
@@ -1802,6 +1802,8 @@ async def list_visits(
             "storeName":    v.store_name,
             "sourceDomain": v.source_domain,
             "ipAddress":    v.ip_address,
+            "city":         v.city,
+            "region":       v.region,
             "country":      v.country,
             "device":       _classify_device(v.user_agent),
             "referrer":     v.referrer,
@@ -1812,6 +1814,126 @@ async def list_visits(
                 "total":         float(order.total) if order.total is not None else None,
             },
             "outcome": _outcome(order),
+        })
+    return rows
+
+
+@router.get("/visits/overview")
+async def visits_overview(db: AsyncSession = Depends(get_db)):
+    """Aggregate stats for the Visits tab's stat cards, daily breakdown,
+    and top-referring-stores table. All date comparisons are in UTC
+    (matching how created_at/paid_at are already stored) — not localized
+    to any specific timezone."""
+    from sqlalchemy import func as _sa_func
+    from models.visit import Visit
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=7)
+    month_start = today_start - timedelta(days=30)
+    started_filter = _sa_or(Order.email != "", Order.first_name.is_not(None))
+
+    async def _count(query) -> int:
+        result = await db.execute(query)
+        return result.scalar() or 0
+
+    today_visits      = await _count(select(_sa_func.count()).select_from(Visit).where(Visit.created_at >= today_start))
+    unique_ips_today  = await _count(select(_sa_func.count(_sa_func.distinct(Visit.ip_address))).where(Visit.created_at >= today_start))
+    week_visits       = await _count(select(_sa_func.count()).select_from(Visit).where(Visit.created_at >= week_start))
+    month_visits      = await _count(select(_sa_func.count()).select_from(Visit).where(Visit.created_at >= month_start))
+    all_time_visits   = await _count(select(_sa_func.count()).select_from(Visit))
+    started_today     = await _count(select(_sa_func.count()).select_from(Order).where(Order.created_at >= today_start, started_filter))
+    completed_today   = await _count(select(_sa_func.count()).select_from(Order).where(Order.payment_status == PaymentStatus.paid, Order.paid_at >= today_start))
+
+    # Daily breakdown, last 30 days — three separate GROUP BY queries
+    # (visits / started / completed each have a different date column to
+    # group on), merged by date in Python rather than one complex join.
+    visits_by_day = await db.execute(
+        select(_sa_func.date(Visit.created_at), _sa_func.count())
+        .where(Visit.created_at >= month_start)
+        .group_by(_sa_func.date(Visit.created_at))
+    )
+    started_by_day = await db.execute(
+        select(_sa_func.date(Order.created_at), _sa_func.count())
+        .where(Order.created_at >= month_start, started_filter)
+        .group_by(_sa_func.date(Order.created_at))
+    )
+    completed_by_day = await db.execute(
+        select(_sa_func.date(Order.paid_at), _sa_func.count())
+        .where(Order.payment_status == PaymentStatus.paid, Order.paid_at >= month_start)
+        .group_by(_sa_func.date(Order.paid_at))
+    )
+
+    daily: dict = {}
+    for day, count in visits_by_day.all():
+        daily.setdefault(str(day), {"date": str(day), "visits": 0, "started": 0, "completed": 0})["visits"] = count
+    for day, count in started_by_day.all():
+        daily.setdefault(str(day), {"date": str(day), "visits": 0, "started": 0, "completed": 0})["started"] = count
+    for day, count in completed_by_day.all():
+        daily.setdefault(str(day), {"date": str(day), "visits": 0, "started": 0, "completed": 0})["completed"] = count
+    daily_breakdown = sorted(daily.values(), key=lambda d: d["date"], reverse=True)
+
+    top_stores_result = await db.execute(
+        select(Visit.source_domain, _sa_func.count())
+        .where(Visit.created_at >= month_start)
+        .group_by(Visit.source_domain)
+        .order_by(_sa_func.count().desc())
+        .limit(10)
+    )
+    top_stores = [
+        {"store": domain or "Direct / unknown", "visits": count}
+        for domain, count in top_stores_result.all()
+    ]
+
+    return {
+        "todayVisits":         today_visits,
+        "uniqueIpsToday":      unique_ips_today,
+        "thisWeekVisits":      week_visits,
+        "last30DaysVisits":    month_visits,
+        "allTimeVisits":       all_time_visits,
+        "startedCheckoutToday": started_today,
+        "completedToday":      completed_today,
+        "dailyBreakdown":      daily_breakdown,
+        "topReferringStores":  top_stores,
+    }
+
+
+@router.get("/visits/abandoned")
+async def list_abandoned_checkouts(
+    limit: int = Query(100, le=1000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pending orders where the customer actually typed something in
+    (email or name) via the existing checkout-form autosave
+    (POST /api/checkout/update, routes/checkout.py) but never completed
+    payment — "started checkout, not completed". Newest first."""
+    from services import geoip
+
+    result = await db.execute(
+        select(Order)
+        .where(
+            Order.payment_status == PaymentStatus.pending,
+            _sa_or(Order.email != "", Order.first_name.is_not(None)),
+        )
+        .order_by(desc(Order.created_at))
+        .limit(limit)
+    )
+    orders = result.scalars().all()
+
+    rows = []
+    for o in orders:
+        geo = geoip.lookup(o.ip_address) if o.ip_address else None
+        rows.append({
+            "id":        o.id,
+            "createdAt": o.created_at.isoformat() if o.created_at else None,
+            "name":      f"{o.first_name or ''} {o.last_name or ''}".strip(),
+            "email":     o.email or "",
+            "phone":     o.phone or "",
+            "ipAddress": o.ip_address,
+            "city":      geo["city"] if geo else None,
+            "region":    geo["region"] if geo else None,
+            "country":   geo["country"] if geo else None,
+            "storeName": o.store_name,
         })
     return rows
 

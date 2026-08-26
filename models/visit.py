@@ -22,7 +22,14 @@ class Visit(Base):
     store_name    = Column(String(255), nullable=True)   # denormalized, same rationale as Order.store_name
     source_domain = Column(String(255), nullable=True, index=True)
     ip_address    = Column(String(45), nullable=True)
-    country       = Column(String(2), nullable=True, index=True)     # from Cloudflare's CF-IPCountry header
+    # City/region from a local MaxMind GeoLite2 lookup (services/geoip.py)
+    # when that database is available; country alone falls back to
+    # Cloudflare's free CF-IPCountry header otherwise. country is always
+    # a 2-letter ISO code either way, so the two sources never disagree
+    # in format even though only one of them can supply city/region.
+    city          = Column(String(100), nullable=True)
+    region        = Column(String(100), nullable=True)
+    country       = Column(String(2), nullable=True, index=True)
     user_agent    = Column(Text, nullable=True)
     referrer      = Column(Text, nullable=True)
     created_at    = Column(DateTime, server_default=func.now(), index=True)
