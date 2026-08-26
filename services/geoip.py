@@ -1,65 +1,89 @@
 """
-Local IP geolocation via a self-hosted MaxMind GeoLite2-City database — no
-per-request network call, no external API cost/rate-limit, just an
-in-memory binary lookup (microseconds), safe to call synchronously inline
-in the request path.
+IP geolocation for the admin Visits tab — city/region/country via
+ip-api.com's free tier (no signup, no API key, 45 requests/minute),
+backed by a persistent cache table (models/ip_geo_cache.py) keyed by IP
+address so the same address is only ever looked up once, no matter how
+many Visit/Order rows share it.
 
-The .mmdb file itself is NOT part of this repo (see .gitignore) — it's a
-~70MB binary downloaded per-environment via scripts/download_geolite2.py,
-which needs a free MaxMind account + license key (MAXMIND_LICENSE_KEY in
-.env) that only a human can obtain. Until that file exists, lookup()
-returns None for everything and callers fall back to whatever coarser
-signal they already have (e.g. Cloudflare's CF-IPCountry header) — this
-module is designed to degrade silently, never to be a hard dependency.
+Deliberately NOT called from the checkout page itself (main.py) — that's
+a customer-facing hot path where a live third-party network call has no
+place. This is only ever called lazily, from admin GET endpoints
+(routes/admin.py), when an admin actually opens the Visits tab.
 """
 import logging
-import os
+
+import httpx
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from models.ip_geo_cache import IpGeoCache
 
 logger = logging.getLogger(__name__)
 
-_DB_PATH = os.path.join("data", "GeoLite2-City.mmdb")
-
-_reader = None
-_load_attempted = False
+IP_API_URL = "http://ip-api.com/json/{ip}"
+IP_API_FIELDS = "status,city,regionName,countryCode"
 
 
-def _get_reader():
-    global _reader, _load_attempted
-    if _reader is None and not _load_attempted:
-        _load_attempted = True
-        try:
-            import geoip2.database
-            _reader = geoip2.database.Reader(_DB_PATH)
-        except Exception as e:
-            logger.warning(f"GeoLite2 database not available ({e}) — city/region lookups will return None")
-    return _reader
-
-
-def lookup(ip: str) -> dict | None:
-    """
-    Returns {"city": str|None, "region": str|None, "country": str|None}
-    (country as a 2-letter ISO code, matching the existing CF-IPCountry
-    convention this replaces/augments) or None if the IP can't be
-    resolved — a private/reserved IP, the database file isn't
-    downloaded yet, or the address simply isn't in it. Never raises.
-    """
-    if not ip:
-        return None
-    reader = _get_reader()
-    if not reader:
-        return None
+async def _live_lookup(ip: str) -> dict | None:
     try:
-        import geoip2.errors
-        result = reader.city(ip)
-        subdivision = result.subdivisions.most_specific
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(IP_API_URL.format(ip=ip), params={"fields": IP_API_FIELDS})
+        if resp.status_code != 200:
+            return None
+        data = resp.json()
+        if data.get("status") != "success":
+            return None
         return {
-            "city":    result.city.name,
-            "region":  subdivision.name if subdivision else None,
-            "country": result.country.iso_code,
+            "city":    data.get("city") or None,
+            "region":  data.get("regionName") or None,
+            "country": data.get("countryCode") or None,
         }
     except Exception as e:
-        # Covers geoip2.errors.AddressNotFoundError (private/reserved IPs,
-        # unassigned ranges) and any other lookup failure alike — none of
-        # these should ever be surfaced as an error to the caller.
-        logger.debug(f"GeoIP lookup miss for {ip}: {e}")
+        logger.warning(f"ip-api.com lookup failed for {ip}: {e}")
         return None
+
+
+async def enrich_locations(db: AsyncSession, ip_addresses, max_live_lookups: int = 40) -> dict:
+    """
+    Bulk-resolves {"city", "region", "country"} (or None) for a batch of
+    IPs in one call: checks the cache table for all of them in a single
+    query, then does at most `max_live_lookups` live ip-api.com calls for
+    whichever ones aren't cached yet — keeps a single admin page load
+    bounded in time and well under ip-api's free-tier rate limit even
+    across repeated refreshes. Any misses beyond that cap just come back
+    as None for now (shown as country-only, or blank) and resolve
+    naturally the next time an admin views the tab, once cached.
+
+    Returns {ip_address: {"city":..., "region":..., "country":...} | None}.
+    """
+    ips = {ip for ip in ip_addresses if ip}
+    if not ips:
+        return {}
+
+    result = await db.execute(select(IpGeoCache).where(IpGeoCache.ip_address.in_(ips)))
+    cached_rows = {row.ip_address: row for row in result.scalars().all()}
+
+    geo_by_ip: dict = {}
+    for ip in ips:
+        row = cached_rows.get(ip)
+        if row:
+            geo_by_ip[ip] = {"city": row.city, "region": row.region, "country": row.country} if row.resolved else None
+
+    misses = [ip for ip in ips if ip not in geo_by_ip][:max_live_lookups]
+    for ip in misses:
+        geo = await _live_lookup(ip)
+        geo_by_ip[ip] = geo
+        try:
+            db.add(IpGeoCache(
+                ip_address=ip,
+                city=geo["city"] if geo else None,
+                region=geo["region"] if geo else None,
+                country=geo["country"] if geo else None,
+                resolved=geo is not None,
+            ))
+            await db.commit()
+        except Exception as e:
+            logger.warning(f"Could not cache geo lookup for {ip}: {e}")
+            await db.rollback()
+
+    return geo_by_ip

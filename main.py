@@ -32,7 +32,6 @@ from models.brand import Brand
 from models import Order  # triggers all model registrations
 from models.order import NowPaymentsInvoice
 from models.visit import Visit
-from services import geoip
 import models  # noqa — ensure all models are registered with Base
 from routes.checkout import router as checkout_router, _client_ip
 from routes.webhooks import router as webhooks_router
@@ -685,22 +684,18 @@ async def checkout_page(request: Request):
                 httponly=True, secure=True, samesite="lax",
                 max_age=60 * 60 * 24 * 90,
             )
-        ip_for_visit = _client_ip(request)
-        geo = geoip.lookup(ip_for_visit)
         async with AsyncSessionLocal() as db:
             db.add(Visit(
                 visitor_id=visitor_id,
                 brand_id=brand.id if brand else None,
                 store_name=brand.store_name if brand else None,
                 source_domain=source_domain or request.headers.get("host", ""),
-                ip_address=ip_for_visit,
-                # MaxMind gives city+region+country in one lookup; fall
-                # back to Cloudflare's free country-only header if the
-                # GeoLite2 database isn't downloaded yet (services/geoip.py
-                # returns None in that case, never raises).
-                city=geo["city"] if geo else None,
-                region=geo["region"] if geo else None,
-                country=(geo["country"] if geo else None) or request.headers.get("CF-IPCountry"),
+                ip_address=_client_ip(request),
+                # Cheap and synchronous — city/region are resolved lazily
+                # on admin view instead (services/geoip.py), never here.
+                # A live third-party geo call has no place in this
+                # customer-facing hot path.
+                country=request.headers.get("CF-IPCountry"),
                 user_agent=request.headers.get("user-agent", ""),
                 referrer=request.headers.get("referer"),
             ))

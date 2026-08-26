@@ -1793,18 +1793,25 @@ async def list_visits(
             return "pending"
         return order.payment_status
 
+    # City/region resolved lazily here (not stored on Visit) via a
+    # persistent IP-keyed cache — see services/geoip.py for why, and for
+    # the per-request cap on live ip-api.com lookups.
+    from services import geoip
+    geo_by_ip = await geoip.enrich_locations(db, {v.ip_address for v in visits})
+
     rows = []
     for v in visits:
         order = orders_by_visitor.get(v.visitor_id)
+        geo = geo_by_ip.get(v.ip_address)
         rows.append({
             "id":           v.id,
             "visitorId":    v.visitor_id,
             "storeName":    v.store_name,
             "sourceDomain": v.source_domain,
             "ipAddress":    v.ip_address,
-            "city":         v.city,
-            "region":       v.region,
-            "country":      v.country,
+            "city":         geo["city"] if geo else None,
+            "region":       geo["region"] if geo else None,
+            "country":      (geo["country"] if geo else None) or v.country,
             "device":       _classify_device(v.user_agent),
             "referrer":     v.referrer,
             "createdAt":    v.created_at.isoformat() if v.created_at else None,
@@ -1919,10 +1926,11 @@ async def list_abandoned_checkouts(
         .limit(limit)
     )
     orders = result.scalars().all()
+    geo_by_ip = await geoip.enrich_locations(db, {o.ip_address for o in orders})
 
     rows = []
     for o in orders:
-        geo = geoip.lookup(o.ip_address) if o.ip_address else None
+        geo = geo_by_ip.get(o.ip_address)
         rows.append({
             "id":        o.id,
             "createdAt": o.created_at.isoformat() if o.created_at else None,

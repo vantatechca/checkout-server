@@ -35,12 +35,6 @@ class Settings(BaseSettings):
 
     RESEND_API_KEY: str = ""
 
-    # MaxMind GeoLite2 — city-level IP geolocation for the admin Visits tab
-    # (services/geoip.py). Only used by scripts/download_geolite2.py to
-    # fetch the .mmdb file; the app itself never calls the MaxMind API.
-    # Free account + license key at https://www.maxmind.com/en/geolite2/signup-service
-    MAXMIND_LICENSE_KEY: str = ""
-
     # Gmail
     GMAIL_CREDENTIALS_FILE: str = "./gmail_credentials.json"
     GMAIL_TOKEN_FILE: str = "./gmail_token.json"
