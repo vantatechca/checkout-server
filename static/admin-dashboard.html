@@ -1168,7 +1168,17 @@
             </div>
           </div>
 
-          <div class="modal-section-title" style="margin-bottom:0.8rem;">Started Checkout, Not Completed (last 100)</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.8rem;">
+            <div class="modal-section-title" style="margin-bottom:0;">Started Checkout, Not Completed (last 100)</div>
+            <button class="refresh-btn" id="abandonedRefreshBtn" onclick="loadAbandonedCheckouts()">
+              <svg viewBox="0 0 24 24">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+              </svg>
+              <span class="hide-mobile">Refresh</span>
+            </button>
+          </div>
+          <div class="results-count" id="abandonedResultsCount"></div>
           <div class="orders-table" style="margin-bottom:1.6rem;">
             <div class="table-header" style="grid-template-columns: 1.1fr 1.3fr 1.6fr 1.1fr 1.3fr 1fr">
               <span>Time</span>
@@ -1182,6 +1192,7 @@
               <div class="loading-row">Loading...</div>
             </div>
           </div>
+          <div class="pagination" id="abandonedPagination"></div>
 
           <div class="modal-section-title" style="margin-bottom:0.8rem;">Recent Visits</div>
           <div class="filters-container">
@@ -4730,13 +4741,22 @@
     // form's existing autosave (POST /api/checkout/update) already fills
     // in email/name/phone as the customer types, before they ever click
     // Pay. This just lists the pending orders where that happened.
+    var allAbandonedCheckouts = [];
+    var abandonedPage = 1;
+
     function loadAbandonedCheckouts() {
       fetch("/admin/visits/abandoned?limit=100", { credentials: "include" })
         .then(function (r) {
           if (!r.ok) throw new Error("HTTP " + r.status);
           return r.json();
         })
-        .then(renderAbandonedCheckouts)
+        .then(function (rows) {
+          allAbandonedCheckouts = rows;
+          document.getElementById("abandonedResultsCount").textContent =
+            rows.length + " started checkout" + (rows.length !== 1 ? "s" : "") + ", not completed";
+          abandonedPage = 1;
+          renderAbandonedCheckouts(rows);
+        })
         .catch(function () {
           document.getElementById("abandonedCheckoutsBody").innerHTML =
             '<div class="loading-row">Failed to load.</div>';
@@ -4747,10 +4767,17 @@
       var body = document.getElementById("abandonedCheckoutsBody");
       if (!rows.length) {
         body.innerHTML = '<div class="empty"><p>None — every started checkout either finished or hasn\'t entered contact info yet</p></div>';
+        document.getElementById("abandonedPagination").innerHTML = "";
         return;
       }
+      var totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+      if (abandonedPage > totalPages) abandonedPage = totalPages;
+      if (abandonedPage < 1) abandonedPage = 1;
+      var start = (abandonedPage - 1) * PAGE_SIZE;
+      var pageRows = rows.slice(start, start + PAGE_SIZE);
+
       var html = "";
-      rows.forEach(function (o) {
+      pageRows.forEach(function (o) {
         html +=
           '<div class="order-row" style="grid-template-columns: 1.1fr 1.3fr 1.6fr 1.1fr 1.3fr 1fr">' +
           '<div>' + fmtTime(o.createdAt) + '</div>' +
@@ -4762,6 +4789,16 @@
           '</div>';
       });
       body.innerHTML = html;
+
+      renderPagination(
+        "abandonedPagination",
+        rows.length,
+        abandonedPage,
+        function (p) {
+          abandonedPage = p;
+          renderAbandonedCheckouts(rows);
+        },
+      );
     }
 
     // ─── Visits tab — every checkout-page visit, converted or not ────────
