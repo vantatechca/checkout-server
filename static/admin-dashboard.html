@@ -1216,10 +1216,9 @@
           </div>
           <div class="results-count" id="visitsResultsCount"></div>
           <div class="orders-table">
-            <div class="table-header" style="grid-template-columns: 1fr 1.3fr 1.2fr 1.6fr 0.7fr 0.9fr 1.1fr">
+            <div class="table-header" style="grid-template-columns: 1fr 1.4fr 1.8fr 0.7fr 1.2fr 1.1fr">
               <span>Time</span>
               <span>Store</span>
-              <span>IP</span>
               <span>Location</span>
               <span>Device</span>
               <span>Referrer</span>
@@ -4912,10 +4911,9 @@
         var outcomeBadge = _VISIT_OUTCOME_BADGE[v.outcome] ||
           '<span class="status-badge status-failed">' + _escapeHtml(v.outcome) + '</span>';
         html +=
-          '<div class="order-row" style="grid-template-columns: 1fr 1.3fr 1.2fr 1.6fr 0.7fr 0.9fr 1.1fr">';
+          '<div class="order-row" style="grid-template-columns: 1fr 1.4fr 1.8fr 0.7fr 1.2fr 1.1fr">';
         html += '<div>' + fmtTime(v.createdAt) + '</div>';
         html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(v.storeName || v.sourceDomain || '—') + '</div>';
-        html += '<div class="mono" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(v.ipAddress || '') + '">' + _escapeHtml(v.ipAddress || '—') + '</div>';
         html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(_formatLocation(v)) + '">' + _escapeHtml(_formatLocation(v)) + '</div>';
         html += '<div>' + _escapeHtml(v.device || '—') + '</div>';
         html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(v.referrer || '') + '">' + _escapeHtml(v.referrer || '—') + '</div>';
