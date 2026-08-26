@@ -1180,11 +1180,9 @@
           </div>
           <div class="results-count" id="abandonedResultsCount"></div>
           <div class="orders-table" style="margin-bottom:1.6rem;">
-            <div class="table-header" style="grid-template-columns: 1.1fr 1.3fr 1.6fr 1.1fr 1.3fr 1fr">
+            <div class="table-header" style="grid-template-columns: 1.1fr 1.9fr 1.5fr 1.3fr">
               <span>Time</span>
-              <span>Name</span>
               <span>Email</span>
-              <span>Phone</span>
               <span>Location</span>
               <span>Store</span>
             </div>
@@ -4793,11 +4791,9 @@
       var html = "";
       pageRows.forEach(function (o) {
         html +=
-          '<div class="order-row" style="grid-template-columns: 1.1fr 1.3fr 1.6fr 1.1fr 1.3fr 1fr">' +
+          '<div class="order-row" style="grid-template-columns: 1.1fr 1.9fr 1.5fr 1.3fr">' +
           '<div>' + fmtTime(o.createdAt) + '</div>' +
-          '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(o.name || '—') + '</div>' +
           '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(o.email || '—') + '</div>' +
-          '<div>' + _escapeHtml(o.phone || '—') + '</div>' +
           '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(_formatLocation(o)) + '</div>' +
           '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(o.storeName || '—') + '</div>' +
           '</div>';
