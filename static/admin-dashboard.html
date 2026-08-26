@@ -4693,6 +4693,20 @@
         });
     }
 
+    // "2026-08-26" -> "Wed, Aug 26, 2026" (+ " · Today" if it matches
+    // today's UTC calendar date — the daily breakdown is grouped by UTC
+    // date server-side, so "today" has to be compared in UTC too, not
+    // the browser's local date, or the label could disagree with which
+    // row the backend actually calls "today").
+    function _formatDayLabel(dateStr) {
+      var d = new Date(dateStr + "T00:00:00Z");
+      var label = d.toLocaleDateString(undefined, {
+        weekday: "short", month: "short", day: "numeric", year: "numeric", timeZone: "UTC",
+      });
+      var todayStr = new Date().toISOString().slice(0, 10);
+      return dateStr === todayStr ? label + " · Today" : label;
+    }
+
     function renderVisitsOverview(d) {
       document.getElementById("visitStatToday").textContent = d.todayVisits;
       document.getElementById("visitStatTodaySub").textContent = d.uniqueIpsToday + " unique IPs";
@@ -4710,7 +4724,7 @@
         d.dailyBreakdown.forEach(function (row) {
           dailyHtml +=
             '<div class="order-row" style="grid-template-columns: 1.3fr 0.8fr 0.8fr 0.8fr">' +
-            '<div>' + _escapeHtml(row.date) + '</div>' +
+            '<div>' + _escapeHtml(_formatDayLabel(row.date)) + '</div>' +
             '<div>' + row.visits + '</div>' +
             '<div>' + row.started + '</div>' +
             '<div style="color:var(--green,#1a7e2e);font-weight:600">' + row.completed + '</div>' +
