@@ -1724,6 +1724,98 @@ async def list_all_emails(
     ]
 
 
+# ─── Visits (visitor tracking / checkout funnel) ───────────────────────────
+#
+# One row per checkout-page load (main.py's checkout_page(), keyed by the
+# cs_vid tracking cookie) — lets an admin see who visited, where from, and
+# whether they ever converted, down to visitors who never started an order
+# at all. A visit's outcome is computed here by joining against
+# Order.visitor_id rather than stored on the Visit row itself — see
+# models/visit.py for why.
+
+@router.get("/visits")
+async def list_visits(
+    brand_id:      Optional[int] = Query(None),
+    source_domain: Optional[str] = Query(None),
+    country:       Optional[str] = Query(None),
+    converted:     Optional[str] = Query(None),   # "yes" | "no"
+    q:             Optional[str] = Query(None),    # matches IP or source domain
+    limit:         int           = Query(100, le=5000),
+    offset:        int           = Query(0),
+    db: AsyncSession = Depends(get_db),
+):
+    """Every checkout-page visit ever logged, newest first, with each
+    visit's eventual outcome (no order / pending / paid)."""
+    from models.visit import Visit
+    from models.order import _classify_device
+
+    query = select(Visit).order_by(desc(Visit.created_at))
+    if brand_id is not None:
+        query = query.where(Visit.brand_id == brand_id)
+    if source_domain:
+        query = query.where(Visit.source_domain == source_domain)
+    if country:
+        query = query.where(Visit.country == country.upper())
+    if q:
+        like = f"%{q}%"
+        query = query.where(_sa_or(
+            Visit.ip_address.ilike(like),
+            Visit.source_domain.ilike(like),
+        ))
+    if converted in ("yes", "no"):
+        converted_visitor_ids = select(Order.visitor_id).where(Order.visitor_id.is_not(None))
+        if converted == "yes":
+            query = query.where(Visit.visitor_id.in_(converted_visitor_ids))
+        else:
+            query = query.where(Visit.visitor_id.not_in(converted_visitor_ids))
+
+    result = await db.execute(query.limit(limit).offset(offset))
+    visits = result.scalars().all()
+
+    # One follow-up query for every matching order, grouped by visitor_id in
+    # Python — a visitor who abandoned once and later paid on a second
+    # order should show "paid", not "pending", so a paid order always wins.
+    visitor_ids = {v.visitor_id for v in visits}
+    orders_by_visitor: dict = {}
+    if visitor_ids:
+        order_result = await db.execute(select(Order).where(Order.visitor_id.in_(visitor_ids)))
+        for o in order_result.scalars().all():
+            existing = orders_by_visitor.get(o.visitor_id)
+            if not existing or (o.payment_status == PaymentStatus.paid and existing.payment_status != PaymentStatus.paid):
+                orders_by_visitor[o.visitor_id] = o
+
+    def _outcome(order) -> str:
+        if not order:
+            return "none"
+        if order.payment_status == PaymentStatus.paid:
+            return "paid"
+        if order.payment_status == PaymentStatus.pending:
+            return "pending"
+        return order.payment_status
+
+    rows = []
+    for v in visits:
+        order = orders_by_visitor.get(v.visitor_id)
+        rows.append({
+            "id":           v.id,
+            "visitorId":    v.visitor_id,
+            "storeName":    v.store_name,
+            "sourceDomain": v.source_domain,
+            "ipAddress":    v.ip_address,
+            "country":      v.country,
+            "device":       _classify_device(v.user_agent),
+            "referrer":     v.referrer,
+            "createdAt":    v.created_at.isoformat() if v.created_at else None,
+            "order": None if not order else {
+                "id":            order.id,
+                "paymentStatus": order.payment_status,
+                "total":         float(order.total) if order.total is not None else None,
+            },
+            "outcome": _outcome(order),
+        })
+    return rows
+
+
 # ─── Send payment reminder (unified $0 / partial flow) ────────────────────────
 
 @router.post("/orders/{order_id}/send-reminder", dependencies=[Depends(require_write_access)])

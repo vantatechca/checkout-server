@@ -357,6 +357,7 @@ async def _create_base_order(
         order.payment_method  = payment_method
         order.ip_address      = request.client.host if request.client else None
         order.user_agent      = request.headers.get("user-agent", "")
+        order.visitor_id      = request.cookies.get("cs_vid") or order.visitor_id
         # Princeton-only fields — will be None on any other store.
         order.company         = (data.company or None) or order.company
         order.research_field  = (data.research_field or None) or order.research_field
@@ -432,6 +433,7 @@ async def _create_base_order(
         ip_address      = request.client.host if request.client else None,
         user_agent      = request.headers.get("user-agent", ""),
         source_domain   = data.source_domain or request.query_params.get("source") or request.headers.get("host", ""),
+        visitor_id      = request.cookies.get("cs_vid"),
         # Princeton-only fields — will be None on any other store.
         company         = data.company or None,
         research_field  = data.research_field or None,
@@ -534,6 +536,7 @@ async def checkout_reserve(
         ip_address     = request.client.host if request.client else None,
         user_agent     = request.headers.get("user-agent", ""),
         source_domain  = payload.source_domain or request.query_params.get("source") or request.headers.get("host", ""),
+        visitor_id     = request.cookies.get("cs_vid"),
     )
     db.add(order)
 

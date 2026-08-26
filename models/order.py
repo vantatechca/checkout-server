@@ -220,6 +220,11 @@ class Order(Base):
     ip_address      = Column(String(45), nullable=True)
     user_agent      = Column(Text, nullable=True)
     source_domain   = Column(String(255), nullable=True)   # which checkout domain was used
+    # Links this order back to the Visit row(s) logged for the same
+    # tracking cookie (cs_vid) — set at order-creation time in
+    # routes/checkout.py, read by GET /admin/visits to show each visit's
+    # outcome (paid/pending/none). See models/visit.py.
+    visitor_id      = Column(String(32), nullable=True, index=True)
 
     created_at  = Column(DateTime, server_default=func.now())
     updated_at  = Column(DateTime, server_default=func.now(), onupdate=func.now())

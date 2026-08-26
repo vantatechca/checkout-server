@@ -15,6 +15,7 @@ Static file serving:
 import asyncio
 import logging
 import re
+import secrets
 import time
 from contextlib import asynccontextmanager
 
@@ -30,8 +31,9 @@ from database import engine, AsyncSessionLocal
 from models.brand import Brand
 from models import Order  # triggers all model registrations
 from models.order import NowPaymentsInvoice
+from models.visit import Visit
 import models  # noqa — ensure all models are registered with Base
-from routes.checkout import router as checkout_router
+from routes.checkout import router as checkout_router, _client_ip
 from routes.webhooks import router as webhooks_router
 from routes.admin    import router as admin_router
 from config import settings
@@ -663,7 +665,41 @@ async def checkout_page(request: Request):
     else:
         template = jinja_env.get_template("checkout.html")
     html = template.render(**ctx)
-    return HTMLResponse(content=html)
+    response = HTMLResponse(content=html)
+
+    # Visitor tracking (admin "Visits" tab) — a long-lived cookie
+    # correlates this page load with whichever order it eventually
+    # produces (order.visitor_id, set in routes/checkout.py). SameSite=Lax
+    # (not Strict) because a visit almost always arrives via a cross-site
+    # top-level navigation from the brand's storefront on a different
+    # domain — Strict cookies are withheld on exactly that navigation.
+    # Never let a hiccup here break the checkout page itself.
+    try:
+        visitor_id = request.cookies.get("cs_vid")
+        is_new_visitor = visitor_id is None
+        if is_new_visitor:
+            visitor_id = secrets.token_hex(16)
+            response.set_cookie(
+                "cs_vid", visitor_id,
+                httponly=True, secure=True, samesite="lax",
+                max_age=60 * 60 * 24 * 90,
+            )
+        async with AsyncSessionLocal() as db:
+            db.add(Visit(
+                visitor_id=visitor_id,
+                brand_id=brand.id if brand else None,
+                store_name=brand.store_name if brand else None,
+                source_domain=source_domain or request.headers.get("host", ""),
+                ip_address=_client_ip(request),
+                country=request.headers.get("CF-IPCountry"),
+                user_agent=request.headers.get("user-agent", ""),
+                referrer=request.headers.get("referer"),
+            ))
+            await db.commit()
+    except Exception as e:
+        logger.error(f"Visit logging failed (checkout page still served): {e}")
+
+    return response
 
 
 # ─── Stripe embedded checkout — branded thank-you page ────────────────────────
