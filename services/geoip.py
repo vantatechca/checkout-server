@@ -69,21 +69,29 @@ async def enrich_locations(db: AsyncSession, ip_addresses, max_live_lookups: int
         if row:
             geo_by_ip[ip] = {"city": row.city, "region": row.region, "country": row.country} if row.resolved else None
 
+    # All live lookups first (pure HTTP, no DB involved), then ONE batch
+    # write at the end — a commit/rollback per iteration here previously
+    # triggered a known flaky aiomysql/SQLAlchemy pool_pre_ping issue
+    # (see the do_ping patch note in database.py) far more often than a
+    # normal single-commit request does, since a request enriching many
+    # cache-miss IPs could churn the connection pool dozens of times.
     misses = [ip for ip in ips if ip not in geo_by_ip][:max_live_lookups]
     for ip in misses:
         geo = await _live_lookup(ip)
         geo_by_ip[ip] = geo
+        db.add(IpGeoCache(
+            ip_address=ip,
+            city=geo["city"] if geo else None,
+            region=geo["region"] if geo else None,
+            country=geo["country"] if geo else None,
+            resolved=geo is not None,
+        ))
+
+    if misses:
         try:
-            db.add(IpGeoCache(
-                ip_address=ip,
-                city=geo["city"] if geo else None,
-                region=geo["region"] if geo else None,
-                country=geo["country"] if geo else None,
-                resolved=geo is not None,
-            ))
             await db.commit()
         except Exception as e:
-            logger.warning(f"Could not cache geo lookup for {ip}: {e}")
+            logger.warning(f"Could not cache geo lookups for {len(misses)} IP(s): {e}")
             await db.rollback()
 
     return geo_by_ip
