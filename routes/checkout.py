@@ -277,8 +277,17 @@ async def _create_base_order(
     or refreshes the checkout page.
     """
     # Prefer the friendly storename passed from checkout (?storename=); fall
-    # back to the brand, then a generic label.
-    store_name = (data.store_name or "").strip() or (brand.store_name if brand else "Checkout")
+    # back to the brand, then the actual source domain — never the bare
+    # word "Checkout", which identifies nothing when it shows up in the
+    # admin dashboard (Orders list, Visits tab) for a domain with no
+    # matching Brand row.
+    store_name = (
+        (data.store_name or "").strip()
+        or (brand.store_name if brand else None)
+        or data.source_domain
+        or request.headers.get("host", "")
+        or "Checkout"
+    )
     discount_amount, total = _compute_total(data.subtotal, discount_pct)
 
     # Enforce store-pinned currency. If this v2 store has a country fixed in
@@ -522,7 +531,14 @@ async def checkout_reserve(
     order = Order(
         id             = order_id,
         brand_id       = brand.id if brand else 1,
-        store_name     = brand.store_name if brand else "Checkout",
+        # Falls back to the actual domain, never the bare word "Checkout"
+        # — see the matching comment in _create_base_order for why.
+        store_name     = (
+            (brand.store_name if brand else None)
+            or payload.source_domain
+            or request.headers.get("host", "")
+            or "Checkout"
+        ),
         email          = "",                            # filled on submit
         first_name     = None,
         last_name      = "",                            # filled on submit
