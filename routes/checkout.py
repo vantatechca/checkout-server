@@ -66,6 +66,21 @@ def _client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+def _looks_like_ip(s: str) -> bool:
+    """True if `s` is a literal IPv4/IPv6 address. Used to catch the
+    Host header being a raw IP (e.g. a bot or scanner hitting the
+    server's IP directly instead of a real domain) before it gets used
+    as a source_domain fallback — otherwise it shows up in the admin
+    dashboard's "Top Referring Store" ranking as if it were an actual
+    storefront domain."""
+    import ipaddress
+    try:
+        ipaddress.ip_address(s)
+        return True
+    except ValueError:
+        return False
+
+
 async def _rate_limit_submission(request: Request) -> None:
     """Dependency — raise 429 if this IP has submitted too many checkout
     attempts too quickly. Fails OPEN (allows the request) on any Redis
@@ -408,6 +423,13 @@ async def _create_base_order(
     original_sub_i = round(post_promo_i + promo_amt_i, 2) if promo_amt_i > 0 else post_promo_i
     promo_pct_i    = round((promo_amt_i / original_sub_i) * 100, 2) if original_sub_i > 0 and promo_amt_i > 0 else 0.0
 
+    # Last-resort fallback for source_domain — never a raw IP (a bot/
+    # scanner hitting the server's IP directly instead of a real domain),
+    # since that shows up in the admin dashboard as if it were a store.
+    _host_fallback = request.headers.get("host", "")
+    if _looks_like_ip(_host_fallback):
+        _host_fallback = ""
+
     order = Order(
         id              = order_id,
         brand_id        = brand.id if brand else 1,
@@ -441,7 +463,7 @@ async def _create_base_order(
         payment_status  = PaymentStatus.pending,
         ip_address      = request.client.host if request.client else None,
         user_agent      = request.headers.get("user-agent", ""),
-        source_domain   = data.source_domain or request.query_params.get("source") or request.headers.get("host", ""),
+        source_domain   = data.source_domain or request.query_params.get("source") or _host_fallback,
         visitor_id      = request.cookies.get("cs_vid"),
         # Princeton-only fields — will be None on any other store.
         company         = data.company or None,
@@ -528,6 +550,11 @@ async def checkout_reserve(
             break
         order_id = generate_order_id()
 
+    # Last-resort fallback — never a raw IP (see _looks_like_ip's docstring).
+    _host_fallback = request.headers.get("host", "")
+    if _looks_like_ip(_host_fallback):
+        _host_fallback = ""
+
     order = Order(
         id             = order_id,
         brand_id       = brand.id if brand else 1,
@@ -536,7 +563,7 @@ async def checkout_reserve(
         store_name     = (
             (brand.store_name if brand else None)
             or payload.source_domain
-            or request.headers.get("host", "")
+            or _host_fallback
             or "Checkout"
         ),
         email          = "",                            # filled on submit
@@ -551,7 +578,7 @@ async def checkout_reserve(
         payment_status = PaymentStatus.pending,
         ip_address     = request.client.host if request.client else None,
         user_agent     = request.headers.get("user-agent", ""),
-        source_domain  = payload.source_domain or request.query_params.get("source") or request.headers.get("host", ""),
+        source_domain  = payload.source_domain or request.query_params.get("source") or _host_fallback,
         visitor_id     = request.cookies.get("cs_vid"),
     )
     db.add(order)

@@ -33,7 +33,7 @@ from models import Order  # triggers all model registrations
 from models.order import NowPaymentsInvoice
 from models.visit import Visit
 import models  # noqa — ensure all models are registered with Base
-from routes.checkout import router as checkout_router, _client_ip
+from routes.checkout import router as checkout_router, _client_ip, _looks_like_ip
 from routes.webhooks import router as webhooks_router
 from routes.admin    import router as admin_router
 from config import settings
@@ -684,12 +684,19 @@ async def checkout_page(request: Request):
                 httponly=True, secure=True, samesite="lax",
                 max_age=60 * 60 * 24 * 90,
             )
+        # Last-resort fallback — never a raw IP (a bot/scanner hitting the
+        # server's IP directly instead of a real domain), since that
+        # shows up in the admin dashboard's "Top Referring Store" ranking
+        # as if it were an actual storefront.
+        _host_fallback = request.headers.get("host", "")
+        if _looks_like_ip(_host_fallback):
+            _host_fallback = ""
         async with AsyncSessionLocal() as db:
             db.add(Visit(
                 visitor_id=visitor_id,
                 brand_id=brand.id if brand else None,
                 store_name=brand.store_name if brand else None,
-                source_domain=source_domain or request.headers.get("host", ""),
+                source_domain=source_domain or _host_fallback,
                 ip_address=_client_ip(request),
                 # Cheap and synchronous — city/region are resolved lazily
                 # on admin view instead (services/geoip.py), never here.
