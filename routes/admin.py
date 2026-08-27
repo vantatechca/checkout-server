@@ -1733,6 +1733,46 @@ async def list_all_emails(
 # Order.visitor_id rather than stored on the Visit row itself — see
 # models/visit.py for why.
 
+def _extract_domain(url: Optional[str]) -> Optional[str]:
+    """Bare hostname from a URL or bare domain string (no scheme/path/
+    query), lowercased, www.-stripped. None if empty/unparseable."""
+    if not url:
+        return None
+    from urllib.parse import urlparse
+    try:
+        parsed = urlparse(url if "//" in url else f"//{url}")
+        host = (parsed.hostname or "").lower()
+        if host.startswith("www."):
+            host = host[4:]
+        return host or None
+    except Exception:
+        return None
+
+
+def _resolve_visit_store(source_domain: Optional[str], referrer: Optional[str], portal_domain: Optional[str]) -> Optional[str]:
+    """The real originating storefront — never the shared checkout
+    portal's own domain ("where they land"), which is exactly what
+    source_domain silently falls back to when no ?source= param was
+    passed (see checkout_page() in main.py / _create_base_order and
+    checkout_reserve() in routes/checkout.py). Many different storefronts
+    can share one portal domain (e.g. swiftremit.ca), so showing the
+    portal's own name/domain as "the store" is actively misleading.
+
+    Prefers source_domain when it resolves to a real, non-portal domain;
+    falls back to extracting a domain from the actual HTTP Referer header
+    (a customer landing via their storefront's own product page still
+    carries that page's domain in Referer even when ?source= is missing);
+    otherwise unresolved (the caller shows "Direct / unknown")."""
+    portal = _extract_domain(portal_domain) or (portal_domain or "").lower() or None
+    src = _extract_domain(source_domain)
+    if src and src != portal:
+        return src
+    ref = _extract_domain(referrer)
+    if ref and ref != portal:
+        return ref
+    return None
+
+
 @router.get("/visits")
 async def list_visits(
     brand_id:      Optional[int] = Query(None),
@@ -1799,21 +1839,33 @@ async def list_visits(
     from services import geoip
     geo_by_ip = await geoip.enrich_locations(db, {v.ip_address for v in visits})
 
+    # The real originating storefront, never the shared checkout portal's
+    # own domain — see _resolve_visit_store. Needs each Visit's portal
+    # domain (Brand.domain) as the "not this" comparison.
+    brand_ids = {v.brand_id for v in visits if v.brand_id is not None}
+    portal_domain_by_brand: dict = {}
+    if brand_ids:
+        brand_result = await db.execute(select(Brand.id, Brand.domain).where(Brand.id.in_(brand_ids)))
+        portal_domain_by_brand = dict(brand_result.all())
+
     rows = []
     for v in visits:
         order = orders_by_visitor.get(v.visitor_id)
         geo = geo_by_ip.get(v.ip_address)
+        resolved_store = _resolve_visit_store(
+            v.source_domain, v.referrer, portal_domain_by_brand.get(v.brand_id)
+        )
         rows.append({
             "id":           v.id,
             "visitorId":    v.visitor_id,
             "storeName":    v.store_name,
-            "sourceDomain": v.source_domain,
+            "sourceDomain": resolved_store or "Direct / unknown",
             "ipAddress":    v.ip_address,
             "city":         geo["city"] if geo else None,
             "region":       geo["region"] if geo else None,
             "country":      (geo["country"] if geo else None) or v.country,
             "device":       _classify_device(v.user_agent),
-            "referrer":     v.referrer,
+            "referrer":     _extract_domain(v.referrer) or v.referrer,
             "createdAt":    v.created_at.isoformat() if v.created_at else None,
             "order": None if not order else {
                 "id":            order.id,
@@ -1880,16 +1932,29 @@ async def visits_overview(db: AsyncSession = Depends(get_db)):
         daily.setdefault(str(day), {"date": str(day), "visits": 0, "started": 0, "completed": 0})["completed"] = count
     daily_breakdown = sorted(daily.values(), key=lambda d: d["date"], reverse=True)
 
-    top_stores_result = await db.execute(
-        select(Visit.source_domain, _sa_func.count())
+    # Resolved per-row (never the shared portal's own domain — see
+    # _resolve_visit_store) rather than a plain GROUP BY on source_domain,
+    # which would otherwise rank the portal itself as if it were a store
+    # whenever a visit's ?source= param was missing.
+    from collections import Counter
+    recent_visits_result = await db.execute(
+        select(Visit.source_domain, Visit.referrer, Visit.brand_id)
         .where(Visit.created_at >= month_start)
-        .group_by(Visit.source_domain)
-        .order_by(_sa_func.count().desc())
-        .limit(10)
+    )
+    recent_rows = recent_visits_result.all()
+    brand_ids = {row.brand_id for row in recent_rows if row.brand_id is not None}
+    portal_domain_by_brand: dict = {}
+    if brand_ids:
+        brand_result = await db.execute(select(Brand.id, Brand.domain).where(Brand.id.in_(brand_ids)))
+        portal_domain_by_brand = dict(brand_result.all())
+
+    store_counts = Counter(
+        _resolve_visit_store(row.source_domain, row.referrer, portal_domain_by_brand.get(row.brand_id)) or "Direct / unknown"
+        for row in recent_rows
     )
     top_stores = [
-        {"store": domain or "Direct / unknown", "visits": count}
-        for domain, count in top_stores_result.all()
+        {"store": store, "visits": count}
+        for store, count in store_counts.most_common(10)
     ]
 
     return {
@@ -1928,9 +1993,21 @@ async def list_abandoned_checkouts(
     orders = result.scalars().all()
     geo_by_ip = await geoip.enrich_locations(db, {o.ip_address for o in orders})
 
+    # Order.store_name is the shared checkout portal's own brand name
+    # whenever one matched (see _create_base_order/checkout_reserve in
+    # routes/checkout.py) — the same "where they land" bias as
+    # Visit.store_name. Order.source_domain is the reliable field;
+    # resolve it against the portal's own domain the same way visits are.
+    brand_ids = {o.brand_id for o in orders if o.brand_id is not None}
+    portal_domain_by_brand: dict = {}
+    if brand_ids:
+        brand_result = await db.execute(select(Brand.id, Brand.domain).where(Brand.id.in_(brand_ids)))
+        portal_domain_by_brand = dict(brand_result.all())
+
     rows = []
     for o in orders:
         geo = geo_by_ip.get(o.ip_address)
+        resolved_store = _resolve_visit_store(o.source_domain, None, portal_domain_by_brand.get(o.brand_id))
         rows.append({
             "id":        o.id,
             "createdAt": o.created_at.isoformat() if o.created_at else None,
@@ -1941,7 +2018,7 @@ async def list_abandoned_checkouts(
             "city":      geo["city"] if geo else None,
             "region":    geo["region"] if geo else None,
             "country":   geo["country"] if geo else None,
-            "storeName": o.store_name,
+            "storeName": resolved_store or "Direct / unknown",
         })
     return rows
 

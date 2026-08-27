@@ -4913,7 +4913,7 @@
         html +=
           '<div class="order-row" style="grid-template-columns: 1fr 1.4fr 1.8fr 0.7fr 1.2fr 1.1fr">';
         html += '<div>' + fmtTime(v.createdAt) + '</div>';
-        html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(v.storeName || v.sourceDomain || '—') + '</div>';
+        html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _escapeHtml(v.sourceDomain || v.storeName || '—') + '</div>';
         html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(_formatLocation(v)) + '">' + _escapeHtml(_formatLocation(v)) + '</div>';
         html += '<div>' + _escapeHtml(v.device || '—') + '</div>';
         html += '<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + _escapeHtml(v.referrer || '') + '">' + _escapeHtml(v.referrer || '—') + '</div>';
