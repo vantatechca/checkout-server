@@ -67,17 +67,59 @@ async def send_email(
 
 
 # ─── HTML wrapper ────────────────────────────────────────────────────────────
+# Mirrors the checkout page's visual language (templates/checkout-ca.html):
+# DM Sans/DM Mono with solid email-safe fallback stacks (custom web fonts are
+# unreliable across email clients, so the fallbacks carry the actual weight),
+# the same warm off-white background, rounded card, and per-brand accent bar.
 
-def _wrap_html(body_html: str) -> str:
-    return f"""
-    <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#222;padding:24px;line-height:1.5">
-      {body_html}
-      <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
-      <p style="font-size:12px;color:#999;margin:0">
-        This message was sent in relation to your order. If you have any questions, please use the chat support available on our website.
-      </p>
-    </div>
-    """
+FONT_STACK = "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+MONO_STACK = "'DM Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace"
+
+
+def _wrap_html(body_html: str, accent: str = "#dd1d1d", preheader: str = "") -> str:
+    preheader_html = (
+        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;mso-hide:all">{html_lib.escape(preheader)}</div>'
+        if preheader else ""
+    )
+    return f"""<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background:#f8f7f4">
+    {preheader_html}
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8f7f4">
+      <tr>
+        <td align="center" style="padding:32px 16px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #e2e0da;border-radius:12px;overflow:hidden">
+            <tr>
+              <td style="height:4px;line-height:4px;font-size:0;background:{accent}">&nbsp;</td>
+            </tr>
+            <tr>
+              <td style="padding:32px 32px 8px 32px;font-family:{FONT_STACK};color:#0f1117;font-size:15px;line-height:1.55">
+                {body_html}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 28px 32px">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                  <td style="border-top:1px solid #e2e0da;font-size:0;line-height:0;padding-top:20px">&nbsp;</td>
+                </tr></table>
+                <p style="font-family:{FONT_STACK};font-size:12px;color:#8a897f;margin:16px 0 0;line-height:1.6">
+                  This message was sent in relation to your order. If you have any questions, please use the chat support available on our website.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"""
 
 
 # ─── Template: payment reminder (unified — handles $0 and partial payments) ─
@@ -178,10 +220,10 @@ def build_payment_reminder_template(
 
             rows_html += (
                 f'<tr>'
-                f'<td style="padding:8px 0;border-bottom:1px solid #eee">{title}{variant}</td>'
-                f'<td style="padding:8px 6px;text-align:center;border-bottom:1px solid #eee;color:#666">{qty}</td>'
-                f'<td style="padding:8px 0;text-align:right;border-bottom:1px solid #eee">${price:.2f}</td>'
-                f'<td style="padding:8px 0 8px 8px;text-align:right;border-bottom:1px solid #eee;font-weight:600">${line:.2f}</td>'
+                f'<td style="padding:10px 0;border-bottom:1px solid #f0efe9">{title}{variant}</td>'
+                f'<td style="padding:10px 6px;text-align:center;border-bottom:1px solid #f0efe9;color:#6b6a61">{qty}</td>'
+                f'<td style="padding:10px 0;text-align:right;border-bottom:1px solid #f0efe9;font-family:{MONO_STACK}">${price:.2f}</td>'
+                f'<td style="padding:10px 0 10px 8px;text-align:right;border-bottom:1px solid #f0efe9;font-weight:600;font-family:{MONO_STACK}">${line:.2f}</td>'
                 f'</tr>'
             )
 
@@ -191,14 +233,14 @@ def build_payment_reminder_template(
             )
 
         items_html = f"""
-      <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin:24px 0 8px">Order Summary</h3>
-      <table style="border-collapse:collapse;width:100%;font-size:14px;margin:0 0 16px">
+      <h3 style="font-family:{FONT_STACK};font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#8a897f;margin:24px 0 8px;font-weight:500">Order Summary</h3>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:{FONT_STACK};border-collapse:collapse;width:100%;font-size:14px;margin:0 0 16px">
         <thead>
-          <tr style="color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.04em">
-            <th style="text-align:left;padding:6px 0;border-bottom:1px solid #ddd;font-weight:500">Product</th>
-            <th style="text-align:center;padding:6px 0;border-bottom:1px solid #ddd;font-weight:500">Qty</th>
-            <th style="text-align:right;padding:6px 0;border-bottom:1px solid #ddd;font-weight:500">Price</th>
-            <th style="text-align:right;padding:6px 0;border-bottom:1px solid #ddd;font-weight:500">Total</th>
+          <tr style="color:#8a897f;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">
+            <th style="text-align:left;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500">Product</th>
+            <th style="text-align:center;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500">Qty</th>
+            <th style="text-align:right;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500;font-family:{MONO_STACK}">Price</th>
+            <th style="text-align:right;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500;font-family:{MONO_STACK}">Total</th>
           </tr>
         </thead>
         <tbody>{rows_html}</tbody>
@@ -233,9 +275,10 @@ def build_payment_reminder_template(
         store_html = html_lib.escape(store_label)
 
     body_html = f"""
-      <h2 style="color:{accent};margin:0 0 4px">{heading}</h2>
-      <p style="color:#666;margin:0 0 16px;font-size:13px">
-        Order <strong style="color:#222">{order.id}</strong> &middot; placed at {store_html}
+      <p style="font-family:{MONO_STACK};font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:{accent};margin:0 0 6px">Order {order.id}</p>
+      <h2 style="font-family:{FONT_STACK};color:#0f1117;margin:0 0 4px;font-size:21px;font-weight:700">{heading}</h2>
+      <p style="color:#6b6a61;margin:0 0 20px;font-size:13px">
+        Placed at {store_html}
       </p>
 
       <p>Hi {html_lib.escape(order.first_name) if order.first_name else 'there'},</p>
@@ -244,26 +287,26 @@ def build_payment_reminder_template(
 
       {items_html}
 
-      <table style="border-collapse:collapse;margin:8px 0 16px;width:100%;font-size:14px">
-        <tr><td style="padding:6px 0;color:#666">Subtotal</td>
-            <td style="padding:6px 0;text-align:right">${subtotal:.2f} {currency}</td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:{FONT_STACK};border-collapse:collapse;margin:8px 0 16px;width:100%;font-size:14px">
+        <tr><td style="padding:6px 0;color:#6b6a61">Subtotal</td>
+            <td style="padding:6px 0;text-align:right;font-family:{MONO_STACK}">${subtotal:.2f} {currency}</td></tr>
         {discount_row_html}
-        <tr><td style="padding:6px 0;color:#666;border-top:1px solid #eee">Order total</td>
-            <td style="padding:6px 0;text-align:right;border-top:1px solid #eee">${total:.2f} {currency}</td></tr>
-        <tr><td style="padding:6px 0;color:#666">Amount received</td>
-            <td style="padding:6px 0;text-align:right">${received:.2f} {currency}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6a61;border-top:1px solid #e2e0da">Order total</td>
+            <td style="padding:6px 0;text-align:right;border-top:1px solid #e2e0da;font-family:{MONO_STACK}">${total:.2f} {currency}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6a61">Amount received</td>
+            <td style="padding:6px 0;text-align:right;font-family:{MONO_STACK}">${received:.2f} {currency}</td></tr>
         <tr style="border-top:2px solid {accent}">
             <td style="padding:10px 0;font-weight:bold">Remaining balance</td>
-            <td style="padding:10px 0;text-align:right;font-weight:bold;color:{accent}">${remaining:.2f} {currency}</td></tr>
+            <td style="padding:10px 0;text-align:right;font-weight:bold;color:{accent};font-family:{MONO_STACK};font-size:16px">${remaining:.2f} {currency}</td></tr>
       </table>
 
-      <div style="background:#f7f7f7;padding:12px;border-radius:4px;font-size:14px;margin:16px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf9f6;border:1px solid #e2e0da;border-radius:8px;margin:16px 0"><tr><td style="padding:14px 16px;font-family:{FONT_STACK};font-size:14px;line-height:1.8">
         <strong>Send to:</strong> {payment_email}<br>
-        <strong>Amount:</strong> ${remaining:.2f} {currency}<br>
-        <strong>Memo / message:</strong> {order.id}
-      </div>
+        <strong>Amount:</strong> <span style="font-family:{MONO_STACK}">${remaining:.2f} {currency}</span><br>
+        <strong>Memo / message:</strong> <span style="font-family:{MONO_STACK}">{order.id}</span>
+      </td></tr></table>
 
-      <p style="font-size:14px;color:#555">
+      <p style="font-size:13px;color:#6b6a61">
         Please use the same name and email as the one on your order so we can match the payment automatically.
         Your order will ship as soon as the full balance is received.
       </p>
@@ -309,7 +352,12 @@ def build_payment_reminder_template(
         f"Use the same name/email as on your order. You can contact us via chat support on our website if you need assistance OR IF YOU HAVE ANY QUESTIONS\n"
     )
 
-    return {"subject": subject, "html": _wrap_html(body_html), "text": text}
+    preheader = (
+        f"We received your {method_lbl}, but ${remaining:.2f} {currency} is still remaining."
+        if is_partial else
+        f"${remaining:.2f} {currency} payment still pending for order {order.id}."
+    )
+    return {"subject": subject, "html": _wrap_html(body_html, accent=accent, preheader=preheader), "text": text}
 
 
 # ─── Backwards-compat aliases (so existing imports don't break) ─────────────
@@ -355,8 +403,10 @@ def build_order_received_template(order, accent: str = "#dd1d1d") -> Dict[str, s
     follow_up_text = f"please write to {support_email}." if is_zelle else "please use the chat widget on our website."
     subject = f"Order received — {order.id}"
     body_html = f"""
+      <p style="font-family:{MONO_STACK};font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:{accent};margin:0 0 6px">Order {order.id}</p>
+      <h2 style="font-family:{FONT_STACK};color:#0f1117;margin:0 0 20px;font-size:21px;font-weight:700">Order received</h2>
       <p>Hi {html_lib.escape(order.first_name) if order.first_name else 'there'},</p>
-      <p>Your order <strong>{order.id}</strong> has been received. You will receive a payment
+      <p>Your order has been received. You will receive a payment
       confirmation email within 24–48 hours, depending on the number of orders we are currently processing.</p>
       <p>If you haven't received a confirmation email after that time, {follow_up_html}</p>
     """
@@ -366,7 +416,8 @@ def build_order_received_template(order, accent: str = "#dd1d1d") -> Dict[str, s
         f"confirmation email within 24–48 hours, depending on the number of orders we are currently processing.\n\n"
         f"If you haven't received a confirmation email after that time, {follow_up_text}\n"
     )
-    return {"subject": subject, "html": _wrap_html(body_html), "text": text}
+    preheader = f"Your order {order.id} has been received — confirmation coming within 24–48 hours."
+    return {"subject": subject, "html": _wrap_html(body_html, accent=accent, preheader=preheader), "text": text}
 
 
 # ─── Helper: convert plain text to safe HTML ─────────────────────────────────
@@ -455,24 +506,24 @@ def build_confirmation_template(
         variant_text = f" ({it.variant})" if it.variant else ""
         rows_html += (
             f'<tr>'
-            f'<td style="padding:10px 0;border-bottom:1px solid #eee">{title}{variant_html}</td>'
-            f'<td style="padding:10px 6px;text-align:center;border-bottom:1px solid #eee;color:#666">{qty}</td>'
-            f'<td style="padding:10px 0;text-align:right;border-bottom:1px solid #eee">${price:.2f}</td>'
-            f'<td style="padding:10px 0 10px 8px;text-align:right;border-bottom:1px solid #eee;font-weight:600">${line:.2f}</td>'
+            f'<td style="padding:10px 0;border-bottom:1px solid #f0efe9">{title}{variant_html}</td>'
+            f'<td style="padding:10px 6px;text-align:center;border-bottom:1px solid #f0efe9;color:#6b6a61">{qty}</td>'
+            f'<td style="padding:10px 0;text-align:right;border-bottom:1px solid #f0efe9;font-family:{MONO_STACK}">${price:.2f}</td>'
+            f'<td style="padding:10px 0 10px 8px;text-align:right;border-bottom:1px solid #f0efe9;font-weight:600;font-family:{MONO_STACK}">${line:.2f}</td>'
             f'</tr>'
         )
         items_text_lines.append(
             f"  - {title}{variant_text}  x{qty}  ${line:.2f} {currency}")
 
     items_html = f"""
-      <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin:24px 0 8px">Order Summary</h3>
-      <table style="border-collapse:collapse;width:100%;font-size:14px;margin:0 0 16px">
+      <h3 style="font-family:{FONT_STACK};font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#8a897f;margin:24px 0 8px;font-weight:500">Order Summary</h3>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:{FONT_STACK};border-collapse:collapse;width:100%;font-size:14px;margin:0 0 16px">
         <thead>
-          <tr style="color:#888;font-size:12px;text-transform:uppercase;letter-spacing:0.04em">
-            <th style="text-align:left;padding:6px 0;border-bottom:2px solid #ddd;font-weight:500">Product</th>
-            <th style="text-align:center;padding:6px 0;border-bottom:2px solid #ddd;font-weight:500">Qty</th>
-            <th style="text-align:right;padding:6px 0;border-bottom:2px solid #ddd;font-weight:500">Price</th>
-            <th style="text-align:right;padding:6px 0;border-bottom:2px solid #ddd;font-weight:500">Total</th>
+          <tr style="color:#8a897f;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">
+            <th style="text-align:left;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500">Product</th>
+            <th style="text-align:center;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500">Qty</th>
+            <th style="text-align:right;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500;font-family:{MONO_STACK}">Price</th>
+            <th style="text-align:right;padding:6px 0;border-bottom:1px solid #e2e0da;font-weight:500;font-family:{MONO_STACK}">Total</th>
           </tr>
         </thead>
         <tbody>{rows_html}</tbody>
@@ -508,31 +559,33 @@ def build_confirmation_template(
     addr_html = "<br>".join(html_lib.escape(p) for p in addr_lines)
 
     body_html = f"""
-      <div style="background:{accent};color:#fff;padding:14px 18px;border-radius:6px;margin-bottom:24px">
-        <span style="font-size:18px;font-weight:700">&#10003; Order Confirmed</span>
-        <span style="float:right;font-size:13px;opacity:0.85">{ref_label}</span>
-      </div>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#edfbee;border-radius:8px;margin-bottom:24px"><tr>
+        <td style="padding:16px 18px">
+          <span style="font-family:{FONT_STACK};font-size:16px;font-weight:700;color:#1a7e2e">&#10003; Order Confirmed</span>
+          <span style="float:right;font-family:{MONO_STACK};font-size:13px;color:#1a7e2e">{ref_label}</span>
+        </td>
+      </tr></table>
       <p>Hi {html_lib.escape(order.first_name) if order.first_name else 'there'},</p>
       <p>Your payment has been received and your order is confirmed. We'll get it packed and on its way shortly. Please keep in mind that we are a medical facility, so it may take an additional 1–2 business days to process your order, especially if we have received a high volume of orders recently. Feel free to reach out to our customer service team through the website at any time, and they will be happy to assist you.</p>
-      <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
-        <tr><td style="padding:6px 0;color:#666;width:40%">Order number</td><td style="padding:6px 0;font-weight:600">{order.id}</td></tr>
-        <tr><td style="padding:6px 0;color:#666">Order reference</td><td style="padding:6px 0;font-weight:600">{ref_label}</td></tr>
-        <tr><td style="padding:6px 0;color:#666">Store</td><td style="padding:6px 0">{store_html}</td></tr>
-        <tr><td style="padding:6px 0;color:#666">Payment method</td><td style="padding:6px 0">{method_lbl}</td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:{FONT_STACK};width:100%;border-collapse:collapse;font-size:14px;margin:16px 0">
+        <tr><td style="padding:6px 0;color:#6b6a61;width:40%">Order number</td><td style="padding:6px 0;font-weight:600;font-family:{MONO_STACK}">{order.id}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6a61">Order reference</td><td style="padding:6px 0;font-weight:600;font-family:{MONO_STACK}">{ref_label}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6a61">Store</td><td style="padding:6px 0">{store_html}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b6a61">Payment method</td><td style="padding:6px 0">{method_lbl}</td></tr>
       </table>
       {items_html}
-      <table style="border-collapse:collapse;margin:8px 0 16px;width:100%;font-size:14px">
-        <tr><td style="padding:6px 0;color:#666">Subtotal</td><td style="padding:6px 0;text-align:right">${subtotal:.2f} {currency}</td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family:{FONT_STACK};border-collapse:collapse;margin:8px 0 16px;width:100%;font-size:14px">
+        <tr><td style="padding:6px 0;color:#6b6a61">Subtotal</td><td style="padding:6px 0;text-align:right;font-family:{MONO_STACK}">${subtotal:.2f} {currency}</td></tr>
         {discount_row_html}
         <tr style="border-top:2px solid {accent}">
           <td style="padding:10px 0;font-weight:bold">Total paid</td>
-          <td style="padding:10px 0;text-align:right;font-weight:bold;color:{accent}">${total:.2f} {currency}</td>
+          <td style="padding:10px 0;text-align:right;font-weight:bold;color:{accent};font-family:{MONO_STACK};font-size:16px">${total:.2f} {currency}</td>
         </tr>
-        {f'<tr><td colspan="2" style="padding:0 0 6px;text-align:right;font-size:12px;color:#888">Charged as ${settled_amount:.2f} {settled_currency} on your card</td></tr>' if show_usd_charge else ''}
+        {f'<tr><td colspan="2" style="padding:0 0 6px;text-align:right;font-size:12px;color:#8a897f">Charged as ${settled_amount:.2f} {settled_currency} on your card</td></tr>' if show_usd_charge else ''}
       </table>
-      <h3 style="font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:#888;margin:24px 0 8px">Shipping To</h3>
-      <div style="background:#f7f7f7;padding:12px 14px;border-radius:4px;font-size:14px;line-height:1.7">{addr_html}</div>
-      <p style="font-size:14px;color:#555;margin-top:20px">Questions? Use the chat widget on our website.</p>
+      <h3 style="font-family:{FONT_STACK};font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:#8a897f;margin:24px 0 8px;font-weight:500">Shipping To</h3>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#faf9f6;border:1px solid #e2e0da;border-radius:8px"><tr><td style="padding:14px 16px;font-family:{FONT_STACK};font-size:14px;line-height:1.7">{addr_html}</td></tr></table>
+      <p style="font-size:13px;color:#6b6a61;margin-top:20px">Questions? Use the chat widget on our website.</p>
     """
 
     items_block = ("Order summary:\n" + "\n".join(items_text_lines) +
@@ -545,7 +598,8 @@ def build_confirmation_template(
         f"Subtotal:   ${subtotal:.2f} {currency}\n{discount_text}Total paid: ${total:.2f} {currency}\n{usd_charge_text}\n"
         f"Ship to:\n    {addr_text}\n\nQuestions? Use the chat widget on our website.\n"
     )
-    return {"subject": subject, "html": _wrap_html(body_html), "text": text}
+    preheader = f"Your order {ref_label} is confirmed — total ${total:.2f} {currency}."
+    return {"subject": subject, "html": _wrap_html(body_html, accent=accent, preheader=preheader), "text": text}
 
 
 async def send_confirmation_email(
