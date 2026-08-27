@@ -1852,9 +1852,15 @@ async def list_visits(
     for v in visits:
         order = orders_by_visitor.get(v.visitor_id)
         geo = geo_by_ip.get(v.ip_address)
-        resolved_store = _resolve_visit_store(
-            v.source_domain, v.referrer, portal_domain_by_brand.get(v.brand_id)
-        )
+        portal = portal_domain_by_brand.get(v.brand_id)
+        resolved_store = _resolve_visit_store(v.source_domain, v.referrer, portal)
+        # Same portal-exclusion as resolved_store above — a raw Referer
+        # header pointing at the portal's own domain (e.g. the customer
+        # navigated within the checkout page itself) is exactly as
+        # misleading here as it is in the Store column.
+        ref_domain = _extract_domain(v.referrer)
+        portal_norm = _extract_domain(portal) or (portal or "").lower() or None
+        referrer_display = ref_domain if (ref_domain and ref_domain != portal_norm) else None
         rows.append({
             "id":           v.id,
             "visitorId":    v.visitor_id,
@@ -1865,7 +1871,7 @@ async def list_visits(
             "region":       geo["region"] if geo else None,
             "country":      (geo["country"] if geo else None) or v.country,
             "device":       _classify_device(v.user_agent),
-            "referrer":     _extract_domain(v.referrer) or v.referrer,
+            "referrer":     referrer_display,
             "createdAt":    v.created_at.isoformat() if v.created_at else None,
             "order": None if not order else {
                 "id":            order.id,
