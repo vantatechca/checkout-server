@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     VIEWER_PASSWORD: str = ""
 
     BRIDGE_SECRET: str = ""
+
     BRIDGE_URL: str = "https://bridge-7.flystarcafe7.workers.dev/s2s"
     BRIDGE_SECRET_US: str = ""
     BRIDGE_URL_US:    str = ""
