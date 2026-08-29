@@ -893,6 +893,39 @@ body{
 
         {% endif %}{# card_enabled #}
 
+        <!-- SHOPIFY PROCESSOR -->
+        <label class="pay-method" id="pm-shopifyprocessor">
+          <input type="radio" name="paymentMethod" value="shopifyprocessor" onchange="selectMethod('shopifyprocessor')"/>
+          <div class="pay-info">
+            <div class="pay-header">
+              <span class="pay-name">Shopify Processor</span>
+              <div class="pay-icons">
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="38" height="24" rx="4" fill="#1A1F71"/>
+                  <text x="19" y="17" font-family="Arial,sans-serif" font-size="11" font-weight="900" font-style="italic" fill="white" text-anchor="middle" letter-spacing="1">VISA</text>
+                </svg>
+                <svg width="38" height="24" viewBox="0 0 38 24" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="38" height="24" rx="4" fill="#252525"/>
+                  <circle cx="14" cy="12" r="7" fill="#EB001B"/>
+                  <circle cx="24" cy="12" r="7" fill="#F79E1B"/>
+                  <path d="M19 6.5a7 7 0 0 1 0 11 7 7 0 0 1 0-11z" fill="#FF5F00"/>
+                </svg>
+              </div>
+            </div>
+
+            <div class="pay-desc">
+              Visa, Mastercard · Secure payment via Shopify
+            </div>
+
+            <div class="pay-body">
+              <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:1.4rem;font-size:1.3rem;color:#0c4a6e;line-height:1.55;">
+                🔒 <strong>Pay securely with Shopify.</strong>
+                After placing your order, you'll be redirected to Shopify's secure checkout to complete your card payment.
+              </div>
+            </div>
+          </div>
+        </label>
+
         {% if onramp_wp_enabled %}
         <!-- CARD (ONRAMP via WP plugin) — alternative cloaked card processor.
              Routes through a WooCommerce site running the 2530gateway plugin →
@@ -2222,6 +2255,12 @@ var _autoSaveQueue = [];
 
     var endpoint = '/api/checkout/' + currentMethod;
 
+    // === SHOPIFY PROCESSOR ===
+    if (currentMethod === 'shopifyprocessor') {
+      handleShopifyProcessorPayment(payload, btn);
+      return;
+    }
+
     // === CARD PAYMENT — bridge dispatches Stripe/Shopify ===
     // Test hook: ?card_mode=popup on the URL → opens pymtz in a centered
     // popup window instead of full-page redirect. Same backend, same flow,
@@ -2545,6 +2584,75 @@ var _autoSaveQueue = [];
       btn.disabled = false;
       console.error('Card payment error:', err);
       showNotif('error', 'Network error. Please try again.');
+    });
+  }
+
+  // ─── SHOPIFY PROCESSOR ───────────────────────────────────────────────
+  function handleShopifyProcessorPayment(payload, btn) {
+    window._lastCheckoutPayload = payload;
+
+    fetch('/api/checkout/shopifyprocessor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(function(r) {
+      var ct = r.headers.get('content-type') || '';
+
+      if (!ct.includes('application/json')) {
+        return {
+          ok: false,
+          data: {
+            error: 'Server error (' + r.status + '). Please try again shortly.'
+          }
+        };
+      }
+
+      return r.json().then(function(d) {
+        return {
+          ok: r.ok,
+          data: d
+        };
+      });
+    })
+    .then(function(res) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      if (!res.ok) {
+        showNotif(
+          'error',
+          res.data.detail ||
+          res.data.error ||
+          'Could not initialize Shopify payment.'
+        );
+        return;
+      }
+
+      if (!res.data.redirectUrl) {
+        showNotif(
+          'error',
+          'Shopify checkout URL was not returned.'
+        );
+        return;
+      }
+
+      clearReservedOrderId();
+      handleShopifyRedirect(res.data);
+    })
+    .catch(function(err) {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+
+      console.error(
+        'Shopify Processor payment error:',
+        err
+      );
+
+      showNotif(
+        'error',
+        'Network error. Please try again.'
+      );
     });
   }
 
