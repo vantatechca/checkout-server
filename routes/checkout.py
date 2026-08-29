@@ -26,8 +26,8 @@ from services.shopify_draft import create_draft_order, ShopifyError
 from services.nowpayments import NowPaymentsClient, NowPaymentsError
 from services.pymtz import PymtzClient, PymtzError
 
-router  = APIRouter(prefix="/api/checkout", tags=["checkout"])
-logger  = logging.getLogger(__name__)
+router = APIRouter(prefix="/api/checkout", tags=["checkout"])
+logger = logging.getLogger(__name__)
 
 # pymtz settles in USD, so CAD orders must be converted before we send the
 # amount. This MUST stay in sync with USD_CONVERSION_RATE in checkout.html
@@ -46,7 +46,7 @@ USD_CONVERSION_RATE = 1.4  # 1 USD = 1.4 CAD
 # autosave endpoint, which fire innocuously on every page load/keystroke and
 # don't need this). Loose enough that a real shopper submitting one checkout
 # never notices it.
-CHECKOUT_RATE_LIMIT_MAX    = 8    # submissions...
+CHECKOUT_RATE_LIMIT_MAX = 8    # submissions...
 CHECKOUT_RATE_LIMIT_WINDOW = 60   # ...per this many seconds, per IP
 
 
@@ -93,7 +93,8 @@ async def _rate_limit_submission(request: Request) -> None:
         if count == 1:
             await r.expire(key, CHECKOUT_RATE_LIMIT_WINDOW)
         if count > CHECKOUT_RATE_LIMIT_MAX:
-            raise HTTPException(429, "Too many checkout attempts — please wait a minute and try again.")
+            raise HTTPException(
+                429, "Too many checkout attempts — please wait a minute and try again.")
     except HTTPException:
         raise
     except Exception as e:
@@ -122,10 +123,10 @@ def _v2_referer_suffix(request: Request) -> str:
 
 class CartItem(BaseModel):
     product_id: str | None = Field(None, max_length=50)
-    title:      str        = Field(..., min_length=1, max_length=500)
+    title:      str = Field(..., min_length=1, max_length=500)
     variant:    str | None = Field(None, max_length=200)
-    qty:        int        = Field(1, ge=1, le=100)
-    price:      float      = Field(..., ge=0, le=10000)
+    qty:        int = Field(1, ge=1, le=100)
+    price:      float = Field(..., ge=0, le=10000)
     # Product image URL (Shopify CDN). Optional. Used to render the actual
     # product thumbnail in the v2 confirmation pages.
     image:      str | None = Field(None, max_length=500)
@@ -147,7 +148,7 @@ class CheckoutBase(BaseModel):
     city:        str | None = None
     province:    str | None = None
     postal_code: str | None = None
-    country:     str        = "CA"
+    country:     str = "CA"
 
     # Billing
     bill_same:     str = "1"
@@ -165,8 +166,10 @@ class CheckoutBase(BaseModel):
     subtotal: float
     currency: str = "CAD"
     source_domain: str | None = None
-    store_name: str | None = None   # friendly store name from the ?storename= URL param (for display)
-    store_country: str = "CA"   # "CA" or "US" — which store the order came from (not shipping)
+    # friendly store name from the ?storename= URL param (for display)
+    store_name: str | None = None
+    # "CA" or "US" — which store the order came from (not shipping)
+    store_country: str = "CA"
 
     # Discount info — applies to all payment methods
     discount_code: str | None = None
@@ -233,8 +236,9 @@ def _safe_pct(amount: float, subtotal: float) -> float:
         return 0.0
     return round((amt / sub) * 100, 2)
 
+
 MAX_ITEMS_PER_ORDER = 50
-MAX_TOTAL_ORDER     = 100000.0
+MAX_TOTAL_ORDER = 100000.0
 
 
 def _validate_cart(items: list, claimed_subtotal: float, promo_discount: float = 0.0) -> None:
@@ -312,7 +316,8 @@ async def _create_base_order(
     # keep the payload-supplied currency.
     try:
         from main import _v2_store_country
-        _src = data.source_domain or request.query_params.get("source") or request.headers.get("host", "")
+        _src = data.source_domain or request.query_params.get(
+            "source") or request.headers.get("host", "")
         _pinned = _v2_store_country(_src)
         if _pinned == "US":
             data.currency = "USD"
@@ -325,7 +330,7 @@ async def _create_base_order(
     order: Order | None = None
     if data.order_id:
         result = await db.execute(select(Order).where(Order.id == data.order_id))
-        order  = result.scalar_one_or_none()
+        order = result.scalar_one_or_none()
         # Guard: only reuse if it's still pending — don't touch paid/failed/cancelled
         if order and order.payment_status != PaymentStatus.pending:
             order = None
@@ -345,46 +350,49 @@ async def _create_base_order(
 
     if order:
         # UPDATE path — reuse the reserved order
-        order.brand_id        = brand.id if brand else order.brand_id or 1
-        order.store_name      = store_name
-        order.email           = data.email
-        order.first_name      = data.first_name
-        order.last_name       = data.last_name
-        order.address1        = data.address1
-        order.address2        = data.address2
-        order.city            = data.city
-        order.province        = data.province
-        order.postal_code     = data.postal_code
-        order.country         = data.country
-        order.bill_same       = data.bill_same
-        order.bill_address1   = data.bill_address1
-        order.bill_address2   = data.bill_address2
-        order.bill_city       = data.bill_city
-        order.bill_province   = data.bill_province
-        order.bill_postal     = data.bill_postal
-        order.bill_country    = data.bill_country
+        order.brand_id = brand.id if brand else order.brand_id or 1
+        order.store_name = store_name
+        order.email = data.email
+        order.first_name = data.first_name
+        order.last_name = data.last_name
+        order.address1 = data.address1
+        order.address2 = data.address2
+        order.city = data.city
+        order.province = data.province
+        order.postal_code = data.postal_code
+        order.country = data.country
+        order.bill_same = data.bill_same
+        order.bill_address1 = data.bill_address1
+        order.bill_address2 = data.bill_address2
+        order.bill_city = data.bill_city
+        order.bill_province = data.bill_province
+        order.bill_postal = data.bill_postal
+        order.bill_country = data.bill_country
         # Compute original (pre-promo) subtotal — needed for accurate email display
-        promo_amt   = float(data.discount_amount or 0)
-        post_promo  = float(data.subtotal or 0)
-        original_sub = round(post_promo + promo_amt, 2) if promo_amt > 0 else post_promo
-        promo_pct_calc = round((promo_amt / original_sub) * 100, 2) if original_sub > 0 and promo_amt > 0 else 0.0
+        promo_amt = float(data.discount_amount or 0)
+        post_promo = float(data.subtotal or 0)
+        original_sub = round(post_promo + promo_amt,
+                             2) if promo_amt > 0 else post_promo
+        promo_pct_calc = round((promo_amt / original_sub) * 100,
+                               2) if original_sub > 0 and promo_amt > 0 else 0.0
 
-        order.subtotal              = Decimal(str(post_promo))
-        order.original_subtotal     = Decimal(str(original_sub))
-        order.discount_code         = data.discount_code
+        order.subtotal = Decimal(str(post_promo))
+        order.original_subtotal = Decimal(str(original_sub))
+        order.discount_code = data.discount_code
         order.promo_discount_amount = Decimal(str(promo_amt))
-        order.promo_discount_pct    = Decimal(str(promo_pct_calc))
-        order.discount_pct          = Decimal(str(discount_pct))
-        order.discount_amount       = Decimal(str(discount_amount))
-        order.total                 = Decimal(str(total))
-        order.currency        = data.currency
-        order.payment_method  = payment_method
-        order.ip_address      = request.client.host if request.client else None
-        order.user_agent      = request.headers.get("user-agent", "")
-        order.visitor_id      = request.cookies.get("cs_vid") or order.visitor_id
+        order.promo_discount_pct = Decimal(str(promo_pct_calc))
+        order.discount_pct = Decimal(str(discount_pct))
+        order.discount_amount = Decimal(str(discount_amount))
+        order.total = Decimal(str(total))
+        order.currency = data.currency
+        order.payment_method = payment_method
+        order.ip_address = request.client.host if request.client else None
+        order.user_agent = request.headers.get("user-agent", "")
+        order.visitor_id = request.cookies.get("cs_vid") or order.visitor_id
         # Princeton-only fields — will be None on any other store.
-        order.company         = (data.company or None) or order.company
-        order.research_field  = (data.research_field or None) or order.research_field
+        order.company = (data.company or None) or order.company
+        order.research_field = (
+            data.research_field or None) or order.research_field
         if data.source_domain:
             order.source_domain = data.source_domain
 
@@ -394,15 +402,16 @@ async def _create_base_order(
         )
         for item in data.items:
             db.add(OrderItem(
-                order_id       = order.id,
-                product_id     = item.product_id,
-                title          = item.title,
-                variant        = item.variant,
-                qty            = item.qty,
-                price          = Decimal(str(item.price)),
-                original_price = Decimal(str(getattr(item, "original_price", None) or item.price)),
-                total          = Decimal(str(round(item.price * item.qty, 2))),
-                image_url      = getattr(item, "image", None),
+                order_id=order.id,
+                product_id=item.product_id,
+                title=item.title,
+                variant=item.variant,
+                qty=item.qty,
+                price=Decimal(str(item.price)),
+                original_price=Decimal(
+                    str(getattr(item, "original_price", None) or item.price)),
+                total=Decimal(str(round(item.price * item.qty, 2))),
+                image_url=getattr(item, "image", None),
             ))
 
         await db.flush()
@@ -418,10 +427,12 @@ async def _create_base_order(
         order_id = generate_order_id()
 
     # Compute promo math for INSERT path
-    promo_amt_i    = float(data.discount_amount or 0)
-    post_promo_i   = float(data.subtotal or 0)
-    original_sub_i = round(post_promo_i + promo_amt_i, 2) if promo_amt_i > 0 else post_promo_i
-    promo_pct_i    = round((promo_amt_i / original_sub_i) * 100, 2) if original_sub_i > 0 and promo_amt_i > 0 else 0.0
+    promo_amt_i = float(data.discount_amount or 0)
+    post_promo_i = float(data.subtotal or 0)
+    original_sub_i = round(post_promo_i + promo_amt_i,
+                           2) if promo_amt_i > 0 else post_promo_i
+    promo_pct_i = round((promo_amt_i / original_sub_i) * 100,
+                        2) if original_sub_i > 0 and promo_amt_i > 0 else 0.0
 
     # Last-resort fallback for source_domain — never a raw IP (a bot/
     # scanner hitting the server's IP directly instead of a real domain),
@@ -431,57 +442,59 @@ async def _create_base_order(
         _host_fallback = ""
 
     order = Order(
-        id              = order_id,
-        brand_id        = brand.id if brand else 1,
-        store_name      = store_name,
-        email           = data.email,
-        first_name      = data.first_name,
-        last_name       = data.last_name,
-        address1        = data.address1,
-        address2        = data.address2,
-        city            = data.city,
-        province        = data.province,
-        postal_code     = data.postal_code,
-        country         = data.country,
-        bill_same       = data.bill_same,
-        bill_address1   = data.bill_address1,
-        bill_address2   = data.bill_address2,
-        bill_city       = data.bill_city,
-        bill_province   = data.bill_province,
-        bill_postal     = data.bill_postal,
-        bill_country    = data.bill_country,
-        subtotal              = Decimal(str(post_promo_i)),
-        original_subtotal     = Decimal(str(original_sub_i)),
-        discount_code         = data.discount_code,
-        promo_discount_amount = Decimal(str(promo_amt_i)),
-        promo_discount_pct    = Decimal(str(promo_pct_i)),
-        discount_pct          = Decimal(str(discount_pct)),
-        discount_amount       = Decimal(str(discount_amount)),
-        total                 = Decimal(str(total)),
-        currency        = data.currency,
-        payment_method  = payment_method,
-        payment_status  = PaymentStatus.pending,
-        ip_address      = request.client.host if request.client else None,
-        user_agent      = request.headers.get("user-agent", ""),
-        source_domain   = data.source_domain or request.query_params.get("source") or _host_fallback,
-        visitor_id      = request.cookies.get("cs_vid"),
+        id=order_id,
+        brand_id=brand.id if brand else 1,
+        store_name=store_name,
+        email=data.email,
+        first_name=data.first_name,
+        last_name=data.last_name,
+        address1=data.address1,
+        address2=data.address2,
+        city=data.city,
+        province=data.province,
+        postal_code=data.postal_code,
+        country=data.country,
+        bill_same=data.bill_same,
+        bill_address1=data.bill_address1,
+        bill_address2=data.bill_address2,
+        bill_city=data.bill_city,
+        bill_province=data.bill_province,
+        bill_postal=data.bill_postal,
+        bill_country=data.bill_country,
+        subtotal=Decimal(str(post_promo_i)),
+        original_subtotal=Decimal(str(original_sub_i)),
+        discount_code=data.discount_code,
+        promo_discount_amount=Decimal(str(promo_amt_i)),
+        promo_discount_pct=Decimal(str(promo_pct_i)),
+        discount_pct=Decimal(str(discount_pct)),
+        discount_amount=Decimal(str(discount_amount)),
+        total=Decimal(str(total)),
+        currency=data.currency,
+        payment_method=payment_method,
+        payment_status=PaymentStatus.pending,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent", ""),
+        source_domain=data.source_domain or request.query_params.get(
+            "source") or _host_fallback,
+        visitor_id=request.cookies.get("cs_vid"),
         # Princeton-only fields — will be None on any other store.
-        company         = data.company or None,
-        research_field  = data.research_field or None,
+        company=data.company or None,
+        research_field=data.research_field or None,
     )
     db.add(order)
 
     for item in data.items:
         db.add(OrderItem(
-            order_id       = order_id,
-            product_id     = item.product_id,
-            title          = item.title,
-            variant        = item.variant,
-            qty            = item.qty,
-            price          = Decimal(str(item.price)),
-            original_price = Decimal(str(getattr(item, "original_price", None) or item.price)),
-            total          = Decimal(str(round(item.price * item.qty, 2))),
-            image_url      = getattr(item, "image", None),
+            order_id=order_id,
+            product_id=item.product_id,
+            title=item.title,
+            variant=item.variant,
+            qty=item.qty,
+            price=Decimal(str(item.price)),
+            original_price=Decimal(
+                str(getattr(item, "original_price", None) or item.price)),
+            total=Decimal(str(round(item.price * item.qty, 2))),
+            image_url=getattr(item, "image", None),
         ))
 
     await db.flush()
@@ -506,22 +519,23 @@ async def _maybe_upsert_customer_account(db: AsyncSession, data: "CheckoutBase")
         from services.customer_accounts import upsert_account
         await upsert_account(
             db,
-            email    = data.email or "",
-            password = pwd,
-            profile  = {
-                "first_name":  data.first_name  or "",
-                "last_name":   data.last_name   or "",
-                "phone":       data.phone       or "",
-                "address1":    data.address1    or "",
-                "address2":    data.address2    or "",
-                "city":        data.city        or "",
-                "province":    data.province    or "",
+            email=data.email or "",
+            password=pwd,
+            profile={
+                "first_name":  data.first_name or "",
+                "last_name":   data.last_name or "",
+                "phone":       data.phone or "",
+                "address1":    data.address1 or "",
+                "address2":    data.address2 or "",
+                "city":        data.city or "",
+                "province":    data.province or "",
                 "postal_code": data.postal_code or "",
-                "country":     data.country     or "",
+                "country":     data.country or "",
             },
         )
     except Exception as e:
-        logger.warning(f"[customer_accounts] upsert hook failed for {data.email!r}: {e}")
+        logger.warning(
+            f"[customer_accounts] upsert hook failed for {data.email!r}: {e}")
 
 
 # ─── POST /api/checkout/reserve ──────────────────────────────────────────────
@@ -540,7 +554,8 @@ async def checkout_reserve(
     This prevents duplicate orders when the customer switches payment methods
     or double-clicks Pay Now.
     """
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
     brand = _get_brand(request)
 
     order_id = generate_order_id()
@@ -556,42 +571,44 @@ async def checkout_reserve(
         _host_fallback = ""
 
     order = Order(
-        id             = order_id,
-        brand_id       = brand.id if brand else 1,
+        id=order_id,
+        brand_id=brand.id if brand else 1,
         # Falls back to the actual domain, never the bare word "Checkout"
         # — see the matching comment in _create_base_order for why.
-        store_name     = (
+        store_name=(
             (brand.store_name if brand else None)
             or payload.source_domain
             or _host_fallback
             or "Checkout"
         ),
-        email          = "",                            # filled on submit
-        first_name     = None,
-        last_name      = "",                            # filled on submit
-        subtotal       = Decimal(str(payload.subtotal)),
-        total          = Decimal(str(payload.subtotal)),  # before discount
-        discount_pct   = Decimal("0"),
-        discount_amount= Decimal("0"),
-        currency       = payload.currency,
-        payment_method = PaymentMethod.card,            # placeholder, overwritten on submit
-        payment_status = PaymentStatus.pending,
-        ip_address     = request.client.host if request.client else None,
-        user_agent     = request.headers.get("user-agent", ""),
-        source_domain  = payload.source_domain or request.query_params.get("source") or _host_fallback,
-        visitor_id     = request.cookies.get("cs_vid"),
+        email="",                            # filled on submit
+        first_name=None,
+        last_name="",                            # filled on submit
+        subtotal=Decimal(str(payload.subtotal)),
+        total=Decimal(str(payload.subtotal)),  # before discount
+        discount_pct=Decimal("0"),
+        discount_amount=Decimal("0"),
+        currency=payload.currency,
+        # placeholder, overwritten on submit
+        payment_method=PaymentMethod.card,
+        payment_status=PaymentStatus.pending,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent", ""),
+        source_domain=payload.source_domain or request.query_params.get(
+            "source") or _host_fallback,
+        visitor_id=request.cookies.get("cs_vid"),
     )
     db.add(order)
 
     for item in payload.items:
         db.add(OrderItem(
-            order_id   = order_id,
-            product_id = item.product_id,
-            title      = item.title,
-            variant    = item.variant,
-            qty        = item.qty,
-            price      = Decimal(str(item.price)),
-            total      = Decimal(str(round(item.price * item.qty, 2))),
+            order_id=order_id,
+            product_id=item.product_id,
+            title=item.title,
+            variant=item.variant,
+            qty=item.qty,
+            price=Decimal(str(item.price)),
+            total=Decimal(str(round(item.price * item.qty, 2))),
         ))
 
     await db.commit()
@@ -653,7 +670,7 @@ async def autosave_order_field(
     try:
         order_id = payload.order_id.strip()
         js_field = payload.field.strip()
-        v        = payload.value.strip()
+        v = payload.value.strip()
 
         if not order_id or not js_field or not v:
             return {"ok": False, "error": "missing_or_empty"}
@@ -665,7 +682,7 @@ async def autosave_order_field(
 
         # Look up the reserved order
         result = await db.execute(select(Order).where(Order.id == order_id))
-        order  = result.scalar_one_or_none()
+        order = result.scalar_one_or_none()
         if not order:
             return {"ok": False, "error": "order_not_found"}
 
@@ -678,7 +695,14 @@ async def autosave_order_field(
         # methods (each method has a different discount %).
         if db_column == "payment_method":
             try:
-                new_method = PaymentMethod(v)
+                # Shopify Processor is a separate checkout rail in the frontend,
+                # but we store it as the generic `card` PaymentMethod so we don't
+                # need a database enum migration. payment_ref/payment_notes identify
+                # the actual processor.
+                if v == "shopifyprocessor":
+                    new_method = PaymentMethod.card
+                else:
+                    new_method = PaymentMethod(v)
             except (ValueError, KeyError):
                 return {"ok": False, "error": "invalid_payment_method"}
 
@@ -689,29 +713,32 @@ async def autosave_order_field(
             brand = brand_result.scalar_one_or_none()
 
             if new_method == PaymentMethod.interac:
-                pct = float(brand.interac_discount) if brand and brand.interac_discount else 10.0
+                pct = float(
+                    brand.interac_discount) if brand and brand.interac_discount else 10.0
             elif new_method == PaymentMethod.zelle:
                 pct = float(getattr(brand, "zelle_discount", None) or 10.0)
             elif new_method == PaymentMethod.crypto:
-                pct = float(brand.crypto_discount) if brand and brand.crypto_discount else 10.0
+                pct = float(
+                    brand.crypto_discount) if brand and brand.crypto_discount else 10.0
             elif new_method == PaymentMethod.altcoin:
                 pct = 7.0   # NowPayments altcoin discount — matches /altcoin endpoint
             else:  # card
                 pct = 0.0
 
-            sub        = float(order.subtotal or 0)
-            disc_amt   = round(sub * pct / 100, 2)
-            new_total  = round(sub - disc_amt, 2)
+            sub = float(order.subtotal or 0)
+            disc_amt = round(sub * pct / 100, 2)
+            new_total = round(sub - disc_amt, 2)
 
             try:
-                order.payment_method  = new_method
-                order.discount_pct    = Decimal(str(pct))
+                order.payment_method = new_method
+                order.discount_pct = Decimal(str(pct))
                 order.discount_amount = Decimal(str(disc_amt))
-                order.total           = Decimal(str(new_total))
+                order.total = Decimal(str(new_total))
                 await db.commit()
             except Exception as e:
                 await db.rollback()
-                logger.warning(f"[autosave] payment_method update failed for {order_id}: {e}")
+                logger.warning(
+                    f"[autosave] payment_method update failed for {order_id}: {e}")
                 return {"ok": False, "error": "db_error"}
 
             return {"ok": True}
@@ -722,7 +749,8 @@ async def autosave_order_field(
             await db.commit()
         except Exception as e:
             await db.rollback()
-            logger.warning(f"[autosave] DB update failed for {order_id}.{db_column}: {e}")
+            logger.warning(
+                f"[autosave] DB update failed for {order_id}.{db_column}: {e}")
             return {"ok": False, "error": "db_error"}
 
         return {"ok": True}
@@ -732,8 +760,235 @@ async def autosave_order_field(
         logger.warning(f"[autosave] unexpected error: {e}")
         return {"ok": False, "error": "server_error"}
 
+# ─── POST /api/checkout/shopifyprocessor ─────────────────────────────────────
+
+
+class ShopifyProcessorCheckoutRequest(CheckoutBase):
+    pass
+
+
+@router.post(
+    "/shopifyprocessor",
+    dependencies=[Depends(_rate_limit_submission)],
+)
+async def checkout_shopifyprocessor(
+    payload: ShopifyProcessorCheckoutRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Shopify Processor.
+
+    Creates/reuses our local pending order, then sends the order/cart data
+    to the WordPress Shopify bridge. WordPress uses its connected Shopify
+    Sell on WordPress store to create the Shopify checkout and returns the
+    Shopify-hosted checkout URL.
+
+    No card data is handled here.
+    """
+
+    # Validate the cart exactly like the other checkout methods.
+    _validate_cart(
+        payload.items,
+        payload.subtotal,
+        getattr(payload, "discount_amount", 0.0),
+    )
+
+    brand = _get_brand(request)
+
+    # Store as generic card to avoid adding a new DB PaymentMethod enum.
+    # payment_ref/payment_notes below identify this as Shopify Processor.
+    order = await _create_base_order(
+        db,
+        payload,
+        PaymentMethod.card,
+        brand,
+        0.0,
+        request,
+    )
+
+    await db.commit()
+
+    # Staging/production WP bridge URL comes from .env.
+    bridge_url = (
+        getattr(settings, "SHOPIFY_PROCESSOR_WP_URL", "") or ""
+    ).strip().rstrip("/")
+
+    if not bridge_url:
+        order.payment_notes = (
+            "shopifyprocessor error: "
+            "SHOPIFY_PROCESSOR_WP_URL is not configured"
+        )
+        await db.commit()
+
+        raise HTTPException(
+            status_code=503,
+            detail="Shopify Processor is not configured.",
+        )
+
+    # Build a clean server-to-server payload for WordPress.
+    bridge_payload = {
+        "external_order_id": order.id,
+
+        "customer": {
+            "email": payload.email,
+            "first_name": payload.first_name or "",
+            "last_name": payload.last_name or "",
+            "phone": payload.phone or "",
+        },
+
+        "shipping_address": {
+            "address1": payload.address1 or "",
+            "address2": payload.address2 or "",
+            "city": payload.city or "",
+            "province": payload.province or "",
+            "postal_code": payload.postal_code or "",
+            "country": payload.country or "",
+        },
+
+        "items": [
+            {
+                "product_id": item.product_id,
+                "title": item.title,
+                "variant": item.variant,
+                "quantity": item.qty,
+                "price": item.price,
+            }
+            for item in payload.items
+        ],
+
+        "subtotal": float(order.subtotal),
+        "total": float(order.total),
+        "currency": order.currency,
+
+        "source_domain": payload.source_domain or "",
+        "store_name": order.store_name or "",
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{bridge_url}/wp-json/spb/v1/checkout",
+                json=bridge_payload,
+                headers={
+                    "Accept": "application/json",
+                },
+            )
+
+    except httpx.RequestError as exc:
+        logger.error(
+            "[shopifyprocessor] WordPress connection failed "
+            f"for order {order.id}: {exc}"
+        )
+
+        order.payment_notes = (
+            "shopifyprocessor WP connection error: "
+            f"{str(exc)[:500]}"
+        )
+        await db.commit()
+
+        raise HTTPException(
+            status_code=502,
+            detail="Could not connect to Shopify checkout service.",
+        )
+
+    # WordPress should always return JSON.
+    try:
+        wp_data = response.json()
+    except Exception:
+        logger.error(
+            "[shopifyprocessor] non-JSON WordPress response "
+            f"order={order.id} status={response.status_code}"
+        )
+
+        order.payment_notes = (
+            "shopifyprocessor invalid WP response "
+            f"HTTP {response.status_code}"
+        )
+        await db.commit()
+
+        raise HTTPException(
+            status_code=502,
+            detail="Shopify checkout service returned an invalid response.",
+        )
+
+    if response.status_code < 200 or response.status_code >= 300:
+        message = (
+            wp_data.get("message")
+            or wp_data.get("error")
+            or "Shopify checkout could not be created."
+        )
+
+        logger.error(
+            "[shopifyprocessor] WP bridge failed "
+            f"order={order.id} "
+            f"status={response.status_code} "
+            f"message={message}"
+        )
+
+        order.payment_notes = (
+            "shopifyprocessor WP error: "
+            f"{str(message)[:500]}"
+        )
+        await db.commit()
+
+        raise HTTPException(
+            status_code=502,
+            detail=str(message),
+        )
+
+    checkout_url = (
+        wp_data.get("checkoutUrl")
+        or wp_data.get("checkout_url")
+        or wp_data.get("redirectUrl")
+        or wp_data.get("redirect_url")
+    )
+
+    if not checkout_url:
+        order.payment_notes = (
+            "shopifyprocessor error: "
+            "WordPress returned no checkout URL"
+        )
+        await db.commit()
+
+        raise HTTPException(
+            status_code=502,
+            detail="Shopify checkout URL was not returned.",
+        )
+
+    # Store correlation info.
+    shopify_cart_id = (
+        wp_data.get("cartId")
+        or wp_data.get("cart_id")
+        or ""
+    )
+
+    order.payment_ref = (
+        f"shopify:{shopify_cart_id}"
+        if shopify_cart_id
+        else f"shopify:{order.id}"
+    )
+
+    order.payment_notes = (
+        f"shopifyprocessor → {checkout_url}"
+    )[:1000]
+
+    await db.commit()
+
+    logger.info(
+        f"[shopifyprocessor] order={order.id} "
+        "Shopify checkout created"
+    )
+
+    return {
+        "success": True,
+        "orderId": order.id,
+        "redirectUrl": checkout_url,
+        "paymentId": order.payment_ref,
+    }
 
 # ─── POST /api/checkout/card ─────────────────────────────────────────────────
+
 
 @router.post("/card", dependencies=[Depends(_rate_limit_submission)])
 async def checkout_card(
@@ -765,7 +1020,8 @@ async def checkout_card(
     raise HTTPException(503, "Credit card payment is currently disabled")
 
     brand = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
     order = await _create_base_order(db, payload, PaymentMethod.card, brand, 0.0, request)
     await db.commit()
 
@@ -784,48 +1040,50 @@ async def checkout_card(
     # USD equivalent shown by the "≈ $X USD" badge on checkout — not the raw
     # CAD number relabeled as USD.
     if (order.currency or "").upper() == "CAD":
-        pymtz_amount   = round(float(order.total) / USD_CONVERSION_RATE, 2)
+        pymtz_amount = round(float(order.total) / USD_CONVERSION_RATE, 2)
         pymtz_currency = "USD"
         # Admin-facing only — order.total/currency stay the CAD cart price
         # on purpose (see models/order.py settled_currency/settled_amount).
         order.settled_currency = pymtz_currency
-        order.settled_amount   = pymtz_amount
+        order.settled_amount = pymtz_amount
     else:
-        pymtz_amount   = float(order.total)
+        pymtz_amount = float(order.total)
         pymtz_currency = order.currency
 
     try:
-        pymtz_country = "US" if (order.currency or "").upper() == "USD" else "CA"
-        client  = PymtzClient(country=pymtz_country)
+        pymtz_country = "US" if (
+            order.currency or "").upper() == "USD" else "CA"
+        client = PymtzClient(country=pymtz_country)
 
         # Use billing address if the customer entered one, else fall back to
         # shipping. payload.bill_same == "1" means "billing == shipping".
         bill_same = (payload.bill_same or "1") == "1"
-        b_addr1   = (payload.address1 if bill_same else payload.bill_address1) or ""
-        b_addr2   = (payload.address2 if bill_same else payload.bill_address2) or ""
-        b_city    = (payload.city     if bill_same else payload.bill_city)     or ""
-        b_state   = (payload.province if bill_same else payload.bill_province) or ""
-        b_zip     = (payload.postal_code if bill_same else payload.bill_postal) or ""
-        b_country = (payload.country  if bill_same else payload.bill_country)  or "CA"
+        b_addr1 = (payload.address1 if bill_same else payload.bill_address1) or ""
+        b_addr2 = (payload.address2 if bill_same else payload.bill_address2) or ""
+        b_city = (payload.city if bill_same else payload.bill_city) or ""
+        b_state = (payload.province if bill_same else payload.bill_province) or ""
+        b_zip = (payload.postal_code if bill_same else payload.bill_postal) or ""
+        b_country = (
+            payload.country if bill_same else payload.bill_country) or "CA"
 
         payment = await client.create_payment(
-            order_id    = order.id,
-            amount      = pymtz_amount,
-            currency    = pymtz_currency,
-            description = description,
-            email       = payload.email,
-            return_url  = return_url,
-            cancel_url  = cancel_url,
-            first_name  = payload.first_name or "",
-            last_name   = payload.last_name  or "",
-            phone       = payload.phone      or "",
-            address1    = b_addr1,
-            address2    = b_addr2,
-            city        = b_city,
-            state       = b_state,
-            postal_code = b_zip,
-            country     = b_country,
-            metadata    = {
+            order_id=order.id,
+            amount=pymtz_amount,
+            currency=pymtz_currency,
+            description=description,
+            email=payload.email,
+            return_url=return_url,
+            cancel_url=cancel_url,
+            first_name=payload.first_name or "",
+            last_name=payload.last_name or "",
+            phone=payload.phone or "",
+            address1=b_addr1,
+            address2=b_addr2,
+            city=b_city,
+            state=b_state,
+            postal_code=b_zip,
+            country=b_country,
+            metadata={
                 "source_domain":    payload.source_domain or "",
                 "store_name":       order.store_name or "",
                 "order_currency":   order.currency or "",
@@ -834,7 +1092,7 @@ async def checkout_card(
             },
         )
 
-        order.payment_ref   = payment.get("id", "")
+        order.payment_ref = payment.get("id", "")
         order.payment_notes = f"pymtz payment {payment.get('id', '')} → {payment.get('payment_url', '')}"
         await db.commit()
 
@@ -848,9 +1106,10 @@ async def checkout_card(
     except PymtzError as e:
         logger.exception(f"pymtz payment creation failed for {order.id}")
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = str(e)
+        order.payment_notes = str(e)
         await db.commit()
-        raise HTTPException(status_code=502, detail=f"Could not start card payment: {e}")
+        raise HTTPException(
+            status_code=502, detail=f"Could not start card payment: {e}")
 
 
 # ─── POST /api/checkout/stripe_direct ────────────────────────────────────────
@@ -901,13 +1160,16 @@ async def checkout_stripe_direct(
     elif _stripe_raw == "":
         _stripe_allowed = False
     else:
-        _stripe_allowlist = {s.strip().lower() for s in _stripe_raw.split(",") if s.strip()}
+        _stripe_allowlist = {s.strip().lower()
+                             for s in _stripe_raw.split(",") if s.strip()}
         _stripe_allowed = _src_domain in _stripe_allowlist
     if not _stripe_allowed:
-        raise HTTPException(403, f"Stripe not enabled for store '{_src_domain}'")
+        raise HTTPException(
+            403, f"Stripe not enabled for store '{_src_domain}'")
 
     brand = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
 
     # Create / fetch the pending order — same pattern as the other card paths.
     order = await _create_base_order(db, payload, PaymentMethod.card, brand, 0.0, request)
@@ -918,24 +1180,24 @@ async def checkout_stripe_direct(
     try:
         client = StripeDirectClient()
         result = await client.create_and_confirm_payment(
-            payment_method_id = payload.payment_method_id,
-            amount            = float(order.total),
-            currency          = (order.currency or "USD"),
-            order_id          = order.id,
-            customer_email    = payload.email,
-            customer_ip       = client_ip,
-            source_domain     = payload.source_domain,
+            payment_method_id=payload.payment_method_id,
+            amount=float(order.total),
+            currency=(order.currency or "USD"),
+            order_id=order.id,
+            customer_email=payload.email,
+            customer_ip=client_ip,
+            source_domain=payload.source_domain,
             # Neutral description — visible in Stripe dashboard only, but
             # we still keep it clean (no product names, no peptide refs).
-            description       = f"Order {order.id}",
+            description=f"Order {order.id}",
             # Use order ID as the idempotency key so accidental double-submit
             # from the same order won't double-charge.
-            idempotency_key   = f"order-{order.id}",
+            idempotency_key=f"order-{order.id}",
         )
     except StripeError as e:
         logger.error(f"[stripe_direct] transport error for {order.id}: {e}")
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = f"stripe error: {str(e)[:300]}"
+        order.payment_notes = f"stripe error: {str(e)[:300]}"
         await db.commit()
         raise HTTPException(502, f"Card payment failed: {e}")
 
@@ -950,8 +1212,8 @@ async def checkout_stripe_direct(
     # to the frontend; Stripe.js handles the challenge UI.
     if result["status"] == "requires_action" and result.get("next_action"):
         order.payment_status = PaymentStatus.pending
-        order.payment_ref    = f"pi:{result['payment_intent_id']}"
-        order.payment_notes  = (
+        order.payment_ref = f"pi:{result['payment_intent_id']}"
+        order.payment_notes = (
             f"stripe 3DS required · pi={result['payment_intent_id']}"
         )[:1000]
         await db.commit()
@@ -965,7 +1227,7 @@ async def checkout_stripe_direct(
     if not result["success"]:
         # Decline / error — surface to user, mark failed.
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = (
+        order.payment_notes = (
             f"stripe declined · status={result['status']} "
             f"pi={result['payment_intent_id']} · {result['message'][:200]}"
         )[:1000]
@@ -978,12 +1240,12 @@ async def checkout_stripe_direct(
 
     # ── Charge succeeded — mark paid + downstream Shopify/affiliate ────────
     order.payment_status = PaymentStatus.paid
-    order.paid_at        = datetime.now(timezone.utc)
+    order.paid_at = datetime.now(timezone.utc)
     # Prefix `pi:` so the admin dashboard classifier recognizes this as
     # Stripe direct (see models/order.py:_classify_processor — `pi_` prefix
     # already maps to "stripe").
-    order.payment_ref    = f"pi_{result['payment_intent_id'].replace('pi_', '')}"
-    order.payment_notes  = (
+    order.payment_ref = f"pi_{result['payment_intent_id'].replace('pi_', '')}"
+    order.payment_notes = (
         f"stripe paid · pi={result['payment_intent_id']} "
         f"charge={result['charge_id']} card={result['brand']}*{result['last4']}"
     )[:1000]
@@ -1035,20 +1297,22 @@ async def checkout_wpay(
         raise HTTPException(503, "WPay not enabled")
 
     # Per-store gate (mirrors STRIPE_DIRECT_STORES semantic).
-    _wpay_raw   = (getattr(settings, "WPAY_STORES", "") or "").strip()
+    _wpay_raw = (getattr(settings, "WPAY_STORES", "") or "").strip()
     _src_domain = (payload.source_domain or "").strip().lower()
     if _wpay_raw == "*":
         _wpay_allowed = True
     elif _wpay_raw == "":
         _wpay_allowed = False
     else:
-        _wpay_allowlist = {s.strip().lower() for s in _wpay_raw.split(",") if s.strip()}
+        _wpay_allowlist = {s.strip().lower()
+                           for s in _wpay_raw.split(",") if s.strip()}
         _wpay_allowed = _src_domain in _wpay_allowlist
     if not _wpay_allowed:
         raise HTTPException(403, f"WPay not enabled for store '{_src_domain}'")
 
     brand = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
 
     # Reuse the `card` discount rate (0.0) — WPay is a plain card-equivalent
     # option like Stripe Direct, not an incentivized manual method.
@@ -1063,7 +1327,7 @@ async def checkout_wpay(
         # Admin-facing only — order.total/currency stay the CAD cart price
         # on purpose (see models/order.py settled_currency/settled_amount).
         order.settled_currency = "USD"
-        order.settled_amount   = wpay_amount
+        order.settled_amount = wpay_amount
     else:
         wpay_amount = float(order.total)
 
@@ -1076,37 +1340,38 @@ async def checkout_wpay(
 
     # Billing address — same bill_same selection used by checkout_card.
     bill_same = (payload.bill_same or "1") == "1"
-    b_addr1   = (payload.address1 if bill_same else payload.bill_address1) or ""
-    b_city    = (payload.city     if bill_same else payload.bill_city)     or ""
-    b_state   = (payload.province if bill_same else payload.bill_province) or ""
-    b_zip     = (payload.postal_code if bill_same else payload.bill_postal) or ""
-    b_country = (payload.country  if bill_same else payload.bill_country)  or "US"
+    b_addr1 = (payload.address1 if bill_same else payload.bill_address1) or ""
+    b_city = (payload.city if bill_same else payload.bill_city) or ""
+    b_state = (payload.province if bill_same else payload.bill_province) or ""
+    b_zip = (payload.postal_code if bill_same else payload.bill_postal) or ""
+    b_country = (
+        payload.country if bill_same else payload.bill_country) or "US"
 
     transaction_id = f"{order.id}-{int(time.time())}"
-    callback_url   = f"{settings.BASE_URL}/webhooks/wpay"
-    redirect_url   = f"{settings.BASE_URL}/order/{order.id}/confirmation{_v2_referer_suffix(request)}"
-    client_ip      = request.client.host if request.client else ""
+    callback_url = f"{settings.BASE_URL}/webhooks/wpay"
+    redirect_url = f"{settings.BASE_URL}/order/{order.id}/confirmation{_v2_referer_suffix(request)}"
+    client_ip = request.client.host if request.client else ""
 
     try:
         client = WPayClient()
         wpay_redirect_url = await client.submit_hpp_payment(
-            transaction_id = transaction_id,
-            amount         = wpay_amount,
-            email          = payload.email,
-            first_name     = payload.first_name or "",
-            last_name      = payload.last_name  or "",
-            phone          = payload.phone      or "",
-            country        = b_country,
-            state          = b_state,
-            city           = b_city,
-            address        = b_addr1,
-            zip_code       = b_zip,
-            ip_address     = client_ip,
-            callback_url   = callback_url,
-            redirect_url   = redirect_url,
+            transaction_id=transaction_id,
+            amount=wpay_amount,
+            email=payload.email,
+            first_name=payload.first_name or "",
+            last_name=payload.last_name or "",
+            phone=payload.phone or "",
+            country=b_country,
+            state=b_state,
+            city=b_city,
+            address=b_addr1,
+            zip_code=b_zip,
+            ip_address=client_ip,
+            callback_url=callback_url,
+            redirect_url=redirect_url,
         )
 
-        order.payment_ref   = transaction_id
+        order.payment_ref = transaction_id
         order.payment_notes = f"wpay hpp txn={transaction_id} → {wpay_redirect_url}"
         await db.commit()
 
@@ -1128,7 +1393,7 @@ async def checkout_wpay(
     except WPayError as e:
         logger.error(f"[wpay] HPP request failed for {order.id}: {e}")
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = f"wpay error: {str(e)[:300]}"
+        order.payment_notes = f"wpay error: {str(e)[:300]}"
         await db.commit()
         raise HTTPException(502, f"Could not start WPay payment: {e}")
 
@@ -1171,24 +1436,30 @@ async def checkout_wpay_2d(
     # Per-store gate. A store qualifies by
     # exact domain (WPAY_WP_STORES) OR by country (WPAY_WP_COUNTRIES) —
     # either is sufficient, matching _wpay_2d_enabled_for() in main.py.
-    _wpaywp_raw    = (getattr(settings, "WPAY_WP_STORES", "") or "").strip()
-    _src_domain    = (payload.source_domain or "").strip().lower()
+    _wpaywp_raw = (getattr(settings, "WPAY_WP_STORES", "") or "").strip()
+    _src_domain = (payload.source_domain or "").strip().lower()
     if _wpaywp_raw == "*":
         _wpaywp_allowed = True
     else:
-        _wpaywp_allowlist = {s.strip().lower() for s in _wpaywp_raw.split(",") if s.strip()}
+        _wpaywp_allowlist = {s.strip().lower()
+                             for s in _wpaywp_raw.split(",") if s.strip()}
         _wpaywp_allowed = _src_domain in _wpaywp_allowlist
 
     if not _wpaywp_allowed:
-        _wpaywp_countries_raw = (getattr(settings, "WPAY_WP_COUNTRIES", "") or "").strip()
-        _wpaywp_countries = {c.strip().upper() for c in _wpaywp_countries_raw.split(",") if c.strip()}
-        _wpaywp_allowed = (getattr(payload, "store_country", "") or "").strip().upper() in _wpaywp_countries
+        _wpaywp_countries_raw = (
+            getattr(settings, "WPAY_WP_COUNTRIES", "") or "").strip()
+        _wpaywp_countries = {c.strip().upper()
+                             for c in _wpaywp_countries_raw.split(",") if c.strip()}
+        _wpaywp_allowed = (getattr(payload, "store_country", "")
+                           or "").strip().upper() in _wpaywp_countries
 
     if not _wpaywp_allowed:
-        raise HTTPException(403, f"WPay (WP plugin) not enabled for store '{_src_domain}'")
+        raise HTTPException(
+            403, f"WPay (WP plugin) not enabled for store '{_src_domain}'")
 
     brand = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
 
     # Plain card-equivalent option — no incentive discount, matches wpay/stripe_direct.
     order = await _create_base_order(db, payload, PaymentMethod.wpay_2d, brand, 0.0, request)
@@ -1198,14 +1469,14 @@ async def checkout_wpay_2d(
     # rejects anything else) — convert CAD totals so the customer is charged the
     # USD equivalent, same pattern as pymtz above.
     if (order.currency or "").upper() == "CAD":
-        wc_amount   = round(float(order.total) / USD_CONVERSION_RATE, 2)
+        wc_amount = round(float(order.total) / USD_CONVERSION_RATE, 2)
         wc_currency = "USD"
         # Admin-facing only — order.total/currency stay the CAD cart price
         # on purpose (see models/order.py settled_currency/settled_amount).
         order.settled_currency = wc_currency
-        order.settled_amount   = wc_amount
+        order.settled_amount = wc_amount
     else:
-        wc_amount   = float(order.total)
+        wc_amount = float(order.total)
         wc_currency = (order.currency or "USD").upper()
 
     if wc_amount < WPAY_WP_MIN_AMOUNT:
@@ -1221,17 +1492,18 @@ async def checkout_wpay_2d(
     # check rather than relying on that as an implicit side effect.
     if wc_currency != "USD":
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = f"wpay_2d declined: currency {wc_currency} is not USD"
+        order.payment_notes = f"wpay_2d declined: currency {wc_currency} is not USD"
         await db.commit()
         raise HTTPException(400, "WPay 2D only supports USD transactions.")
 
     bill_same = (payload.bill_same or "1") == "1"
-    b_addr1   = (payload.address1 if bill_same else payload.bill_address1) or ""
-    b_addr2   = (payload.address2 if bill_same else payload.bill_address2) or ""
-    b_city    = (payload.city     if bill_same else payload.bill_city)     or ""
-    b_state   = (payload.province if bill_same else payload.bill_province) or ""
-    b_zip     = (payload.postal_code if bill_same else payload.bill_postal) or ""
-    b_country = (payload.country  if bill_same else payload.bill_country)  or "US"
+    b_addr1 = (payload.address1 if bill_same else payload.bill_address1) or ""
+    b_addr2 = (payload.address2 if bill_same else payload.bill_address2) or ""
+    b_city = (payload.city if bill_same else payload.bill_city) or ""
+    b_state = (payload.province if bill_same else payload.bill_province) or ""
+    b_zip = (payload.postal_code if bill_same else payload.bill_postal) or ""
+    b_country = (
+        payload.country if bill_same else payload.bill_country) or "US"
 
     # Per WPay's compliance notice: only these billing GEOs are approved —
     # anything else is force-declined on their end regardless, so reject it
@@ -1239,35 +1511,38 @@ async def checkout_wpay_2d(
     # Mastercard only) is NOT checkable here — the plugin's own Basis Theory
     # tokenization means we never see the card brand; that restriction is
     # enforced entirely on WPay's hosted card form, not in this backend.
-    _wpaywp_geos_raw = (getattr(settings, "WPAY_WP_ALLOWED_GEOS", "") or "").strip()
-    _wpaywp_allowed_geos = {g.strip().upper() for g in _wpaywp_geos_raw.split(",") if g.strip()}
+    _wpaywp_geos_raw = (
+        getattr(settings, "WPAY_WP_ALLOWED_GEOS", "") or "").strip()
+    _wpaywp_allowed_geos = {g.strip().upper()
+                            for g in _wpaywp_geos_raw.split(",") if g.strip()}
     if _wpaywp_allowed_geos and b_country.strip().upper() not in _wpaywp_allowed_geos:
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = f"wpay_2d declined: billing country '{b_country}' outside WPay's approved GEO list"
+        order.payment_notes = f"wpay_2d declined: billing country '{b_country}' outside WPay's approved GEO list"
         await db.commit()
-        raise HTTPException(400, f"Card payments are not currently available for billing country '{b_country}'.")
+        raise HTTPException(
+            400, f"Card payments are not currently available for billing country '{b_country}'.")
 
     try:
-        client  = WPayWPClient()
+        client = WPayWPClient()
         wc_resp = await client.create_order(
-            external_order_id = order.id,
-            amount      = wc_amount,
-            currency    = wc_currency,
-            first_name  = payload.first_name or "",
-            last_name   = payload.last_name  or "",
-            email       = payload.email,
-            phone       = payload.phone      or "",
-            address1    = b_addr1,
-            address2    = b_addr2,
-            city        = b_city,
-            state       = b_state,
-            postal_code = b_zip,
-            country     = b_country,
+            external_order_id=order.id,
+            amount=wc_amount,
+            currency=wc_currency,
+            first_name=payload.first_name or "",
+            last_name=payload.last_name or "",
+            email=payload.email,
+            phone=payload.phone or "",
+            address1=b_addr1,
+            address2=b_addr2,
+            city=b_city,
+            state=b_state,
+            postal_code=b_zip,
+            country=b_country,
         )
         wc_order_id = wc_resp.get("id")
-        pay_url     = wc_resp["payment_url"]
+        pay_url = wc_resp["payment_url"]
 
-        order.payment_ref   = f"wc:{wc_order_id}"
+        order.payment_ref = f"wc:{wc_order_id}"
         order.payment_notes = f"wpay_2d via WC order #{wc_order_id} → {pay_url}"
         await db.commit()
 
@@ -1289,7 +1564,7 @@ async def checkout_wpay_2d(
     except WPayWPError as e:
         logger.error(f"[wpay_2d] WC order create failed for {order.id}: {e}")
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = f"wpay_2d error: {str(e)[:300]}"
+        order.payment_notes = f"wpay_2d error: {str(e)[:300]}"
         await db.commit()
         raise HTTPException(502, f"Could not start WPay payment: {e}")
 
@@ -1323,7 +1598,8 @@ async def checkout_onramp_wp(
         raise HTTPException(403, "Onramp is not available for US stores")
 
     brand = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
     # Reuse the `card` PaymentMethod — the customer-facing UX is still a card,
     # we disambiguate via payment_notes/payment_ref.
     order = await _create_base_order(db, payload, PaymentMethod.card, brand, 0.0, request)
@@ -1335,38 +1611,39 @@ async def checkout_onramp_wp(
     # 2530gateway plugin handle FX themselves — pre-converting CAD→USD here
     # caused the onramp UI (Kryptonim et al.) to label the USD value as CAD,
     # undercharging the customer by ~28%.
-    wc_amount   = float(order.total)
+    wc_amount = float(order.total)
     wc_currency = (order.currency or "USD").upper()
 
     bill_same = (payload.bill_same or "1") == "1"
-    b_addr1   = (payload.address1 if bill_same else payload.bill_address1) or ""
-    b_addr2   = (payload.address2 if bill_same else payload.bill_address2) or ""
-    b_city    = (payload.city     if bill_same else payload.bill_city)     or ""
-    b_state   = (payload.province if bill_same else payload.bill_province) or ""
-    b_zip     = (payload.postal_code if bill_same else payload.bill_postal) or ""
-    b_country = (payload.country  if bill_same else payload.bill_country)  or "CA"
+    b_addr1 = (payload.address1 if bill_same else payload.bill_address1) or ""
+    b_addr2 = (payload.address2 if bill_same else payload.bill_address2) or ""
+    b_city = (payload.city if bill_same else payload.bill_city) or ""
+    b_state = (payload.province if bill_same else payload.bill_province) or ""
+    b_zip = (payload.postal_code if bill_same else payload.bill_postal) or ""
+    b_country = (
+        payload.country if bill_same else payload.bill_country) or "CA"
 
     try:
-        client  = OnrampWPClient()
+        client = OnrampWPClient()
         wc_resp = await client.create_order(
-            external_order_id = order.id,
-            amount      = wc_amount,
-            currency    = wc_currency,
-            first_name  = payload.first_name or "",
-            last_name   = payload.last_name  or "",
-            email       = payload.email,
-            phone       = payload.phone      or "",
-            address1    = b_addr1,
-            address2    = b_addr2,
-            city        = b_city,
-            state       = b_state,
-            postal_code = b_zip,
-            country     = b_country,
+            external_order_id=order.id,
+            amount=wc_amount,
+            currency=wc_currency,
+            first_name=payload.first_name or "",
+            last_name=payload.last_name or "",
+            email=payload.email,
+            phone=payload.phone or "",
+            address1=b_addr1,
+            address2=b_addr2,
+            city=b_city,
+            state=b_state,
+            postal_code=b_zip,
+            country=b_country,
         )
         wc_order_id = wc_resp.get("id")
-        pay_url     = wc_resp["payment_url"]
+        pay_url = wc_resp["payment_url"]
 
-        order.payment_ref   = f"wc:{wc_order_id}"
+        order.payment_ref = f"wc:{wc_order_id}"
         order.payment_notes = f"onramp_wp via WC order #{wc_order_id} → {pay_url}"
         await db.commit()
 
@@ -1380,7 +1657,7 @@ async def checkout_onramp_wp(
     except OnrampWPError as e:
         logger.error(f"[onramp_wp] order create failed for {order.id}: {e}")
         order.payment_status = PaymentStatus.failed
-        order.payment_notes  = f"onramp_wp error: {str(e)[:300]}"
+        order.payment_notes = f"onramp_wp error: {str(e)[:300]}"
         await db.commit()
         raise HTTPException(502, f"Onramp payment setup failed: {e}")
 
@@ -1391,8 +1668,9 @@ async def checkout_interac(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    brand        = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    brand = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
     discount_pct = float(brand.interac_discount if brand else 10.0)
 
     order = await _create_base_order(db, payload, PaymentMethod.interac, brand, discount_pct, request)
@@ -1406,12 +1684,12 @@ async def checkout_interac(
     if ip:
         if ip.status != "matched":
             ip.expected_amount = order.total
-            ip.status          = "waiting"
+            ip.status = "waiting"
     else:
         db.add(InteracPayment(
-            order_id        = order.id,
-            expected_amount = order.total,
-            status          = "waiting",
+            order_id=order.id,
+            expected_amount=order.total,
+            status="waiting",
         ))
 
     await db.commit()
@@ -1461,8 +1739,9 @@ async def checkout_zelle(
     US equivalent of Interac. Customer sends Zelle manually to our US email.
     Admin matches the payment manually via the admin dashboard.
     """
-    brand        = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    brand = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
     # Zelle discount — same 10% as Interac
     discount_pct = float(getattr(brand, "zelle_discount", None) or 10.0)
 
@@ -1477,12 +1756,12 @@ async def checkout_zelle(
     if zp:
         if zp.status != "matched":
             zp.expected_amount = order.total
-            zp.status          = "waiting"
+            zp.status = "waiting"
     else:
         db.add(ZellePayment(
-            order_id        = order.id,
-            expected_amount = order.total,
-            status          = "waiting",
+            order_id=order.id,
+            expected_amount=order.total,
+            status="waiting",
         ))
 
     await db.commit()
@@ -1523,29 +1802,31 @@ async def checkout_crypto(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    brand        = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    brand = _get_brand(request)
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
     discount_pct = float(brand.crypto_discount if brand else 10.0)
 
     order = await _create_base_order(db, payload, PaymentMethod.crypto, brand, discount_pct, request)
 
     # Use brand-specific BTCPay store if configured
-    btcpay_store = (brand.btcpay_store_id if brand and brand.btcpay_store_id else None)
-    client       = BTCPayClient(store_id=btcpay_store)
+    btcpay_store = (
+        brand.btcpay_store_id if brand and brand.btcpay_store_id else None)
+    client = BTCPayClient(store_id=btcpay_store)
 
     webhook_url = f"{settings.BASE_URL}/webhooks/btcpay"
 
     try:
         invoice = await client.create_invoice(
-            order_id       = order.id,
-            amount         = float(order.total),
-            currency       = order.currency,
-            customer_email = payload.email,
-            customer_name  = f"{payload.first_name or ''} {payload.last_name}".strip(),
-            webhook_url    = webhook_url,
+            order_id=order.id,
+            amount=float(order.total),
+            currency=order.currency,
+            customer_email=payload.email,
+            customer_name=f"{payload.first_name or ''} {payload.last_name}".strip(),
+            webhook_url=webhook_url,
         )
 
-        btcpay_id  = invoice["id"]
+        btcpay_id = invoice["id"]
         invoice_url = invoice.get("checkoutLink", "")
 
         # Reuse existing CryptoInvoice if present (customer re-submitted); else create
@@ -1554,17 +1835,17 @@ async def checkout_crypto(
         )
         ci = existing.scalar_one_or_none()
         if ci:
-            ci.btcpay_invoice_id  = btcpay_id
+            ci.btcpay_invoice_id = btcpay_id
             ci.btcpay_invoice_url = invoice_url
-            ci.amount_fiat        = order.total
-            ci.status             = "New"
+            ci.amount_fiat = order.total
+            ci.status = "New"
         else:
             db.add(CryptoInvoice(
-                order_id           = order.id,
-                btcpay_invoice_id  = btcpay_id,
-                btcpay_invoice_url = invoice_url,
-                amount_fiat        = order.total,
-                status             = "New",
+                order_id=order.id,
+                btcpay_invoice_id=btcpay_id,
+                btcpay_invoice_url=invoice_url,
+                amount_fiat=order.total,
+                status="New",
             ))
 
         order.payment_ref = btcpay_id
@@ -1590,9 +1871,10 @@ async def checkout_crypto(
         logger.exception(f"BTCPay invoice creation failed for {order.id}")
         order.payment_status = PaymentStatus.failed
         await db.commit()
-        raise HTTPException(status_code=502, detail=f"Crypto payment unavailable: {e}")
-    
-    
+        raise HTTPException(
+            status_code=502, detail=f"Crypto payment unavailable: {e}")
+
+
 # ─── POST /api/checkout/altcoin ───────────────────────────────────────────────
 
 @router.post("/altcoin", dependencies=[Depends(_rate_limit_submission)])
@@ -1602,38 +1884,39 @@ async def checkout_altcoin(
     db: AsyncSession = Depends(get_db),
 ):
     brand = _get_brand(request)
-    _validate_cart(payload.items, payload.subtotal, getattr(payload, "discount_amount", 0.0))
+    _validate_cart(payload.items, payload.subtotal,
+                   getattr(payload, "discount_amount", 0.0))
     discount_pct = 7.0  # NowPayments altcoin discount fixed at 7%
 
     order = await _create_base_order(db, payload, PaymentMethod.altcoin, brand, discount_pct, request)
 
-    client      = NowPaymentsClient()
-    ipn_url     = f"{settings.BASE_URL}/webhooks/nowpayments"
+    client = NowPaymentsClient()
+    ipn_url = f"{settings.BASE_URL}/webhooks/nowpayments"
     # Mirror v2 + country onto the post-payment confirmation page if the
     # customer started on the v2 checkout. NOWPayments does its own redirect
     # after invoice settles, so the flag must be baked into the URL now.
     success_url = f"{settings.BASE_URL}/order/{order.id}/confirmation{_v2_referer_suffix(request)}"
-    cancel_url  = f"{settings.BASE_URL}/"
+    cancel_url = f"{settings.BASE_URL}/"
 
     try:
         invoice = await client.create_invoice(
-            order_id         = order.id,
-            amount           = float(order.total),
-            currency         = order.currency,
-            ipn_callback_url = ipn_url,
-            success_url      = success_url,
-            cancel_url       = cancel_url,
+            order_id=order.id,
+            amount=float(order.total),
+            currency=order.currency,
+            ipn_callback_url=ipn_url,
+            success_url=success_url,
+            cancel_url=cancel_url,
         )
 
         np_invoice_id = str(invoice["id"])
-        invoice_url   = invoice.get("invoice_url", "")
+        invoice_url = invoice.get("invoice_url", "")
 
         db.add(NowPaymentsInvoice(
-            order_id      = order.id,
-            np_invoice_id = np_invoice_id,
-            invoice_url   = invoice_url,
-            amount_fiat   = order.total,
-            status        = "waiting",
+            order_id=order.id,
+            np_invoice_id=np_invoice_id,
+            invoice_url=invoice_url,
+            amount_fiat=order.total,
+            status="waiting",
         ))
         order.payment_ref = np_invoice_id
         await db.commit()
@@ -1651,7 +1934,8 @@ async def checkout_altcoin(
         logger.exception(f"NowPayments invoice creation failed for {order.id}")
         order.payment_status = PaymentStatus.failed
         await db.commit()
-        raise HTTPException(status_code=502, detail=f"Altcoin payment unavailable: {e}")
+        raise HTTPException(
+            status_code=502, detail=f"Altcoin payment unavailable: {e}")
 
 
 # ─── GET /api/checkout/pymtz-verify/{order_id} ───────────────────────────────
@@ -1698,11 +1982,12 @@ async def pymtz_verify(
     try:
         payment = await PymtzClient(country=pymtz_country).get_payment(order.payment_ref)
     except Exception as e:
-        logger.warning(f"[pymtz-verify] get_payment failed for {order.id}: {e}")
+        logger.warning(
+            f"[pymtz-verify] get_payment failed for {order.id}: {e}")
         return {"orderId": order.id, "paymentStatus": "pending"}
 
     pymtz_status = payment.get("status", "")
-    our_status   = PYMTZ_STATUS_MAP.get(pymtz_status)
+    our_status = PYMTZ_STATUS_MAP.get(pymtz_status)
 
     if not our_status or our_status == "pending":
         return {"orderId": order.id, "paymentStatus": "pending"}
@@ -1710,7 +1995,7 @@ async def pymtz_verify(
     # ── Update order ──────────────────────────────────────────────────────────
     order.payment_status = PaymentStatus(our_status)
     if our_status == "paid":
-        order.paid_at       = datetime.now(timezone.utc)
+        order.paid_at = datetime.now(timezone.utc)
         order.payment_notes = f"pymtz {order.payment_ref} confirmed via return-url verify."
     elif our_status == "failed":
         order.payment_notes = f"pymtz {order.payment_ref} failed (verify check)."
@@ -1718,7 +2003,8 @@ async def pymtz_verify(
         order.payment_notes = f"pymtz {order.payment_ref} expired (verify check)."
     await db.commit()
 
-    logger.info(f"[pymtz-verify] Order {order.id} → {our_status} (pymtz status: {pymtz_status})")
+    logger.info(
+        f"[pymtz-verify] Order {order.id} → {our_status} (pymtz status: {pymtz_status})")
 
     # ── Side effects — only on paid ───────────────────────────────────────────
     if our_status == "paid":
@@ -1741,7 +2027,7 @@ async def pymtz_verify(
 @router.get("/status/{order_id}")
 async def order_status(order_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Order).where(Order.id == order_id))
-    order  = result.scalar_one_or_none()
+    order = result.scalar_one_or_none()
 
     if not order:
         raise HTTPException(status_code=404, detail="Order not found.")
