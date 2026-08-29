@@ -10,6 +10,8 @@ import time
 from decimal import Decimal
 from datetime import datetime, timezone
 
+import httpx
+
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
