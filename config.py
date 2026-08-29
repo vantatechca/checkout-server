@@ -63,6 +63,8 @@ class Settings(BaseSettings):
     BRIDGE_SECRET_US: str = ""
     BRIDGE_URL_US:    str = ""
 
+    SHOPIFY_PROCESSOR_WP_URL: str = ""
+
     SHOPIFY_STORE_DOMAIN: str = ""
     SHOPIFY_API_TOKEN: str = ""
     SHOPIFY_STORE_DOMAIN_US: str = ""
@@ -147,7 +149,8 @@ class Settings(BaseSettings):
     CHECKOUT_V2_STORES_FILE: str = "data/checkout_v2_stores.txt"
 
     # Stripe — for embedded checkout in modal
-    STRIPE_PUBLISHABLE_KEY: str = ""    # pk_test_... (test) or pk_live_... (live)
+    # pk_test_... (test) or pk_live_... (live)
+    STRIPE_PUBLISHABLE_KEY: str = ""
     STRIPE_WORKER_URL:      str = "https://stripe-worker.flystarcafe7.workers.dev"
 
     # Helcim — worker URL for thank-you page order lookup
@@ -174,7 +177,7 @@ class Settings(BaseSettings):
     # built, so no package-contents description is ever sent to Shippo or
     # the carrier (see services/shippo.py for why).
     SHIPPO_ENABLED:   bool = False
-    SHIPPO_API_TOKEN: str  = ""   # shippo_live_... — from the Shippo dashboard
+    SHIPPO_API_TOKEN: str = ""   # shippo_live_... — from the Shippo dashboard
 
     SHIPPO_FROM_NAME_CA:     str = ""
     SHIPPO_FROM_ADDRESS1_CA: str = ""
@@ -204,16 +207,21 @@ class Settings(BaseSettings):
 
     # Onramp via WordPress + 2530gateway plugin.
     # See services/onramp_wp.py for the architecture overview.
-    ONRAMP_WP_ENABLED:         bool = False  # master kill-switch — flip to true to show the option
-    ONRAMP_WP_URL:             str = ""   # e.g. http://23.137.251.62:8083 (no trailing /)
-    ONRAMP_WP_CONSUMER_KEY:    str = ""   # ck_... from WC → Settings → Advanced → REST API (HTTPS only)
+    # master kill-switch — flip to true to show the option
+    ONRAMP_WP_ENABLED:         bool = False
+    # e.g. http://23.137.251.62:8083 (no trailing /)
+    ONRAMP_WP_URL:             str = ""
+    # ck_... from WC → Settings → Advanced → REST API (HTTPS only)
+    ONRAMP_WP_CONSUMER_KEY:    str = ""
     ONRAMP_WP_CONSUMER_SECRET: str = ""   # cs_...
     # Application Password auth — preferred over WC REST keys when the
     # site is HTTP. Create at WP admin → Users → admin → Application Passwords.
     ONRAMP_WP_USERNAME:        str = ""   # WP username (e.g. "admin")
     ONRAMP_WP_APP_PASSWORD:    str = ""   # 24-char app password "aBcD eFgH ..."
-    ONRAMP_WP_PRODUCT_ID:      str = ""   # leave blank to use fee_lines (no product needed)
-    ONRAMP_WP_GATEWAY_ID:      str = ""   # leave blank for the default hosted gateway
+    # leave blank to use fee_lines (no product needed)
+    ONRAMP_WP_PRODUCT_ID:      str = ""
+    # leave blank for the default hosted gateway
+    ONRAMP_WP_GATEWAY_ID:      str = ""
     ONRAMP_WP_WEBHOOK_SECRET:  str = ""   # signing secret from the WC webhook config
 
     # WPay 2D (Direct Card) via the same WordPress + WooCommerce site as
@@ -223,10 +231,14 @@ class Settings(BaseSettings):
     # alongside the 2530gateway one. See services/wpay_wp.py.
     # Separate option from WPAY_ENABLED (the HPP flow) — both can be shown
     # at once; this is NOT a replacement for it.
-    WPAY_WP_ENABLED:        bool = False  # master kill-switch — flip to true to show the option
-    WPAY_WP_GATEWAY_ID:     str = "wpay_2d"  # WooCommerce gateway ID the plugin registers ($this->id in class-wpay-2d-gateway.php)
-    WPAY_WP_PRODUCT_ID:     str = ""      # leave blank to use fee_lines (no product needed)
-    WPAY_WP_WEBHOOK_SECRET: str = ""      # signing secret from the WC webhook config (can differ from ONRAMP_WP_WEBHOOK_SECRET)
+    # master kill-switch — flip to true to show the option
+    WPAY_WP_ENABLED:        bool = False
+    # WooCommerce gateway ID the plugin registers ($this->id in class-wpay-2d-gateway.php)
+    WPAY_WP_GATEWAY_ID:     str = "wpay_2d"
+    # leave blank to use fee_lines (no product needed)
+    WPAY_WP_PRODUCT_ID:     str = ""
+    # signing secret from the WC webhook config (can differ from ONRAMP_WP_WEBHOOK_SECRET)
+    WPAY_WP_WEBHOOK_SECRET: str = ""
     # Per-store allowlist:
     #   ""    → no stores see the option
     #   "*"   → all stores
@@ -258,14 +270,17 @@ class Settings(BaseSettings):
     # (used by the legacy Stripe Elements bridge path). For Stripe Direct,
     # we reuse it on the frontend.
     STRIPE_DIRECT_ENABLED:                bool = False
-    STRIPE_SECRET_KEY:                    str  = ""   # sk_live_xxx or sk_test_xxx — server-side, never exposed
-    STRIPE_WEBHOOK_SECRET:                str  = ""   # whsec_xxx — for /webhooks/stripe_direct HMAC verification
-    STRIPE_STATEMENT_DESCRIPTOR_SUFFIX:   str  = ""   # appended to merchant name on bank statement; neutral text only (no pharma references)
+    # sk_live_xxx or sk_test_xxx — server-side, never exposed
+    STRIPE_SECRET_KEY:                    str = ""
+    # whsec_xxx — for /webhooks/stripe_direct HMAC verification
+    STRIPE_WEBHOOK_SECRET:                str = ""
+    # appended to merchant name on bank statement; neutral text only (no pharma references)
+    STRIPE_STATEMENT_DESCRIPTOR_SUFFIX:   str = ""
     # Per-store allowlist:
     #   ""    → no stores see Stripe option
     #   "*"   → all stores
     #   "..." → only listed domains
-    STRIPE_DIRECT_STORES:                 str  = ""
+    STRIPE_DIRECT_STORES:                 str = ""
 
     # WPay Channels — hosted-redirect card processor (HPP flow). Customer is
     # redirected to WPay's own hosted page to enter card details; we never
@@ -273,13 +288,13 @@ class Settings(BaseSettings):
     # HMAC callbacks, so /webhooks/wpay cross-verifies against WPay's own
     # status API instead (same approach used for pymtz).
     WPAY_ENABLED:    bool = False
-    WPAY_UID:        str  = ""   # merchant UID from WPay backoffice
-    WPAY_USER_TOKEN: str  = ""   # API user token from WPay backoffice
+    WPAY_UID:        str = ""   # merchant UID from WPay backoffice
+    WPAY_USER_TOKEN: str = ""   # API user token from WPay backoffice
     # Per-store allowlist:
     #   ""    → no stores see the option
     #   "*"   → all stores
     #   "..." → only listed domains
-    WPAY_STORES:     str  = ""
+    WPAY_STORES:     str = ""
 
     @property
     def DATABASE_URL(self) -> str:
