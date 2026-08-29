@@ -65,6 +65,7 @@ class Settings(BaseSettings):
     BRIDGE_URL_US:    str = ""
 
     SHOPIFY_PROCESSOR_WP_URL: str = ""
+    SHOPIFY_PROCESSOR_SHARED_SECRET: str = ""
 
     SHOPIFY_STORE_DOMAIN: str = ""
     SHOPIFY_API_TOKEN: str = ""

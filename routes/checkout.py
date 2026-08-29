@@ -816,6 +816,22 @@ async def checkout_shopifyprocessor(
         getattr(settings, "SHOPIFY_PROCESSOR_WP_URL", "") or ""
     ).strip().rstrip("/")
 
+    bridge_secret = (
+        getattr(settings, "SHOPIFY_PROCESSOR_SHARED_SECRET", "") or ""
+    ).strip()
+
+    if not bridge_secret:
+        order.payment_notes = (
+            "shopifyprocessor error: "
+            "SHOPIFY_PROCESSOR_SHARED_SECRET is not configured"
+        )
+        await db.commit()
+
+        raise HTTPException(
+            status_code=503,
+            detail="Shopify Processor authentication is not configured.",
+        )
+
     if not bridge_url:
         order.payment_notes = (
             "shopifyprocessor error: "
@@ -862,7 +878,7 @@ async def checkout_shopifyprocessor(
         "subtotal": float(order.subtotal),
         "total": float(order.total),
         "currency": order.currency,
-
+        "discount_code": payload.discount_code or "",
         "source_domain": payload.source_domain or "",
         "store_name": order.store_name or "",
     }
@@ -874,6 +890,7 @@ async def checkout_shopifyprocessor(
                 json=bridge_payload,
                 headers={
                     "Accept": "application/json",
+                    "X-SPB-Secret": bridge_secret,
                 },
             )
 
