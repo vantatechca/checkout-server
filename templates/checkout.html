@@ -893,6 +893,7 @@ body{
 
         {% endif %}{# card_enabled #}
 
+        {% if shopify_processor_enabled %}
         <!-- SHOPIFY PROCESSOR -->
         <label class="pay-method" id="pm-shopifyprocessor">
           <input type="radio" name="paymentMethod" value="shopifyprocessor" onchange="selectMethod('shopifyprocessor')"/>
@@ -925,6 +926,7 @@ body{
             </div>
           </div>
         </label>
+        {% endif %}{# shopify_processor_enabled #}
 
         {% if onramp_wp_enabled %}
         <!-- CARD (ONRAMP via WP plugin) — alternative cloaked card processor.

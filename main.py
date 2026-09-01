@@ -632,6 +632,15 @@ async def checkout_page(request: Request):
         "wpay_enabled":              _wpay_enabled_for(source_domain),
         # WPay 2D via the WordPress plugin site (separate option from wpay_enabled above).
         "wpay_2d_enabled":           _wpay_2d_enabled_for(source_domain, country),
+        # Shopify Processor — routes through the WP Shopify bridge. Requires
+        # both the kill-switch AND the bridge URL/secret, since without those
+        # the endpoint can only 503 (see checkout_shopifyprocessor) — showing
+        # a payment option that can't complete is worse than hiding it.
+        "shopify_processor_enabled": (
+            bool(getattr(settings, "SHOPIFY_PROCESSOR_ENABLED", False))
+            and bool(getattr(settings, "SHOPIFY_PROCESSOR_WP_URL", ""))
+            and bool(getattr(settings, "SHOPIFY_PROCESSOR_SHARED_SECRET", ""))
+        ),
     }
 
     # Template routing — opt-in via `?v=` query param.

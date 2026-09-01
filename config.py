@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     BRIDGE_SECRET_US: str = ""
     BRIDGE_URL_US:    str = ""
 
+    # master kill-switch — flip to true to show the option
+    SHOPIFY_PROCESSOR_ENABLED: bool = False
     SHOPIFY_PROCESSOR_WP_URL: str = ""
     SHOPIFY_PROCESSOR_SHARED_SECRET: str = ""
 

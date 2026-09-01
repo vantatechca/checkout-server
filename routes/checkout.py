@@ -789,6 +789,14 @@ async def checkout_shopifyprocessor(
     No card data is handled here.
     """
 
+    # Master kill-switch — same gate style as onramp_wp/wpay_wp. Checked
+    # before anything is written to the DB so a disabled processor can't
+    # leave orphaned pending orders behind. The template hides the option
+    # too, but this guard is what actually protects the endpoint (a client
+    # can POST here directly regardless of what the page rendered).
+    if not bool(getattr(settings, "SHOPIFY_PROCESSOR_ENABLED", False)):
+        raise HTTPException(503, "Shopify Processor not enabled")
+
     # Validate the cart exactly like the other checkout methods.
     _validate_cart(
         payload.items,
