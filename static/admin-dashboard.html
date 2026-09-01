@@ -1972,8 +1972,14 @@
           }
         } else if (
           o.paymentStatus === "failed" ||
-          o.paymentStatus === "expired"
+          o.paymentStatus === "expired" ||
+          o.paymentStatus === "cancelled"
         ) {
+          // Cancelled gets the same two recovery actions as failed/expired —
+          // a cancel is an admin decision (or a misclick), not a terminal
+          // payment outcome, so the order must stay actionable: Recover puts
+          // it back to pending so the customer can pay again, Mark Paid
+          // covers "they actually paid us after we cancelled".
           action =
             '<button class="action-btn btn-recover" onclick="event.stopPropagation();recoverOrder(\'' +
             o.id +
@@ -3102,6 +3108,12 @@
         html += "</div>";
       } else {
         var isPaid = (o.paymentStatus === "paid");
+        // Same recoverable set the row actions use — see renderOrders().
+        var isRecoverable = (
+          o.paymentStatus === "failed" ||
+          o.paymentStatus === "expired" ||
+          o.paymentStatus === "cancelled"
+        );
         html += '<div class="modal-btns">';
         html +=
           '<button class="modal-cancel" style="flex:1" onclick="closeModal()">Close</button>';
@@ -3110,6 +3122,15 @@
             "<button style=\"height:4.8rem;padding:0 2rem;background:#fff0f0;color:#c8102e;border:1.5px solid #c8102e;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer;\" onclick=\"unmarkOrderPaid('" +
             o.id +
             "')\">⚠ Unmark Paid</button>";
+        } else if (isRecoverable) {
+          html +=
+            "<button style=\"height:4.8rem;padding:0 2rem;background:#fff;color:#2563eb;border:1.5px solid #2563eb;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:1.5rem;font-weight:600;cursor:pointer;\" title=\"Reset to pending so the customer can pay again\" onclick=\"recoverOrder('" +
+            o.id +
+            "');closeModal()\">\u21bb Recover</button>";
+          html +=
+            '<button class="modal-confirm" onclick="markPaidFailedOrder(\'' +
+            o.id +
+            "');closeModal()\">\u2713 Mark as Paid</button>";
         }
         html += "</div>";
       }
@@ -4237,9 +4258,9 @@
         });
     }
 
-    // Mark a failed/expired order as paid directly from the row, without
-    // opening the full detail modal. Used by the inline "Mark Paid" button
-    // beside the Recover button on failed-row actions.
+    // Mark a failed/expired/cancelled order as paid directly from the row,
+    // without opening the full detail modal. Used by the inline "Mark Paid"
+    // button beside the Recover button on failed/cancelled-row actions.
     async function markPaidFailedOrder(orderId) {
       var ok = await showConfirm({
         title: "Mark order as paid?",
@@ -4247,10 +4268,14 @@
         okText: "Mark Paid",
       });
       if (!ok) return;
+      // Record which terminal state it came from in payment_notes — "from
+      // cancelled" vs "from failed" matters when auditing later.
+      var _prev = allOrders.find(function (x) { return x.id === orderId; });
+      var _prevStatus = (_prev && _prev.paymentStatus) || "failed";
       fetch("/admin/orders/" + orderId + "/mark-paid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes: "Marked paid by admin (from failed)" }),
+        body: JSON.stringify({ notes: "Marked paid by admin (from " + _prevStatus + ")" }),
       })
         .then(function (r) {
           return r.json().then(function (data) {

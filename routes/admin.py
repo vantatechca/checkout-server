@@ -320,10 +320,17 @@ async def list_orders(
             Order.tracking_number.is_not(None),
         )
 
-    # Failed tab — payment never succeeded; admin can attempt recovery
+    # Failed tab — payment never succeeded; admin can attempt recovery.
+    # Cancelled belongs here too: it's the same "no money, but still
+    # actionable" bucket, and it's the only tab (besides All) where the
+    # Recover / Mark Paid row buttons for those orders are reachable.
     if failed == "yes":
         q = q.where(
-            Order.payment_status.in_([PaymentStatus.failed, PaymentStatus.expired])
+            Order.payment_status.in_([
+                PaymentStatus.failed,
+                PaymentStatus.expired,
+                PaymentStatus.cancelled,
+            ])
         )
 
     # Eager-load payment relations so we can show shortfall info on rows
@@ -565,11 +572,17 @@ async def order_stats(
         )
     )
 
-    # Failed = failed OR expired — both are "recoverable" terminal states
+    # Failed = failed OR expired OR cancelled — all "recoverable" terminal
+    # states. Must match the Failed tab's list filter above, or the sidebar
+    # badge count and the rendered row count disagree.
     failed_q = select(sa_func.count()).select_from(Order).where(
         and_(
             *base_filter,
-            Order.payment_status.in_([PaymentStatus.failed, PaymentStatus.expired]),
+            Order.payment_status.in_([
+                PaymentStatus.failed,
+                PaymentStatus.expired,
+                PaymentStatus.cancelled,
+            ]),
         )
     )
 
@@ -2197,9 +2210,14 @@ async def recover_order(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Reset a failed/expired order back to pending so the customer can retry payment.
-    Clears stale per-method invoice records (BTCPay/NowPayments) which would have
-    expired alongside the order.
+    Reset a failed/expired/cancelled order back to pending so the customer can
+    retry payment. Clears stale per-method invoice records (BTCPay/NowPayments)
+    which would have expired alongside the order.
+
+    Cancelled is recoverable for the same reason failed/expired are: it's a
+    non-terminal admin decision (usually "customer went quiet"), and the
+    customer may come back — or the cancel may simply have been a misclick.
+    Paid stays non-recoverable (use unmark-paid instead).
     """
     from models.order import CryptoInvoice, NowPaymentsInvoice
 
@@ -2215,10 +2233,15 @@ async def recover_order(
         raise HTTPException(404, "Order not found")
     if order.payment_status == PaymentStatus.paid:
         raise HTTPException(400, "Cannot recover a paid order")
-    if order.payment_status not in (PaymentStatus.failed, PaymentStatus.expired):
+    if order.payment_status not in (
+        PaymentStatus.failed,
+        PaymentStatus.expired,
+        PaymentStatus.cancelled,
+    ):
         raise HTTPException(
             400,
-            f"Order is {order.payment_status.value} — only failed/expired orders can be recovered",
+            f"Order is {order.payment_status.value} — only failed/expired/cancelled "
+            "orders can be recovered",
         )
 
     prev_status = order.payment_status.value
