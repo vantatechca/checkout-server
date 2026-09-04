@@ -1829,6 +1829,13 @@ async def checkout_crypto(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    # Bitcoin is CANADA-ONLY. Mirrors the UI gate in main.py
+    # (`crypto_enabled = country in ("CA",)`) — even if a non-CA customer
+    # calls this endpoint directly, refuse before creating an order or a
+    # BTCPay invoice. Keep both lists in sync when changing availability.
+    if (payload.store_country or "").upper() != "CA":
+        raise HTTPException(403, "Bitcoin is only available for Canadian stores")
+
     brand = _get_brand(request)
     _validate_cart(payload.items, payload.subtotal,
                    getattr(payload, "discount_amount", 0.0))

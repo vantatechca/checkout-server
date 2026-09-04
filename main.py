@@ -601,6 +601,14 @@ async def checkout_page(request: Request):
     if country == "US":
         onramp_enabled = False
 
+    # Bitcoin (BTCPay) is CANADA-ONLY. Same "hard kill by country" pattern as
+    # onramp above — every order is either US or CA, so this hides the option
+    # everywhere except CA stores without per-store CSV bookkeeping. The
+    # matching server-side guard lives in routes/checkout.py::checkout_crypto,
+    # so a US customer can't reach it by POSTing directly either.
+    # To offer it in another country, add that code to the tuple below.
+    crypto_enabled = country in ("CA",)
+
     ctx = {
         "store_name": (
             request.query_params.get("storename") + " Checkout"
@@ -621,6 +629,8 @@ async def checkout_page(request: Request):
         "source_domain":    source_domain,
         "card_enabled":      card_enabled,
         "altcoin_enabled":   altcoin_enabled,
+        # Bitcoin (BTCPay) — Canada-only (see the country gate above).
+        "crypto_enabled":    crypto_enabled,
         "onramp_wp_enabled": onramp_enabled,
         "stripe_publishable_key": settings.STRIPE_PUBLISHABLE_KEY or "",
         "helcim_worker_url": getattr(settings, "HELCIM_WORKER_URL", "https://hc-worker.flystarcafe7.workers.dev"),

@@ -1632,7 +1632,8 @@ body{
           </div>
         </label>
 
-        <!-- BITCOIN -->
+        {% if crypto_enabled %}
+        <!-- BITCOIN (BTCPay) — Canada-only, gated by crypto_enabled -->
         <label class="pay-method" id="pm-crypto">
           <input type="radio" name="paymentMethod" value="crypto" onchange="selectMethod('crypto')"/>
           <div class="pay-info">
@@ -1653,6 +1654,7 @@ body{
             </div>
           </div>
         </label>
+        {% endif %}{# crypto_enabled #}
 
       </div>
     </section>
