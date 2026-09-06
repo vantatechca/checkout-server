@@ -889,8 +889,6 @@ body{
             </div>
           </div>
         </label>
-        
-
         {% endif %}{# card_enabled #}
 
         {% if shopify_processor_enabled %}
@@ -1035,7 +1033,7 @@ body{
           <div class="pay-info">
             <div class="pay-header">
               <span class="pay-name">Zelle</span>
-              <span class="save-badge">Save 10%</span>
+              <span class="save-badge">Save {{ (zelle_discount / 100 * 100)|int }}%</span>
             </div>
             <div class="pay-desc">US only · Instant bank transfer · All major US banks</div>
             <div class="pay-body">
@@ -1085,7 +1083,7 @@ body{
           <div class="pay-info">
             <div class="pay-header">
               <span class="pay-name">Interac E-Transfer</span>
-              <span class="save-badge">Save 10%</span>
+              <span class="save-badge">Save {{ (interac_discount / 100 * 100)|int }}%</span>
             </div>
             <div class="pay-desc">Canada only · Instant bank transfer · All banks</div>
             <div class="pay-body">
@@ -1872,9 +1870,13 @@ var _autoSaveQueue = [];
 
   function fmt(n) { return '$' + n.toFixed(2); }
 
+  // ─── UPDATE TOTALS (the core discount logic) ──────────────────────────
   function updateTotals(method) {
-    _applyWpayMinimum();
-    _applyWpay2dMinimum();
+    var discFactorZelle   = 1 - (DISCOUNTS['zelle'] || 0);
+    var discFactorInterac = 1 - (DISCOUNTS['interac'] || 0);
+    var discFactorCrypto  = 1 - (DISCOUNTS['crypto'] || 0);
+    var discFactorAltcoin = 1 - (DISCOUNTS['altcoin'] || 0);
+
     // If a discount code was applied from URL
     if (APPLIED_DISCOUNT) {
       var originalSubtotal = APPLIED_DISCOUNT.original_subtotal;
@@ -1905,7 +1907,13 @@ var _autoSaveQueue = [];
           newRow.className = 'payment-method-discount-row';
           newRow.style.cssText = 'display:flex;justify-content:space-between;padding:0.8rem 0;border-bottom:1px solid var(--sidebar-border);font-size:1.3rem;';
           newRow.innerHTML = '<span id="paymentMethodLabel" style="color:var(--sidebar-muted);"></span><span id="paymentMethodDisplay" style="color:var(--green);font-weight:600;"></span>';
-          discRow.parentNode.insertBefore(newRow, document.getElementById('totalRow') || discRow.nextSibling);
+          // Insert before the grand total row
+          var grandRow = document.querySelector('.grand');
+          if (grandRow) {
+            grandRow.parentNode.insertBefore(newRow, grandRow);
+          } else {
+            discRow.parentNode.insertBefore(newRow, discRow.nextSibling);
+          }
         }
         
         var pct = (methodDisc * 100).toFixed(0);
@@ -1935,36 +1943,36 @@ var _autoSaveQueue = [];
       };
       document.getElementById('btnLabel').textContent = labels[method] || labels.card;
       
-      // UPDATE PAYMENT METHOD AMOUNTS in payment boxes (truncate, don't round)
-      var zelleFinal = Math.floor(afterCodeSubtotal * 0.95 * 100) / 100;
-      var zelleDiscount = afterCodeSubtotal - zelleFinal;
+      // UPDATE PAYMENT METHOD AMOUNTS in payment boxes (rounded)
+      var zelleFinal = (afterCodeSubtotal * discFactorZelle).toFixed(2);
+      var zelleDiscount = afterCodeSubtotal - parseFloat(zelleFinal);
       var zelleAmt = document.getElementById('zelleAmt');
-      if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal.toFixed(2);
+      if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal;
       var zelleAmtLine = document.getElementById('zelleAmtLine');
-      if (zelleAmtLine) zelleAmtLine.textContent = '$' + zelleFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+      if (zelleAmtLine) zelleAmtLine.textContent = '$' + zelleFinal + ' ' + STORE_CURRENCY;
       var zelleSav = document.getElementById('zelleSavings');
       if (zelleSav) zelleSav.textContent = '$' + zelleDiscount.toFixed(2);
       
-      var interacFinal = Math.floor(afterCodeSubtotal * 0.90 * 100) / 100;
-      var interacDiscount = afterCodeSubtotal - interacFinal;
+      var interacFinal = (afterCodeSubtotal * discFactorInterac).toFixed(2);
+      var interacDiscount = afterCodeSubtotal - parseFloat(interacFinal);
       var interacAmt = document.getElementById('interacAmt');
-      if (interacAmt) interacAmt.textContent = '$' + interacFinal.toFixed(2);
+      if (interacAmt) interacAmt.textContent = '$' + interacFinal;
       var interacAmtLine = document.getElementById('interacAmtLine');
-      if (interacAmtLine) interacAmtLine.textContent = '$' + interacFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+      if (interacAmtLine) interacAmtLine.textContent = '$' + interacFinal + ' ' + STORE_CURRENCY;
       var interacSav = document.getElementById('interacSavings');
       if (interacSav) interacSav.textContent = '$' + interacDiscount.toFixed(2);
       
-      var cryptoFinal = Math.floor(afterCodeSubtotal * 0.90 * 100) / 100;
-      var cryptoDiscount = afterCodeSubtotal - cryptoFinal;
+      var cryptoFinal = (afterCodeSubtotal * discFactorCrypto).toFixed(2);
+      var cryptoDiscount = afterCodeSubtotal - parseFloat(cryptoFinal);
       var cryptoAmt = document.getElementById('cryptoAmt');
-      if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal.toFixed(2);
+      if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal;
       var cryptoSav = document.getElementById('cryptoSavings');
       if (cryptoSav) cryptoSav.textContent = '$' + cryptoDiscount.toFixed(2);
 
-      var altcoinFinal = Math.floor(afterCodeSubtotal * 0.93 * 100) / 100;
-      var altcoinDiscount = afterCodeSubtotal - altcoinFinal;
+      var altcoinFinal = (afterCodeSubtotal * discFactorAltcoin).toFixed(2);
+      var altcoinDiscount = afterCodeSubtotal - parseFloat(altcoinFinal);
       var altcoinAmt = document.getElementById('altcoinAmt');
-      if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal.toFixed(2);
+      if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal;
       var altcoinSav = document.getElementById('altcoinSavings');
       if (altcoinSav) altcoinSav.textContent = '$' + altcoinDiscount.toFixed(2);
       
@@ -2003,7 +2011,7 @@ var _autoSaveQueue = [];
       discRow.style.display = 'none';
     }
 
- var labels = {
+    var labels = {
       card:    'Pay now · ' + fmt(total),
       interac: 'Place order · ' + fmt(total),
       zelle:   'Place order · ' + fmt(total),
@@ -2012,36 +2020,36 @@ var _autoSaveQueue = [];
     };
     document.getElementById('btnLabel').textContent = labels[method] || labels.card;
     
-    // Update payment method amounts (truncate, don't round)
-    var zelleFinal = Math.floor(SUBTOTAL * 0.95 * 100) / 100;
-    var zelleDiscount = SUBTOTAL - zelleFinal;
+    // Update payment method amounts (rounded, using DISCOUNTS)
+    var zelleFinal = (SUBTOTAL * discFactorZelle).toFixed(2);
+    var zelleDiscount = SUBTOTAL - parseFloat(zelleFinal);
     var zelleAmt = document.getElementById('zelleAmt');
-    if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal.toFixed(2);
+    if (zelleAmt) zelleAmt.textContent = '$' + zelleFinal;
     var zelleAmtLine = document.getElementById('zelleAmtLine');
-    if (zelleAmtLine) zelleAmtLine.textContent = '$' + zelleFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+    if (zelleAmtLine) zelleAmtLine.textContent = '$' + zelleFinal + ' ' + STORE_CURRENCY;
     var zelleSav = document.getElementById('zelleSavings');
     if (zelleSav) zelleSav.textContent = '$' + zelleDiscount.toFixed(2);
     
-    var interacFinal = Math.floor(SUBTOTAL * 0.90 * 100) / 100;
-    var interacDiscount = SUBTOTAL - interacFinal;
+    var interacFinal = (SUBTOTAL * discFactorInterac).toFixed(2);
+    var interacDiscount = SUBTOTAL - parseFloat(interacFinal);
     var interacAmt = document.getElementById('interacAmt');
-    if (interacAmt) interacAmt.textContent = '$' + interacFinal.toFixed(2);
+    if (interacAmt) interacAmt.textContent = '$' + interacFinal;
     var interacAmtLine = document.getElementById('interacAmtLine');
-    if (interacAmtLine) interacAmtLine.textContent = '$' + interacFinal.toFixed(2) + ' ' + STORE_CURRENCY;
+    if (interacAmtLine) interacAmtLine.textContent = '$' + interacFinal + ' ' + STORE_CURRENCY;
     var interacSav = document.getElementById('interacSavings');
     if (interacSav) interacSav.textContent = '$' + interacDiscount.toFixed(2);
     
-    var cryptoFinal = Math.floor(SUBTOTAL * 0.90 * 100) / 100;
-    var cryptoDiscount = SUBTOTAL - cryptoFinal;
+    var cryptoFinal = (SUBTOTAL * discFactorCrypto).toFixed(2);
+    var cryptoDiscount = SUBTOTAL - parseFloat(cryptoFinal);
     var cryptoAmt = document.getElementById('cryptoAmt');
-    if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal.toFixed(2);
+    if (cryptoAmt) cryptoAmt.textContent = '$' + cryptoFinal;
     var cryptoSav = document.getElementById('cryptoSavings');
     if (cryptoSav) cryptoSav.textContent = '$' + cryptoDiscount.toFixed(2);
 
-    var altcoinFinal = Math.floor(SUBTOTAL * 0.93 * 100) / 100;
-    var altcoinDiscount = SUBTOTAL - altcoinFinal;
+    var altcoinFinal = (SUBTOTAL * discFactorAltcoin).toFixed(2);
+    var altcoinDiscount = SUBTOTAL - parseFloat(altcoinFinal);
     var altcoinAmt = document.getElementById('altcoinAmt');
-    if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal.toFixed(2);
+    if (altcoinAmt) altcoinAmt.textContent = '$' + altcoinFinal;
     var altcoinSav = document.getElementById('altcoinSavings');
     if (altcoinSav) altcoinSav.textContent = '$' + altcoinDiscount.toFixed(2);
   }
@@ -3581,7 +3589,6 @@ var _autoSaveQueue = [];
     </div>
   </div>
 </div>
-
 
 </body>
 </html>

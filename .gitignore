@@ -26,6 +26,3 @@ celerybeat-schedule
 
 # Node (scratch scripts, playwright, etc. — not part of the app)
 node_modules/
-
-# Pre-edit template snapshots kept locally for manual rollback
-templates/*-backup.html
