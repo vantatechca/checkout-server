@@ -601,13 +601,14 @@ async def checkout_page(request: Request):
     if country == "US":
         onramp_enabled = False
 
-    # Bitcoin (BTCPay) is CANADA-ONLY. Same "hard kill by country" pattern as
-    # onramp above — every order is either US or CA, so this hides the option
-    # everywhere except CA stores without per-store CSV bookkeeping. The
-    # matching server-side guard lives in routes/checkout.py::checkout_crypto,
-    # so a US customer can't reach it by POSTing directly either.
+    # Bitcoin (BTCPay) country allowlist. Same "hard kill by country" pattern
+    # as onramp above — every order is either US or CA, so this gates the
+    # option per country without per-store CSV bookkeeping. The matching
+    # server-side guard lives in routes/checkout.py::checkout_crypto, so a
+    # customer in a non-allowed country can't reach it by POSTing directly
+    # either. Keep both lists in sync when changing availability.
     # To offer it in another country, add that code to the tuple below.
-    crypto_enabled = country in ("CA",)
+    crypto_enabled = country in ("CA", "US")
 
     ctx = {
         "store_name": (
